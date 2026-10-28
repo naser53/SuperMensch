@@ -29,7 +29,7 @@ export class Config {
       marshal_bounty: 60,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
 
-      tunnel_costs: [80, 120, 275],  // TUNNEL_COST_1 / _2 / _3
+      tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP
       tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5
       max_active_tunnels: 2,          // MAX_ACTIVE_TUNNELS
