@@ -22,14 +22,14 @@ export class Config {
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
       general_at: 3,            // GENERAL_AT
-      marshal_at: 7,            // MARSHAL_AT
+      marshal_at: 4,            // MARSHAL_AT
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
-      general_bounty: 50,       // GENERAL_BOUNTY
-      marshal_bounty: 70,       // MARSHAL_BOUNTY
+      general_bounty: 40,       // GENERAL_BOUNTY
+      marshal_bounty: 60,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
 
-      tunnel_costs: [100, 175, 275],  // TUNNEL_COST_1 / _2 / _3
+      tunnel_costs: [80, 120, 275],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP
       tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5
       max_active_tunnels: 2,          // MAX_ACTIVE_TUNNELS

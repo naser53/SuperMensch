@@ -185,7 +185,7 @@ test("tunnel: enter, move inside, exit hits a wall piece", () => {
   const g = make();
   put(g, 0, 0, 2); put(g, 3, 0, 1);
   declare(g, 0, 0, 1, 2);
-  assert.equal(g.state.scores[0], -100);
+  assert.equal(g.state.scores[0], -g.cfg.tunnel_costs[0]);
   assert.equal(g.step(g.state, 0, ["p", 0, 0], 1, new Map()), null);
   const [ns] = g.step(g.state, 0, ["p", 0, 0], 4, new Map());
   assert.equal(ns.pos[0][0], TUN);
@@ -350,4 +350,15 @@ test("single-color game: a 6 throws again, as long as 6 comes", () => {
   assert.equal(g.turn, 0);                 // and again
   throwOne(4);
   assert.equal(g.turn, 1);                 // next player
+});
+
+test("ranks and tunnel costs: general from 3 captures, marshal from 4; bounties 40 / 60; tunnels 80 / 120", () => {
+  const g = make();
+  assert.equal(g.rankName(2).key, "soldier");
+  assert.equal(g.rankName(3).key, "general");
+  assert.equal(g.rankName(4).key, "marshal");
+  assert.equal(g.bounty(3), 40);
+  assert.equal(g.bounty(4), 60);
+  assert.equal(g.tunnelCost(1, 2), 80);
+  assert.equal(g.tunnelCost(1, 3), 120);
 });
