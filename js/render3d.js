@@ -182,13 +182,12 @@ export class Board3D {
   // A red "not allowed" sign where the player clicked; it fades out by itself.
   forbid(ev) {
     if (!ev) return;
-    const r = this.container.getBoundingClientRect();
     const el = document.createElement("div");
     el.className = "forbid";
-    el.style.left = ev.clientX - r.left + "px";
-    el.style.top = ev.clientY - r.top + "px";
+    el.style.left = ev.clientX + "px";
+    el.style.top = ev.clientY + "px";
     el.innerHTML = '<svg viewBox="0 0 40 40" width="44" height="44"><circle cx="20" cy="20" r="16" fill="rgba(255,255,255,.85)" stroke="#d62828" stroke-width="5"/><line x1="9" y1="31" x2="31" y2="9" stroke="#d62828" stroke-width="5" stroke-linecap="round"/></svg>';
-    this.container.appendChild(el);
+    document.body.appendChild(el);
     setTimeout(() => el.remove(), 650);
   }
 

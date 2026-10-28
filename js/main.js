@@ -203,7 +203,8 @@ class App {
     } else if (human && dec.kind === "play" && !this.sel.list) {
       const sel = this.sel;
       shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
-      const hint = sel.ambig ? "pick_which" : (sel.die === null ? (sel.needDie ? "need_die" : "pick_die") : "pick_piece");
+      const hint = sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece"
+        : (sel.die === null ? "pick_die" : "pick_piece");
       h += `<div class="pad" style="padding-top:0"><div class="note">${this.T(hint)}</div>`;
       if (sel.ambig) {
         opts = sel.ambig;
@@ -239,7 +240,7 @@ class App {
     this.shownOpts = opts;
     h += this.logHtml() + this.footHtml();
     el.innerHTML = h;
-    this.board.sync(shown, this.sel && this.sel.look);
+    this.board.sync(shown, this.sel && this.sel.piece);
     if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
       this.followedDec = dec;
       if (this.follow && dec && !p.isAi && this.lastFollow !== g.turn) this.board.setView({ side: p.colors[0] });
@@ -257,7 +258,7 @@ class App {
   // A play is made die by die: always click a die first, then the piece that moves with it.
   // With three dice (stuck, card, bonus) the two dice clicked are the ones kept.
   resetSelection(dec) {
-    this.sel = { dec, picks: [], die: null, keep: [], ambig: null, list: false, look: null, needDie: false,
+    this.sel = { dec, picks: [], die: null, keep: [], ambig: null, list: false, piece: null,
       seqs: dec && dec.kind === "play" && !this.game.players[this.game.turn].isAi ? this.game.sequences(dec) : [] };
     this.autoDie();
   }
@@ -298,14 +299,14 @@ class App {
     sel.picks.push(c);
     sel.die = null;
     sel.ambig = null;
-    sel.look = null;
+    sel.piece = null;
     const done = this.matching().filter(q => q.steps.length === sel.picks.length);
     if (done.length) { this.choose(done[0].option); return; }
     this.autoDie();
     this.render();
   }
 
-  clickDie(k) {
+  clickDie(k, ev) {
     const g = this.game, dec = g.pending, sel = this.sel;
     if (!dec || g.players[g.turn].isAi) return;
     if (this.board.viewMode) this.board.setViewMode(false);   // back to playing
@@ -321,11 +322,44 @@ class App {
       return;
     }
     if (dec.kind !== "play" || sel.list) return;
+    if (sel.piece) {                         // piece first: this die moves it
+      if (!this.pieceDice(sel.piece).has(k)) { this.board.forbid(ev); return; }
+      sel.die = k;
+      this.movePiece(sel.piece, ev);
+      return;
+    }
     if (!this.usableDice().has(k)) return;
     sel.die = sel.die === k ? null : k;
     sel.ambig = null;
-    sel.needDie = false;
     this.render();
+  }
+
+  // Does mover m stand for the clicked piece? Any yard piece stands for its color's yard mover.
+  moverMatcher(pc) {
+    const sel = this.sel, g = this.game;
+    const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    const inYard = pc[0] === "p" && shown.pos[pc[1]][pc[2]] === -1;
+    return m => (m[0] === pc[0] && m.join() === pc.join())
+      || (inYard && m[0] === "p" && m[1] === pc[1] && shown.pos[m[1]][m[2]] === -1);
+  }
+
+  // dice the piece can move with now
+  pieceDice(pc) {
+    const n = this.sel.picks.length, isMe = this.moverMatcher(pc);
+    return new Set(this.matching().filter(q => isMe(q.steps[n].mover)).map(q => q.dieIdx[n]));
+  }
+
+  // move the piece with the selected die, or show the "not allowed" sign
+  movePiece(pc, ev) {
+    const g = this.game, sel = this.sel, isMe = this.moverMatcher(pc);
+    const mine = this.candidates().filter(c => isMe(c.step.mover));
+    if (mine.length === 1) this.pickCandidate(mine[0]);
+    else if (mine.length > 1) {
+      sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+      this.render();
+    } else {
+      this.board.forbid(ev);
+    }
   }
 
   diceHtml(dec, human) {
@@ -338,7 +372,8 @@ class App {
         dieHtml(v, "pick" + (this.sel.keep.includes(k) ? " sel" : ""), `data-pdie="${k}"`)).join("")}</div>`;
     }
     if (human && dec.kind === "play" && !this.sel.list) {
-      const sel = this.sel, used = new Set(sel.picks.map(x => x.di)), use = this.usableDice();
+      const sel = this.sel, used = new Set(sel.picks.map(x => x.di));
+      const use = sel.piece ? this.pieceDice(sel.piece) : this.usableDice();
       return `<div class="dice">${dec.dice.map((v, k) => {
         const cls = used.has(k) ? "used" : (sel.die === k ? "pick sel" : (use.has(k) ? "pick" : "off"));
         return dieHtml(v, cls, `data-pdie="${k}"`);
@@ -387,38 +422,32 @@ class App {
     this.render();
   }
 
-  // Click on the board. With a die selected, a click on a piece moves it with that die;
-  // a piece that cannot move with it gets a short "not allowed" sign. Without a die the
-  // piece is only highlighted (to look at the board) and the sign asks for a die first.
+  // Click on the board. Both orders work:
+  //  - die first: a click on a piece moves it with that die (or shows the "not allowed" sign);
+  //  - piece first: the piece is selected and only the dice it can use stay clickable;
+  //    a click on one of them makes the move. A piece with no move gets the sign.
   // The hunter enters by clicking the gate of its completed color (then: which direction).
   boardClick(hit, ev) {
     const g = this.game, sel = this.sel;
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
-    let mine = [];
     if (hit.piece) {
       const pc = hit.piece;
-      const inYard = pc[0] === "p" && shown.pos[pc[1]][pc[2]] === -1;
-      const isMe = m => (m[0] === pc[0] && m.join() === pc.join())
-        || (inYard && m[0] === "p" && m[1] === pc[1] && shown.pos[m[1]][m[2]] === -1);
-      if (sel.die === null) {
-        sel.look = pc;
-        sel.needDie = true;
-        this.board.forbid(ev);
-        this.render();
-        return;
-      }
-      mine = this.candidates().filter(c => isMe(c.step.mover));
-    } else if (hit.field !== undefined) {
-      if (sel.die === null) { sel.needDie = true; this.board.forbid(ev); this.render(); return; }
-      mine = this.candidates().filter(c => c.step.mover[0] === "hn" && g.gate(g._completedColor(g.turn, shown)) === hit.field);
-    } else return;
-    if (mine.length === 1) this.pickCandidate(mine[0]);
-    else if (mine.length > 1) {
-      sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+      if (sel.die !== null) { this.movePiece(pc, ev); return; }
+      if (sel.piece && sel.piece.join() === pc.join()) { sel.piece = null; this.render(); return; }
+      const dice = this.pieceDice(pc);
+      if (!dice.size) { sel.piece = null; this.board.forbid(ev); this.render(); return; }
+      sel.piece = pc;
       this.render();
-    } else {
-      this.board.forbid(ev);
+      return;
+    }
+    if (hit.field !== undefined) {
+      if (sel.die === null) { this.board.forbid(ev); return; }
+      const mine = this.candidates().filter(c => c.step.mover[0] === "hn" && g.gate(g._completedColor(g.turn, shown)) === hit.field);
+      if (mine.length) {
+        sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+        this.render();
+      } else this.board.forbid(ev);
     }
   }
 
@@ -465,7 +494,7 @@ function wire(app) {
       app.render();
       return;
     }
-    if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie); return; }
+    if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie, e); return; }
     if (b.dataset.view !== undefined) { app.view(b.dataset.view); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));

@@ -9,6 +9,7 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    pick_die_for_piece: "Now click a die to move this piece (or click another piece)",
     view_free: "Turn the board",
     view_free_done: "Done turning",
     view_free_hint: "Turn, move and zoom the board with the mouse; pieces cannot be clicked meanwhile",
@@ -29,7 +30,7 @@ export const STR = {
     view_right: "Turn right",
     view_mine: "My side",
     view_follow: "Turn the board to the player",
-    pick_die: "Click a die",
+    pick_die: "Click a die or a piece",
     pick_which: "Which one?",
     pick_keep: "Click the two dice you keep",
     undo: "Undo",
@@ -124,6 +125,7 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    pick_die_for_piece: "حالا روی تاسی کلیک کنید که این مهره با آن حرکت کند (یا مهره‌ی دیگری را انتخاب کنید)",
     view_free: "تغییر زاویه",
     view_free_done: "پایان تغییر زاویه",
     view_free_hint: "چرخاندن، جابه‌جایی و زوم صفحه با ماوس؛ در این حالت روی مهره‌ها نمی‌شود کلیک کرد",
@@ -144,7 +146,7 @@ export const STR = {
     view_right: "چرخش به راست",
     view_mine: "سمت من",
     view_follow: "چرخاندن صفحه به سمت بازیکن",
-    pick_die: "روی یک تاس کلیک کنید",
+    pick_die: "روی یک تاس یا یک مهره کلیک کنید",
     pick_which: "کدام؟",
     pick_keep: "روی دو تاسی که نگه می‌دارید کلیک کنید",
     undo: "برگرداندن",
@@ -239,6 +241,7 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    pick_die_for_piece: "Jetzt einen Würfel anklicken, um diese Figur zu ziehen (oder eine andere Figur wählen)",
     view_free: "Brett drehen",
     view_free_done: "Drehen beenden",
     view_free_hint: "Brett mit der Maus drehen, verschieben und zoomen; Figuren sind währenddessen nicht anklickbar",
@@ -259,7 +262,7 @@ export const STR = {
     view_right: "Nach rechts drehen",
     view_mine: "Meine Seite",
     view_follow: "Brett zum Spieler drehen",
-    pick_die: "Klicke einen Würfel an",
+    pick_die: "Klicke einen Würfel oder eine Figur an",
     pick_which: "Welche?",
     pick_keep: "Klicke die zwei Würfel an, die du behältst",
     undo: "Zurück",
