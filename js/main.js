@@ -161,15 +161,18 @@ class App {
     g.players.forEach((pl, i) => {
       const parts = [t(this.lang, "score", { n: g.state.scores[i] })];
       if (g.mode === "two") parts.push(t(this.lang, "cards", { n: g.cards[i] }));
-      if (g.stuck(i)) parts.push(t(this.lang, "stuck"));
-      h += `<div class="player${i === g.turn && g.winner === null ? " turn" : ""}">` +
+      if (g.stuck(i) && !g.places.includes(i)) parts.push(t(this.lang, "stuck"));
+      const place = g.places.indexOf(i);
+      if (place >= 0) parts.unshift(t(this.lang, "place", { n: place + 1 }));
+      h += `<div class="player${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}">` +
         pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
         `<span>${this.S(pl.name)}</span><span class="stats">${esc(parts.join(" · "))}</span></div>`;
     });
     h += '</div><div class="pad sep">';
-    if (g.winner !== null) {
-      h += `<div class="won">${this.T("won", { p: tr(this.lang, g.players[g.winner].name) })}</div>
-        <button class="btn primary" data-act="menu">${this.T("new_game")}</button></div>`;
+    if (g.over) {
+      h += `<div class="won">${this.T("game_over")}</div><ol class="ranking">` +
+        g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") +
+        `</ol><button class="btn primary" data-act="menu">${this.T("new_game")}</button></div>`;
       h += this.logHtml() + this.footHtml();
       el.innerHTML = h;
       this.board.sync(g.state);
@@ -431,7 +434,7 @@ class App {
 
   tick() {
     const g = this.game;
-    if (!g || g.winner !== null || !g.pending || !g.players[g.turn].isAi) return;
+    if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
     if (performance.now() < this.nextAi) return;
     this.choose(this.ais[g.turn].choose(g));

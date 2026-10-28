@@ -132,8 +132,8 @@ test("points by corridor", () => {
 
 test("full games finish", () => {
   for (let s = 0; s < 4; s++) {
-    assert.notEqual(playOne(s, "two", 3).winner, null);
-    assert.notEqual(playOne(s, "one", 4).winner, null);
+    assert.ok(playOne(s, "two", 3).over);
+    assert.ok(playOne(s, "one", 4).over);
   }
 });
 
@@ -151,8 +151,8 @@ test("4-color board: 40 fields, tunnels skip 1 or 2 corridors, points 1/4/8/10",
   assert.deepEqual(c.tunnels(), [[1, 2], [1, 3], [2, 3]]);
   assert.deepEqual(c.corridor_points, [1, 4, 8, 10]);
   for (let s = 0; s < 3; s++) {
-    assert.notEqual(playOne(s, "two", 2, 4).winner, null);
-    assert.notEqual(playOne(s, "one", 4, 4).winner, null);
+    assert.ok(playOne(s, "two", 2, 4).over);
+    assert.ok(playOne(s, "one", 4, 4).over);
   }
 });
 
@@ -256,4 +256,48 @@ test("debug mode: a double asks for the bonus die", () => {
 test("fixed games still play exactly as recorded (tests/golden.json)", () => {
   const want = JSON.parse(fs.readFileSync(new URL("./golden.json", import.meta.url), "utf8"));
   assert.deepEqual(allGames(), want);
+});
+
+// ---------------------------------------------------------------- §11 end bonuses
+test("end bonuses: clean piece, complete color, finishing places; the game goes on", () => {
+  const g = make();
+  const L = g.L, c = g.cfg;
+  // red: three pieces home, the fourth one step before Z1; yellow already complete
+  [L + 3, L + 2, L + 1].forEach((r, i) => put(g, 0, i, r));
+  put(g, 0, 3, L - 1);
+  [0, 1, 2, 3].forEach(i => put(g, 3, i, L + i));
+  g.state.hit[0][3] = false;
+  const before = g.state.copy();
+  g.state.pos[0][3] = L;                     // red 4 reaches Z1: red complete, player A done
+  g._finalBonuses(0, before);
+  assert.equal(g.state.scores[0], c.clean_piece_bonus + c.color_bonus + c.finish_bonus[0]);
+  assert.deepEqual(g.places, [0]);
+  assert.equal(g.winner, 0);
+  assert.ok(!g.over);                        // B and C play on
+  // B finishes second: game over, C last
+  const b0 = g.state.copy();
+  [1, 4].forEach(col => [0, 1, 2, 3].forEach(i => put(g, col, i, L + i)));
+  b0.hit[1] = [true, true, true, true]; g.state.hit[1] = [true, true, true, true];
+  g.state.hit[4] = [true, true, true, true];
+  g._finalBonuses(1, b0);
+  assert.equal(g.state.scores[1], 2 * c.color_bonus + c.finish_bonus[1]);
+  assert.deepEqual(g.places, [0, 1, 2]);
+  assert.ok(g.over);
+});
+
+test("a captured piece gets no clean-piece bonus", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 3, 0, 1);
+  put(g, 1, 0, g.relOf(1, 8));
+  const p = g.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === YARD);
+  assert.ok(p.state.hit[1][0]);
+});
+
+test("finished players are skipped", () => {
+  const g = make();
+  g.places = [1];
+  g.turn = 0;
+  g.pending = null;
+  g._endTurn();
+  assert.equal(g.turn, 2);
 });

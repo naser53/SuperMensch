@@ -56,7 +56,7 @@ export function mulberry32(seed) {
 
 // ---------------------------------------------------------------- state
 export class State {
-  constructor(pos, kills, hunters, scores, tunnels = null, tmark = null) {
+  constructor(pos, kills, hunters, scores, tunnels = null, tmark = null, hit = null) {
     this.pos = pos;           // pos[color][i] -> rel
     this.kills = kills;       // kills[color][i]
     this.hunters = hunters;   // hunters[player] -> null | [color, abs, dir, kills]
@@ -66,12 +66,14 @@ export class State {
     this.tunnels = tunnels || [];
     // tmark[color][i]: the piece has used a tunnel (debt rule at the threshold)
     this.tmark = tmark || pos.map(x => x.map(() => false));
+    // hit[color][i]: the piece has been captured at least once (no clean-piece bonus)
+    this.hit = hit || pos.map(x => x.map(() => false));
   }
 
   copy() {
     return new State(this.pos.map(p => p.slice()), this.kills.map(k => k.slice()),
       this.hunters.map(h => (h ? h.slice() : null)), this.scores.slice(),
-      this.tunnels.map(t => t.slice()), this.tmark.map(m => m.slice()));
+      this.tunnels.map(t => t.slice()), this.tmark.map(m => m.slice()), this.hit.map(m => m.slice()));
   }
 
   key() {
@@ -139,7 +141,9 @@ export class Game {
     this.noSix = players.map(() => 0);
     this.turn = 0;
     this.turnNo = 1;
-    this.winner = null;
+    this.winner = null;     // first player to finish
+    this.places = [];       // players in the order they finished (§11 final bonuses)
+    this.over = false;      // the game goes on until only one player is left
     this.log = [];
     this.lastDice = [];
     this.bonus = [];
@@ -359,6 +363,7 @@ export class Game {
       ns.pos[vc][vi] = YARD;
       ns.kills[vc][vi] = 0;
       ns.tmark[vc][vi] = false;
+      ns.hit[vc][vi] = true;
       ns.tunnels = ns.tunnels.filter(t => !(t[1] === vc && t[2] === vi));
     } else {
       const q = victim[1], hh = st.hunters[q];
@@ -945,21 +950,49 @@ export class Game {
   }
 
   _applyPlay(play) {
-    const p = this.turn;
+    const p = this.turn, before = this.state;
     const msgs = this._applyScore(p, play);
     this.state = play.state;
     this._cleanupHunters(this.state);
     this.log.push(M("log_play", { play: this.describe(play) }));
     for (const m of msgs) this.log.push(m);
-    if (this.hasWon(p)) {
-      this.winner = p;
-      this.log.push(M("log_win", { p: this.players[p].name }));
+    this._finalBonuses(p, before);
+  }
+
+  // §11 end bonuses: a clean piece reaches the nest, a color is complete, a player finishes.
+  // Points spent on tunnels stay spent: the final score is what is left.
+  _finalBonuses(p, before) {
+    const st = this.state, c = this.cfg, L = this.L;
+    for (const col of this.players[p].colors) {
+      st.pos[col].forEach((r, i) => {
+        if (r >= L && before.pos[col][i] < L && !st.hit[col][i] && c.clean_piece_bonus) {
+          st.scores[p] += c.clean_piece_bonus;
+          this.log.push(M("log_bonus_clean", { piece: this.moverName(["p", col, i]), pts: c.clean_piece_bonus }));
+        }
+      });
+      if (!this.colorComplete(before, col) && this.colorComplete(st, col) && c.color_bonus) {
+        st.scores[p] += c.color_bonus;
+        this.log.push(M("log_bonus_color", { color: M("color", { i: col }), pts: c.color_bonus }));
+      }
+    }
+    if (!this.hasWon(p) || this.places.includes(p)) return;
+    const pts = c.finish_bonus[this.places.length] || 0;
+    this.places.push(p);
+    st.scores[p] += pts;
+    if (this.winner === null) this.winner = p;
+    this.log.push(M("log_finish", { p: this.players[p].name, n: this.places.length, pts }));
+    const left = this.players.map((_, i) => i).filter(i => !this.places.includes(i));
+    if (left.length <= 1) {
+      this.places.push(...left);
+      this.over = true;
+      this.log.push(M("log_game_over"));
     }
   }
 
   // §5 bonuses, then the next queued throw or the next player
   _afterPlay() {
-    if (this.winner !== null) { this.pending = null; return; }
+    if (this.over) { this.pending = null; return; }
+    if (this.places.includes(this.turn)) { this._endTurn(); return; }   // finished: no bonus throws
     const tk = this._throwKind || ["none", []];
     const [kind, dice] = tk;
     const same = arr => arr.every(v => v === arr[0]);
@@ -1012,9 +1045,11 @@ export class Game {
   }
 
   _endTurn() {
-    if (this.winner !== null) { this.pending = null; return; }
-    this.turn = (this.turn + 1) % this.players.length;
-    if (this.turn === 0) this.turnNo += 1;
+    if (this.over) { this.pending = null; return; }
+    do {                                  // players who have finished are skipped
+      this.turn = (this.turn + 1) % this.players.length;
+      if (this.turn === 0) this.turnNo += 1;
+    } while (this.places.includes(this.turn));
     this._startTurn();
   }
 }

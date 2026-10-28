@@ -28,7 +28,7 @@ export function playFixed(seed, mode, n, colors, maxDec = 2500) {
   const ps = Array.from({ length: n }, (_, i) => Player(`P${i + 1}`, mode === "two" ? [i, i + colors / 2] : [i], true));
   const g = new Game(ps, mode, Config.forBoard(colors), seed, true);
   let h = 2166136261, k = 0;
-  while (g.winner === null && g.pending && k < maxDec) {
+  while (!g.over && g.pending && k < maxDec) {
     const dec = g.pending;
     if (dec.kind === "dice") {
       g.choose(new Option(null, ["dice", dec.dice.map(() => [1, 2, 3, 4, 5, 6, 6][Math.floor(rng() * 7)])]));
@@ -43,7 +43,7 @@ export function playFixed(seed, mode, n, colors, maxDec = 2500) {
     k++;
   }
   h = fnv(g.log.map(m => tr("en", m)).join("\n"), h);
-  return { seed, mode, n, colors, decisions: k, winner: g.winner, rounds: g.turnNo, hash: h };
+  return { seed, mode, n, colors, decisions: k, places: g.places, scores: g.state.scores, rounds: g.turnNo, hash: h };
 }
 
 export function allGames() {

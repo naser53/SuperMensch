@@ -131,3 +131,6 @@ label.check.on { color: var(--accent); }
   35% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; } }
 .views { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .views .btn { padding: 5px 9px; font-size: 13px; }
+.player.done { opacity: .75; }
+.ranking { margin: 0 0 14px; padding: 0; list-style: none; }
+.ranking li { margin: 4px 0; }

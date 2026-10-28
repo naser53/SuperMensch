@@ -9,6 +9,13 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    log_bonus_clean: "  {piece} reaches the nest without ever being captured: +{pts}",
+    log_bonus_color: "  {color} is complete: +{pts}",
+    log_finish: "{p} finishes in place {n} (+{pts})",
+    log_game_over: "Game over.",
+    game_over: "Game over",
+    place: "Place {n}",
+    final_score: "{n} points",
     pick_piece: "Now click the piece that moves with this die",
     need_die: "First choose a die",
     view_top: "Top",
@@ -113,6 +120,13 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    log_bonus_clean: "  {piece} بدون اینکه زده شود به آشیانه رسید: +{pts}",
+    log_bonus_color: "  رنگ {color} کامل شد: +{pts}",
+    log_finish: "{p} در جایگاه {n} تمام کرد (+{pts})",
+    log_game_over: "بازی تمام شد.",
+    game_over: "بازی تمام شد",
+    place: "جایگاه {n}",
+    final_score: "{n} امتیاز",
     pick_piece: "حالا روی مهره‌ای کلیک کنید که با این تاس حرکت کند",
     need_die: "اول یک تاس انتخاب کنید",
     view_top: "از بالا",
@@ -217,6 +231,13 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    log_bonus_clean: "  {piece} erreicht das Ziel, ohne je geschlagen worden zu sein: +{pts}",
+    log_bonus_color: "  {color} ist komplett: +{pts}",
+    log_finish: "{p} beendet auf Platz {n} (+{pts})",
+    log_game_over: "Spiel vorbei.",
+    game_over: "Spiel vorbei",
+    place: "Platz {n}",
+    final_score: "{n} Punkte",
     pick_piece: "Jetzt die Figur anklicken, die mit diesem Würfel zieht",
     need_die: "Zuerst einen Würfel wählen",
     view_top: "Von oben",
