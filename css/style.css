@@ -141,6 +141,16 @@ label.check.on { color: var(--accent); }
 .views .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
 #stage.viewmode { box-shadow: inset 0 0 0 4px var(--hi); }
 
+#info { position: fixed; inset: 0; background: rgba(30, 26, 20, .45); z-index: 20; overflow-y: auto; padding: 24px 16px; }
+#info .info-card { max-width: 560px; margin: 0 auto; background: var(--panel); border-radius: 12px; padding: 18px 22px 22px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+#info h2 { margin: 0; font-size: 20px; }
+#info h3 { margin: 18px 0 6px; font-size: 15px; }
+.info-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.info-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.info-table td.pts { text-align: end; font-weight: 700; white-space: nowrap; }
+.info-table tr:nth-child(odd) td { background: #faf8f2; }
+
 @media (max-width: 520px) {
   body { font-size: 14px; }
   #setup .card { padding: 20px 16px 32px; }

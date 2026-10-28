@@ -41,6 +41,7 @@ class App {
     this.hint = hint;
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
+      if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
       if (e.key === "Escape" && this.game) this.showSetup();
     });
     this.showSetup();
@@ -53,6 +54,7 @@ class App {
 
   setLang(l) {
     this.lang = l;
+    if (!$("#info").hidden) setTimeout(() => this.showInfo(true));
     this.persist();
     document.documentElement.lang = l;
     document.documentElement.dir = this.rtl ? "rtl" : "ltr";
@@ -417,6 +419,7 @@ class App {
       <button class="btn${this.board.viewMode ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(this.board.viewMode ? "view_free_done" : "view_free")}</button></div>
       <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
       <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
+      <button class="btn" data-act="info">${this.T("info")}</button>
       <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div></div>`;
   }
 
@@ -474,6 +477,47 @@ class App {
     }
   }
 
+  // ------------------------------------------------------------ info: the scoring of this board
+  showInfo(on) {
+    const el = $("#info");
+    el.hidden = !on;
+    if (!on) return;
+    const g = this.game, c = g.cfg, L = this.lang, n = c.n_colors;
+    const N = x => esc(num(L, x));
+    const P = (sign, x) => `<bdi dir="ltr">${sign}${N(x)}</bdi>`;   // a signed number, kept in one piece
+    const row = (a, b) => `<tr><td>${a}</td><td class="pts">${b}</td></tr>`;
+    const table = (title, rows) => `<h3>${this.T(title)}</h3><table class="info-table"><tbody>${rows.join("")}</tbody></table>`;
+    const corr = [];
+    for (let k = 1; k <= n; k++) {
+      const name = k === 1 ? this.T("info_corr_first", { n: N(1) }) : k === n ? this.T("info_corr_final", { n: N(n) }) : this.T("info_corr", { n: N(k) });
+      corr.push(row(name, N(c.corridor_points[Math.min(k - 1, c.corridor_points.length - 1)])));
+    }
+    corr.push(row(this.T("info_gate"), P("+", c.gate_bonus)));
+    corr.push(row(this.T("info_threshold"), P("+", c.threshold_bonus)));
+    const brk = [row(this.T("info_wall"), P("+", c.wall_break)), row(this.T("info_castle"), P("+", c.castle_break))];
+    const ranks = [
+      row(this.T("info_general", { n: N(c.general_at) }), P("×", c.general_mult)),
+      row(this.T("info_marshal", { n: N(c.marshal_at) }), P("×", c.marshal_mult)),
+      row(this.T("info_hit_general"), P("+", c.general_bounty) + " / " + P("−", c.general_bounty)),
+      row(this.T("info_hit_marshal"), P("+", c.marshal_bounty) + " / " + P("−", c.marshal_bounty)),
+    ];
+    const end = [row(this.T("info_clean"), P("+", c.clean_piece_bonus)), row(this.T("info_color"), P("+", c.color_bonus))];
+    c.finish_bonus.forEach((b, k) => end.push(row(this.T("info_place", { n: N(k + 1) }), P("+", b))));
+    const tun = [];
+    const skips = [...new Set(c.tunnels().map(([a, b]) => b - a))].sort();
+    for (const k of skips) {
+      const [, , T] = g.tunnelGeom(1, 1 + k);
+      tun.push(row(this.T("info_tunnel", { k: N(k), f: N(T) }), P("−", c.tunnel_costs[k - 1])));
+    }
+    el.dir = this.rtl ? "rtl" : "ltr";
+    el.innerHTML = `<div class="info-card"><div class="row between"><h2>${this.T("info_title", { n: N(n) })}</h2>
+      <button class="btn" data-act="info_close">${this.T("close")}</button></div>
+      <p class="muted small">${this.T("info_lead")}</p>
+      ${table("info_hits", corr)}${table("info_breaks", brk)}${table("info_ranks", ranks)}
+      ${table("info_end", end)}${table("info_tunnels", tun)}
+      <p class="muted small">${this.T("info_note")}</p></div>`;
+  }
+
   // Board views, as in chess programs: from above, angled, low; turn by one seat; my side.
   view(name) {
     const g = this.game;
@@ -503,6 +547,7 @@ class App {
 // ------------------------------------------------------------ event wiring
 function wire(app) {
   document.addEventListener("click", e => {
+    if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
     const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay],[data-view]");
     if (!b) return;
     if (b.closest("#setup")) {
@@ -537,6 +582,8 @@ function wire(app) {
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
+    else if (act === "info") app.showInfo(true);
+    else if (act === "info_close") app.showInfo(false);
   });
   document.addEventListener("contextmenu", e => {
     const b = e.target.closest("[data-die]");
