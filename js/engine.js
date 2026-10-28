@@ -1007,8 +1007,12 @@ export class Game {
         }
       }
     } else if (kind === "bonus1") {
+      // a single bonus die goes on with a 6 (from then on only 6 continues) or with the pair's number
       const v = tk[2], d = dice[0];
-      if (d === v) this.bonus.push(["single", v]);
+      if (d === 6) this.bonus.push(["single", 6]);
+      else if (d === v) this.bonus.push(["single", v]);
+    } else if (kind === "single_mode") {
+      if (dice[0] === 6) this.bonus.push(["single", 6]);          // §7: a 6 always throws again
     }
     this._nextBonus();
   }

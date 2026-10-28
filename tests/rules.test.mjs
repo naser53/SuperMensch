@@ -301,3 +301,53 @@ test("finished players are skipped", () => {
   g._endTurn();
   assert.equal(g.turn, 2);
 });
+
+// ---------------------------------------------------------------- §5 single six
+function bonusChain(g, first, rolls) {
+  // play: "first" dice, then answer every bonus die from "rolls"; returns how many bonus dice were asked for
+  g.manual = true;
+  g.pending = new Decision("pre_roll", 0, [new Option("r", "roll")]);
+  g.choose(g.pending.options[0]);
+  g.choose(new Option(null, ["dice", first]));
+  let asked = 0;
+  for (;;) {
+    while (g.pending && g.pending.kind === "play" && g.turn === 0) g.choose(g.pending.options[0]);
+    if (!g.pending || g.pending.kind !== "dice" || g.turn !== 0 || g.pending.dice.length !== 1 || asked >= rolls.length) break;
+    g.choose(new Option(null, ["dice", [rolls[asked++]]]));
+  }
+  return asked;
+}
+
+test("bonus die after a pair: a 6 goes on, then only 6", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 3, 0, 1); put(g, 0, 1, 20);
+  // 1-1, then bonus 6 (goes on), then 1 (stops: after a 6 only 6 continues)
+  assert.equal(bonusChain(g, [1, 1], [6, 1, 3]), 2);
+  const h = make();
+  put(h, 0, 0, 5); put(h, 3, 0, 1); put(h, 0, 1, 20);
+  // 1-1, then 1 (goes on), then 6 (goes on), then 6 (goes on), then 2 (stops)
+  assert.equal(bonusChain(h, [1, 1], [1, 6, 6, 2, 4]), 4);
+});
+
+test("6 with another number in a normal throw: no bonus", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 3, 0, 1);
+  assert.equal(bonusChain(g, [6, 3], [6]), 0);
+});
+
+test("single-color game: a 6 throws again, as long as 6 comes", () => {
+  const g = make("one");
+  put(g, 0, 0, 5);
+  g.manual = true;
+  g._startTurn();
+  const throwOne = v => {
+    g.choose(new Option(null, ["dice", [v]]));
+    while (g.pending && g.pending.kind === "play") g.choose(g.pending.options[0]);
+  };
+  throwOne(6);
+  assert.equal(g.turn, 0);                 // again
+  throwOne(6);
+  assert.equal(g.turn, 0);                 // and again
+  throwOne(4);
+  assert.equal(g.turn, 1);                 // next player
+});
