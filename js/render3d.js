@@ -647,11 +647,123 @@ export class Board3D {
     return {};
   }
 
+  // ------------------------------------------------------------ move animation
+  // A move is shown field by field: the piece hops along its path; a captured piece
+  // flies back to its yard after the capturing piece has landed.
+  isAnimating() { return performance.now() < (this.animEnd || 0); }
+
+  // waypoints of mover m from state a to state b
+  moverPath(a, b, m) {
+    const g = this.game, L = g.L;
+    if (m[0] === "p") {
+      const [, col, i] = m, r0 = a.pos[col][i], r1 = b.pos[col][i];
+      const at = st => this.piecePos(st, col, i);
+      if (r0 === YARD || r0 === TUN || r1 === TUN || r1 === YARD || r0 === r1) return [at(a), at(b)];
+      const end = r1 < r0 ? r1 + L : r1;               // r1 < r0: a lap again (tunnel debt)
+      const pts = [];
+      const tmp = a.copy();
+      for (let x = r0; x <= end; x++) {
+        tmp.pos[col][i] = end === r1 ? x : x % L;
+        pts.push(this.piecePos(tmp, col, i));
+      }
+      return pts;
+    }
+    const p = m[1], h0 = a.hunters[p], h1 = b.hunters[p];
+    if (!h1) return null;
+    if (!h0) {                                          // the hunter comes in from the yard
+      const ghost = this.hunterGhosts && this.hunterGhosts.get(p);
+      const from = ghost ? ghost.position.clone() : this.xz(this.data.track[h1[1]], this.surfaceY());
+      return [from, this.xz(this.data.track[h1[1]], this.surfaceY())];
+    }
+    const n = ((h1[1] - h0[1]) * h0[2] % L + L) % L, pts = [];
+    for (let k = 0; k <= n; k++) pts.push(this.xz(this.data.track[((h0[1] + h0[2] * k) % L + L) % L], this.surfaceY()));
+    return pts;
+  }
+
+  meshOf(m) {
+    return m[0] === "p" ? this.pieceMeshes.get(`${m[1]},${m[2]}`) : this.hunterMeshes.get(m[1]);
+  }
+
+  // entries: [{before, after, step}] in order; hop = ms per field
+  animateSteps(entries, hop = 140) {
+    const now = performance.now();
+    let t = Math.max(now, this.animEnd || 0);
+    for (const { before, after, step } of entries) {
+      const m = step.mover[0] === "hn" ? ["h", step.mover[1]] : step.mover;
+      const grp = this.meshOf(m), pts = this.moverPath(before, after, step.mover);
+      if (grp && pts && pts.length > 1) {
+        const dur = hop * (pts.length - 1) * (pts.length === 2 ? 2.2 : 1);
+        grp.userData.moves = (grp.userData.moves || []).concat([{ pts, t0: t, dur }]);
+        t += dur;
+      }
+      for (const c of step.captures) {
+        if (c.victim[0] !== "p") continue;
+        const [, vc, vi] = c.victim, vg = this.meshOf(c.victim);
+        if (!vg) continue;
+        vg.userData.moves = (vg.userData.moves || []).concat([{ pts: [this.piecePos(before, vc, vi), this.piecePos(after, vc, vi)],
+          t0: t, dur: 420, high: true }]);
+        t += 220;
+      }
+    }
+    this.animEnd = t + 60;
+    return this.animEnd;
+  }
+
+  // position a piece from its animation queue; false when it has nothing to play
+  playMove(grp, now) {
+    const q = grp.userData.moves;
+    if (!q || !q.length) return false;
+    const mv = q[0];
+    if (now < mv.t0) { grp.position.copy(mv.pts[0]); return true; }
+    const u = Math.min(1, (now - mv.t0) / mv.dur), n = mv.pts.length - 1;
+    const f = u * n, j = Math.min(n - 1, Math.floor(f)), w = f - j;
+    const a = mv.pts[j], b = mv.pts[j + 1];
+    grp.position.lerpVectors(a, b, w);
+    grp.position.y += Math.sin(Math.PI * w) * (mv.high ? 1.6 : 0.45);
+    if (u >= 1) { grp.position.copy(mv.pts[n]); q.shift(); }
+    return true;
+  }
+
+  // ------------------------------------------------------------ scores view
+  // Over every pawn: the points it has won (big) and how many pieces it has captured (×n).
+  showScores(st, fmt) {
+    if (this.scoreSprites) for (const sp of this.scoreSprites) sp.parent && sp.parent.remove(sp);
+    this.scoreSprites = [];
+    if (!st) return;
+    for (const [k, grp] of this.pieceMeshes) {
+      const [col, i] = k.split(",").map(Number);
+      if (st.pos[col][i] === YARD && !st.earned[col][i] && !st.hits[col][i]) continue;   // keep the yards calm
+      const pts = fmt(st.earned[col][i]), hits = fmt(st.hits[col][i]);
+      const tex = canvasTex(168, 104, (g, w, h) => {
+        g.fillStyle = "rgba(255,255,255,0.95)";
+        g.strokeStyle = COLORS[col]; g.lineWidth = 6;
+        g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 18); g.fill(); g.stroke();
+        g.fillStyle = "#2b2b2b"; g.textAlign = "center"; g.textBaseline = "middle";
+        g.font = "700 50px Vazirmatn, sans-serif";
+        g.fillText(pts, w / 2, 40);
+        g.font = "700 32px Vazirmatn, sans-serif";
+        g.fillStyle = "#b83b37";
+        g.fillText("× " + hits, w / 2, 80);
+      });
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+      sp.scale.set(1.25, 0.77, 1);
+      sp.position.y = 2.05;
+      sp.renderOrder = 12;
+      grp.add(sp);
+      this.scoreSprites.push(sp);
+    }
+  }
+
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     const k = 1 - Math.exp(-dt * 9);
     const tnow = performance.now() / 1000;
+    const now = performance.now();
     for (const grp of this.pieceGroup.children) {
+      if (this.playMove(grp, now)) {
+        if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
+        continue;
+      }
       const tg = grp.userData.target;
       if (!tg) continue;
       const flat = new THREE.Vector3(tg.x - grp.position.x, 0, tg.z - grp.position.z);

@@ -9,6 +9,9 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    scores: "Scores",
+    scores_on: "Scores view: the game is paused. Press Scores again to go on.",
+    scores_legend: "Over each piece: the points it has won, and × how many pieces it has captured.",
     hunter_ready: "Your hunter can come in: click the pale diamond with ? (with a 6).",
     info: "Info",
     close: "Close",
@@ -151,6 +154,9 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    scores: "Scores",
+    scores_on: "نمای امتیازها: بازی قفل است. برای ادامه دوباره «Scores» را بزنید.",
+    scores_legend: "بالای هر مهره: امتیازی که آن مهره گرفته، و × تعداد مهره‌هایی که زده است.",
     hunter_ready: "شکارچی شما می‌تواند وارد شود: روی الماس کم‌رنگ با علامت ? کلیک کنید (با تاس ۶).",
     info: "Info",
     close: "بستن",
@@ -293,6 +299,9 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    scores: "Punkte",
+    scores_on: "Punkteansicht: das Spiel pausiert. Zum Weiterspielen nochmals Punkte drücken.",
+    scores_legend: "Über jeder Figur: die Punkte, die sie gewonnen hat, und × wie viele Figuren sie geschlagen hat.",
     hunter_ready: "Dein Jäger kann hinein: klicke den blassen Diamanten mit ? an (mit einer 6).",
     info: "Info",
     close: "Schließen",

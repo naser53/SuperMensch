@@ -243,8 +243,19 @@ class App {
       h += '<div class="grow"></div>';
     }
     this.shownOpts = opts;
+    if (this.scoresMode) {
+      h = h.replace('<div class="grow"></div>', "").replace('<div class="options grow">', '<div class="options grow" hidden>');
+      h += `<div class="pad scores-note"><b>${this.T("scores_on")}</b><div class="small">${this.T("scores_legend")}</div></div><div class="grow"></div>`;
+    }
     h += this.logHtml() + this.footHtml();
     el.innerHTML = h;
+    if (g.lastDice !== this.diceRef) {      // a new throw: let the dice tumble
+      const prev = this.diceRef || [], now = g.lastDice;
+      const kept = now.length === 2 && prev.length === 3 &&
+        now.every((v, k) => prev.filter(x => x === v).length >= now.filter((x, j) => x === v && j <= k).length);
+      this.diceRef = now;
+      if (now.length && !kept && !(dec && dec.kind === "dice")) this.rollDice();
+    }
     this.board.sync(shown, this.sel && this.sel.piece);
     this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
     if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
@@ -302,18 +313,67 @@ class App {
 
   pickCandidate(c) {
     const sel = this.sel;
+    const before = sel.picks.length ? sel.picks[sel.picks.length - 1].state : this.game.state;
+    const entry = [{ before, after: c.state, step: c.step }];
     sel.picks.push(c);
     sel.die = null;
     sel.ambig = null;
     sel.piece = null;
     const done = this.matching().filter(q => q.steps.length === sel.picks.length);
-    if (done.length) { this.choose(done[0].option); return; }
+    if (done.length) { this.choose(done[0].option, entry); return; }
     this.autoDie();
+    this.render();
+    this.board.animateSteps(entry, this.hop());
+  }
+
+  hop() { return Math.max(50, Math.min(200, this.delay * 0.22)); }
+
+  // the play step by step, for the animation: [{before, after, step}]
+  replay(play) {
+    const g = this.game, structs = g.structures(g.state), out = [];
+    let cur = g.state;
+    for (const s of play.steps) {
+      const r = g.step(cur, g.turn, s.mover, s.die, structs, play.target);
+      if (!r) break;
+      out.push({ before: cur, after: r[0], step: r[1] });
+      cur = r[0];
+    }
+    return out;
+  }
+
+  // waiting for an animation (move or dice), or locked by the scores view
+  busy() {
+    return this.scoresMode || this.board.isAnimating() || performance.now() < (this.rollUntil || 0);
+  }
+
+  // Dice roll: the faces tumble for half a second, then show the real numbers.
+  rollDice() {
+    this.rollUntil = performance.now() + 520;
+    clearInterval(this.rollTimer);
+    this.rollTimer = setInterval(() => {
+      const left = this.rollUntil - performance.now();
+      document.querySelectorAll("#panel .dice .die:not(.edit)").forEach(d => {
+        if (left <= 0) { d.classList.remove("rolling"); return; }
+        d.classList.add("rolling");
+        const v = 1 + Math.floor(Math.random() * 6);
+        d.querySelectorAll("i").forEach((pip, k) => pip.classList.toggle("on", PIPS[v].includes(k)));
+      });
+      if (left <= 0) { clearInterval(this.rollTimer); this.render(); }
+    }, 65);
+  }
+
+  toggleScores() {
+    const g = this.game;
+    this.scoresMode = !this.scoresMode;
+    const shown = this.sel && this.sel.picks.length ? this.sel.picks[this.sel.picks.length - 1].state : g.state;
+    this.board.showScores(this.scoresMode ? shown : null, x => num(this.lang, x));
+    if (!this.scoresMode) this.nextAi = performance.now() + this.delay;
     this.render();
   }
 
   clickDie(k, ev) {
     const g = this.game, dec = g.pending, sel = this.sel;
+    if (this.busy()) return;
     if (!dec || g.players[g.turn].isAi) return;
     if (this.board.viewMode) this.board.setViewMode(false);   // back to playing
     if (dec.kind === "keep") {
@@ -424,15 +484,20 @@ class App {
       <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
       <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
       <button class="btn" data-act="info">${this.T("info")}</button>
+      <button class="btn${this.scoresMode ? " on" : ""}" data-act="scores">${this.T("scores")}</button>
       <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div></div>`;
   }
 
   // ------------------------------------------------------------ actions
-  choose(opt) {
-    this.game.choose(opt);
+  choose(opt, entries = null) {
+    const g = this.game, dec = g.pending;
+    if (!entries && dec && dec.kind === "play" && opt.payload && opt.payload.steps) entries = this.replay(opt.payload);
+    g.choose(opt);
     this.aiPlan = null;
-    this.nextAi = performance.now() + this.delay;
     this.render();
+    let end = performance.now();
+    if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
+    this.nextAi = end + this.delay;
   }
 
   setDebug(on) {
@@ -454,6 +519,7 @@ class App {
   // The hunter enters by clicking the gate of its completed color (then: which direction).
   boardClick(hit, ev) {
     const g = this.game, sel = this.sel;
+    if (this.busy()) return;
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
     if (hit.target !== undefined && sel.piece) {     // a highlighted field of the selected piece
@@ -543,6 +609,7 @@ class App {
     const g = this.game;
     if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
+    if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
     if (performance.now() < this.nextAi) return;
     this.choose(this.ais[g.turn].choose(g));
   }
@@ -566,6 +633,7 @@ function wire(app) {
       app.render();
       return;
     }
+    if (app.scoresMode && !["scores", "info", "info_close", "menu"].includes(b.dataset.act) && b.dataset.view === undefined) return;
     if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie, e); return; }
     if (b.dataset.view !== undefined) { app.view(b.dataset.view); return; }
     if (b.dataset.pay !== undefined) {
@@ -587,6 +655,7 @@ function wire(app) {
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
     else if (act === "info") app.showInfo(true);
+    else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
   });
   document.addEventListener("contextmenu", e => {

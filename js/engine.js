@@ -56,7 +56,7 @@ export function mulberry32(seed) {
 
 // ---------------------------------------------------------------- state
 export class State {
-  constructor(pos, kills, hunters, scores, tunnels = null, tmark = null, hit = null) {
+  constructor(pos, kills, hunters, scores, tunnels = null, tmark = null, hit = null, earned = null, hits = null) {
     this.pos = pos;           // pos[color][i] -> rel
     this.kills = kills;       // kills[color][i]
     this.hunters = hunters;   // hunters[player] -> null | [color, abs, dir, kills]
@@ -68,12 +68,17 @@ export class State {
     this.tmark = tmark || pos.map(x => x.map(() => false));
     // hit[color][i]: the piece has been captured at least once (no clean-piece bonus)
     this.hit = hit || pos.map(x => x.map(() => false));
+    // for the "scores" view only (no rule reads them): points each piece has won and
+    // how many pieces it has captured, over the whole game (not reset when it is captured)
+    this.earned = earned || pos.map(x => x.map(() => 0));
+    this.hits = hits || pos.map(x => x.map(() => 0));
   }
 
   copy() {
     return new State(this.pos.map(p => p.slice()), this.kills.map(k => k.slice()),
       this.hunters.map(h => (h ? h.slice() : null)), this.scores.slice(),
-      this.tunnels.map(t => t.slice()), this.tmark.map(m => m.slice()), this.hit.map(m => m.slice()));
+      this.tunnels.map(t => t.slice()), this.tmark.map(m => m.slice()), this.hit.map(m => m.slice()),
+      this.earned.map(m => m.slice()), this.hits.map(m => m.slice()));
   }
 
   key() {
@@ -679,6 +684,15 @@ export class Game {
     return M("soldier");
   }
 
+  // the "scores" view: points shared by the pieces that made a capture or a break
+  _credit(st, movers, pts, captures) {
+    const ps = movers.filter(m => m[0] === "p");
+    ps.forEach((m, k) => {
+      st.earned[m[1]][m[2]] += Math.floor(pts / ps.length) + (k < pts % ps.length ? 1 : 0);
+      st.hits[m[1]][m[2]] += captures;
+    });
+  }
+
   _applyScore(p, play) {
     const st = play.state, msgs = [];
     let caps = [];
@@ -695,6 +709,7 @@ export class Game {
       const n = caps.length;
       const bonus = n >= 3 ? this.cfg.castle_break : this.cfg.wall_break;
       st.scores[p] += best + bonus;
+      this._credit(st, caps.map(([s]) => s.mover), best + bonus, 1);
       for (const [q, b] of pen) st.scores[q] -= b;
       msgs.push(M("log_score_break", { what: M(n >= 3 ? "castle" : "wall"), pts: best + bonus }));
       return msgs;
@@ -707,6 +722,7 @@ export class Game {
     if (wall.length === 2) {
       const best = Math.max(...wall.map(c => this.piecePoints(c.color, c.rel) + this.bounty(c.vkills)));
       st.scores[p] += best + this.cfg.wall_break;
+      this._credit(st, caps.filter(([, c]) => wall.includes(c)).map(([s]) => s.mover), best + this.cfg.wall_break, 1);
       for (const c of wall) {
         const b = this.bounty(c.vkills);
         if (b) st.scores[this.ownerOf(c.victim)] -= b;
@@ -730,6 +746,7 @@ export class Game {
       const base = this.piecePoints(c.color, c.rel) * mult;
       const b = this.bounty(c.vkills);
       st.scores[p] += base + b;
+      this._credit(st, [m], base + b, 1);
       if (b) st.scores[this.ownerOf(c.victim)] -= b;
       const extra = b ? M("log_bounty", { b, rank: this.rankName(c.vkills) }) : "";
       msgs.push(M("log_score_hit", { v: this.moverName(c.victim, this.state), pts: base, extra }));
