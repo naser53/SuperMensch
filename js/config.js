@@ -25,8 +25,8 @@ export class Config {
       marshal_points: 25,       // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
-      general_bounty: 40,       // GENERAL_BOUNTY
-      marshal_bounty: 60,       // MARSHAL_BOUNTY
+      general_bounty: 10,       // GENERAL_BOUNTY
+      marshal_bounty: 15,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
 
       tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3

@@ -352,14 +352,14 @@ test("single-color game: a 6 throws again, as long as 6 comes", () => {
   assert.equal(g.turn, 1);                 // next player
 });
 
-test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 40 / 60; tunnels 80 / 120 / 160", () => {
+test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 10 / 15; tunnels 80 / 120 / 160", () => {
   const g = make();
   assert.equal(g.rankName(14).key, "soldier");
   assert.equal(g.rankName(15).key, "general");
   assert.equal(g.rankName(24).key, "general");
   assert.equal(g.rankName(25).key, "marshal");
-  assert.equal(g.bounty(15), 40);
-  assert.equal(g.bounty(25), 60);
+  assert.equal(g.bounty(15), 10);
+  assert.equal(g.bounty(25), 15);
   assert.equal(g.tunnelCost(1, 2), 80);
   assert.equal(g.tunnelCost(1, 3), 120);
   assert.equal(g.tunnelCost(1, 4), 160);
