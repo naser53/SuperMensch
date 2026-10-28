@@ -9,7 +9,7 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
-    pick_die_for_piece: "Now click a die to move this piece (or click another piece)",
+    pick_die_for_piece: "Click a yellow field or a die to move this piece (or click another piece)",
     view_free: "Turn the board",
     view_free_done: "Done turning",
     view_free_hint: "Turn, move and zoom the board with the mouse; pieces cannot be clicked meanwhile",
@@ -125,7 +125,7 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
-    pick_die_for_piece: "حالا روی تاسی کلیک کنید که این مهره با آن حرکت کند (یا مهره‌ی دیگری را انتخاب کنید)",
+    pick_die_for_piece: "روی یک خانه‌ی زرد یا یک تاس کلیک کنید تا این مهره حرکت کند (یا مهره‌ی دیگری را انتخاب کنید)",
     view_free: "تغییر زاویه",
     view_free_done: "پایان تغییر زاویه",
     view_free_hint: "چرخاندن، جابه‌جایی و زوم صفحه با ماوس؛ در این حالت روی مهره‌ها نمی‌شود کلیک کرد",
@@ -241,7 +241,7 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
-    pick_die_for_piece: "Jetzt einen Würfel anklicken, um diese Figur zu ziehen (oder eine andere Figur wählen)",
+    pick_die_for_piece: "Ein gelbes Feld oder einen Würfel anklicken, um diese Figur zu ziehen (oder eine andere Figur wählen)",
     view_free: "Brett drehen",
     view_free_done: "Drehen beenden",
     view_free_hint: "Brett mit der Maus drehen, verschieben und zoomen; Figuren sind währenddessen nicht anklickbar",

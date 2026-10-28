@@ -78,7 +78,8 @@ export class Board3D {
     this.tunnelGroup = new THREE.Group();
     this.previewGroup = new THREE.Group();
     this.pieceGroup = new THREE.Group();
-    this.scene.add(this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup);
+    this.targetGroup = new THREE.Group();
+    this.scene.add(this.targetGroup, this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup);
 
     this.pawnGeo = pawnGeometry();
     this.pieceMeshes = new Map();   // "col,i" -> group
@@ -197,7 +198,7 @@ export class Board3D {
     this.playerName = playerName;    // (playerIndex) -> display text
     this.n = game.cfg.n_colors;
     this.data = BOARDS[String(this.n)];
-    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup]) g.clear();
+    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
     this.hunterMeshes.clear();
     this.buildBoard();
@@ -372,8 +373,11 @@ export class Board3D {
         r1.rotation.x = Math.PI / 2; r1.position.y = 0.06; r1.visible = false;
         const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 10, 40), gold);
         r2.rotation.x = Math.PI / 2; r2.position.y = 0.66; r2.visible = false;
-        grp.add(r1, r2);
-        grp.userData = { piece: ["p", col, i], r1, r2, hop: 0 };
+        const g1 = this.starSprite(1), g2 = this.starSprite(2);   // general: one star, marshal: two
+        g1.position.y = g2.position.y = 1.52;
+        g1.visible = g2.visible = false;
+        grp.add(r1, r2, g1, g2);
+        grp.userData = { piece: ["p", col, i], r1, r2, g1, g2, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -382,14 +386,39 @@ export class Board3D {
     }
   }
 
-  hunterMesh(p, color) {
+  // Gold stars over a pawn's number: 1 = general, 2 = marshal.
+  starSprite(n) {
+    const tex = canvasTex(64 * n + 16, 72, (g, w, h) => {
+      for (let k = 0; k < n; k++) {
+        const cx = 40 + 64 * k, cy = 38, R = 30, r = 12.5;
+        g.beginPath();
+        for (let j = 0; j < 10; j++) {
+          const a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r : R;
+          g.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+        }
+        g.closePath();
+        g.fillStyle = "#f2b705"; g.fill();
+        g.lineWidth = 5; g.strokeStyle = "#7a5200"; g.stroke();
+      }
+    });
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+    s.scale.set(0.38 * (64 * n + 16) / 72, 0.38, 1);
+    s.renderOrder = 11;
+    return s;
+  }
+
+  // The hunter: a turning diamond with F (forward) or R (backward) over it.
+  hunterMesh(p, color, dir) {
     const grp = new THREE.Group();
     const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.42),
       new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.2 }));
     m.position.y = 0.45; m.castShadow = true;
     m.userData.piece = ["h", p];
-    grp.add(m);
-    grp.userData = { piece: ["h", p], body: m };
+    const lab = this.numberSprite(dir === 1 ? "F" : "R", color);
+    lab.position.y = 1.12;
+    lab.scale.set(0.42, 0.42, 1);
+    grp.add(m, lab);
+    grp.userData = { piece: ["h", p], body: m, dir };
     this.pieceGroup.add(grp);
     return grp;
   }
@@ -435,20 +464,25 @@ export class Board3D {
       const [col, i] = k.split(",").map(Number);
       grp.userData.target = this.piecePos(st, col, i);
       const kills = st.kills[col][i];
-      grp.userData.r1.visible = kills >= g.cfg.general_at;
-      grp.userData.r2.visible = kills >= g.cfg.marshal_at;
+      const marshal = kills >= g.cfg.marshal_at, general = kills >= g.cfg.general_at;
+      grp.userData.r1.visible = general;
+      grp.userData.r2.visible = marshal;
+      grp.userData.g1.visible = general && !marshal;
+      grp.userData.g2.visible = marshal;
       const sel = highlight && highlight[0] === "p" && highlight[1] === col && highlight[2] === i;
       grp.children[0].material.emissive?.set(sel ? "#664400" : "#000000");
       grp.scale.setScalar(sel ? 1.12 : 1);
     }
     st.hunters.forEach((h, p) => {
       let grp = this.hunterMeshes.get(p);
-      if (!h) {
-        if (grp) { this.pieceGroup.remove(grp); this.hunterMeshes.delete(p); }
-        return;
+      if (grp && (!h || grp.userData.dir !== h[2])) {
+        this.pieceGroup.remove(grp);
+        this.hunterMeshes.delete(p);
+        grp = null;
       }
+      if (!h) return;
       if (!grp) {
-        grp = this.hunterMesh(p, COLORS[h[0]]);
+        grp = this.hunterMesh(p, COLORS[h[0]], h[2]);
         grp.position.copy(this.xz(this.data.yard[h[0]][0], this.surfaceY()));
         this.hunterMeshes.set(p, grp);
       }
@@ -536,10 +570,36 @@ export class Board3D {
     return this.xz(this.data.track[h[1]], this.surfaceY());
   }
 
+  // Fields the selected piece can reach: pulsing rings with the die value; a click moves there.
+  showTargets(list) {
+    this.targetGroup.clear();
+    for (const t of list) {
+      const grp = new THREE.Group();
+      grp.position.set(t.pos.x, this.surfaceY() + 0.02, t.pos.z);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(FIELD_R * 1.05, 0.07, 10, 40),
+        new THREE.MeshBasicMaterial({ color: HILITE }));
+      ring.rotation.x = Math.PI / 2;
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.04, 32),
+        new THREE.MeshBasicMaterial({ color: HILITE, transparent: true, opacity: 0.35, depthWrite: false }));
+      const lab = this.numberSprite(String(t.label), "#b8860b");
+      lab.position.y = 0.55;
+      lab.scale.set(0.3, 0.3, 1);
+      // a tall invisible column, so a pawn on the field does not hide the target from clicks
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R, FIELD_R, 1.2, 12),
+        new THREE.MeshBasicMaterial({ visible: false }));
+      col.position.y = 0.6;
+      for (const m of [ring, disc, lab, col]) { m.userData.targetId = t.id; grp.add(m); }
+      grp.userData.pulse = ring;
+      this.targetGroup.add(grp);
+    }
+  }
+
   pick(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
+    for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
+      if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
     for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))
       if (h.object.userData.piece) return { piece: h.object.userData.piece };
     for (const h of this.raycaster.intersectObjects(this.boardGroup.children, false))
@@ -563,6 +623,8 @@ export class Board3D {
       if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
     }
     this.stepAnim();
+    const pulse = 1 + 0.12 * Math.sin(tnow * 6);
+    for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }

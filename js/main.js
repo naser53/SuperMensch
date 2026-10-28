@@ -241,6 +241,7 @@ class App {
     h += this.logHtml() + this.footHtml();
     el.innerHTML = h;
     this.board.sync(shown, this.sel && this.sel.piece);
+    this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
     if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
       this.followedDec = dec;
       if (this.follow && dec && !p.isAi && this.lastFollow !== g.turn) this.board.setView({ side: p.colors[0] });
@@ -349,6 +350,23 @@ class App {
     return new Set(this.matching().filter(q => isMe(q.steps[n].mover)).map(q => q.dieIdx[n]));
   }
 
+  // Where the selected piece can go: one target per usable die (equal dice: one target).
+  pieceTargets() {
+    const sel = this.sel, n = sel.picks.length, isMe = this.moverMatcher(sel.piece), out = [];
+    const seen = new Set();
+    for (const q of this.matching()) {
+      if (!isMe(q.steps[n].mover)) continue;
+      const di = q.dieIdx[n], m = q.steps[n].mover, st = q.states[n];
+      const pos = m[0] === "p" ? this.board.piecePos(st, m[1], m[2]) : this.board.hunterPos(st, m[1]);
+      const k = pos.x.toFixed(2) + "," + pos.z.toFixed(2);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({ id: out.length, di, pos, label: sel.dec.dice[di] });
+    }
+    this.shownTargets = out;
+    return out;
+  }
+
   // move the piece with the selected die, or show the "not allowed" sign
   movePiece(pc, ev) {
     const g = this.game, sel = this.sel, isMe = this.moverMatcher(pc);
@@ -431,6 +449,11 @@ class App {
     const g = this.game, sel = this.sel;
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    if (hit.target !== undefined && sel.piece) {     // a highlighted field of the selected piece
+      const tg = this.shownTargets && this.shownTargets[hit.target];
+      if (tg) { sel.die = tg.di; this.movePiece(sel.piece, ev); }
+      return;
+    }
     if (hit.piece) {
       const pc = hit.piece;
       if (sel.die !== null) { this.movePiece(pc, ev); return; }
