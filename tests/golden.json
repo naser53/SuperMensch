@@ -1,0 +1,452 @@
+[
+ {
+  "seed": 2,
+  "mode": "two",
+  "n": 2,
+  "colors": 6,
+  "decisions": 472,
+  "winner": 1,
+  "rounds": 93,
+  "hash": 2761921488
+ },
+ {
+  "seed": 33,
+  "mode": "two",
+  "n": 2,
+  "colors": 6,
+  "decisions": 879,
+  "winner": 1,
+  "rounds": 165,
+  "hash": 2454268924
+ },
+ {
+  "seed": 64,
+  "mode": "two",
+  "n": 2,
+  "colors": 6,
+  "decisions": 1263,
+  "winner": 1,
+  "rounds": 251,
+  "hash": 2395706929
+ },
+ {
+  "seed": 95,
+  "mode": "two",
+  "n": 2,
+  "colors": 6,
+  "decisions": 650,
+  "winner": 1,
+  "rounds": 121,
+  "hash": 1046176264
+ },
+ {
+  "seed": 126,
+  "mode": "two",
+  "n": 2,
+  "colors": 6,
+  "decisions": 689,
+  "winner": 0,
+  "rounds": 125,
+  "hash": 1397365098
+ },
+ {
+  "seed": 3,
+  "mode": "two",
+  "n": 3,
+  "colors": 6,
+  "decisions": 1345,
+  "winner": 0,
+  "rounds": 163,
+  "hash": 3852471971
+ },
+ {
+  "seed": 34,
+  "mode": "two",
+  "n": 3,
+  "colors": 6,
+  "decisions": 1186,
+  "winner": 1,
+  "rounds": 150,
+  "hash": 2498818909
+ },
+ {
+  "seed": 65,
+  "mode": "two",
+  "n": 3,
+  "colors": 6,
+  "decisions": 1294,
+  "winner": 1,
+  "rounds": 167,
+  "hash": 780202634
+ },
+ {
+  "seed": 96,
+  "mode": "two",
+  "n": 3,
+  "colors": 6,
+  "decisions": 928,
+  "winner": 2,
+  "rounds": 114,
+  "hash": 3658601474
+ },
+ {
+  "seed": 127,
+  "mode": "two",
+  "n": 3,
+  "colors": 6,
+  "decisions": 1413,
+  "winner": 0,
+  "rounds": 181,
+  "hash": 3509810207
+ },
+ {
+  "seed": 2,
+  "mode": "one",
+  "n": 2,
+  "colors": 6,
+  "decisions": 420,
+  "winner": 1,
+  "rounds": 108,
+  "hash": 593841659
+ },
+ {
+  "seed": 33,
+  "mode": "one",
+  "n": 2,
+  "colors": 6,
+  "decisions": 620,
+  "winner": 1,
+  "rounds": 155,
+  "hash": 681441750
+ },
+ {
+  "seed": 64,
+  "mode": "one",
+  "n": 2,
+  "colors": 6,
+  "decisions": 377,
+  "winner": 1,
+  "rounds": 95,
+  "hash": 274812665
+ },
+ {
+  "seed": 95,
+  "mode": "one",
+  "n": 2,
+  "colors": 6,
+  "decisions": 435,
+  "winner": 0,
+  "rounds": 110,
+  "hash": 3736415816
+ },
+ {
+  "seed": 126,
+  "mode": "one",
+  "n": 2,
+  "colors": 6,
+  "decisions": 368,
+  "winner": 0,
+  "rounds": 94,
+  "hash": 1657424687
+ },
+ {
+  "seed": 4,
+  "mode": "one",
+  "n": 4,
+  "colors": 6,
+  "decisions": 1358,
+  "winner": 3,
+  "rounds": 172,
+  "hash": 4045553690
+ },
+ {
+  "seed": 35,
+  "mode": "one",
+  "n": 4,
+  "colors": 6,
+  "decisions": 1169,
+  "winner": 0,
+  "rounds": 151,
+  "hash": 95077785
+ },
+ {
+  "seed": 66,
+  "mode": "one",
+  "n": 4,
+  "colors": 6,
+  "decisions": 842,
+  "winner": 1,
+  "rounds": 109,
+  "hash": 1686905116
+ },
+ {
+  "seed": 97,
+  "mode": "one",
+  "n": 4,
+  "colors": 6,
+  "decisions": 972,
+  "winner": 0,
+  "rounds": 124,
+  "hash": 1718708441
+ },
+ {
+  "seed": 128,
+  "mode": "one",
+  "n": 4,
+  "colors": 6,
+  "decisions": 710,
+  "winner": 2,
+  "rounds": 89,
+  "hash": 957394287
+ },
+ {
+  "seed": 6,
+  "mode": "one",
+  "n": 6,
+  "colors": 6,
+  "decisions": 2155,
+  "winner": 5,
+  "rounds": 185,
+  "hash": 762676287
+ },
+ {
+  "seed": 37,
+  "mode": "one",
+  "n": 6,
+  "colors": 6,
+  "decisions": 1913,
+  "winner": 1,
+  "rounds": 167,
+  "hash": 2633938950
+ },
+ {
+  "seed": 68,
+  "mode": "one",
+  "n": 6,
+  "colors": 6,
+  "decisions": 1513,
+  "winner": 2,
+  "rounds": 132,
+  "hash": 2949824272
+ },
+ {
+  "seed": 99,
+  "mode": "one",
+  "n": 6,
+  "colors": 6,
+  "decisions": 2222,
+  "winner": 3,
+  "rounds": 192,
+  "hash": 82081129
+ },
+ {
+  "seed": 130,
+  "mode": "one",
+  "n": 6,
+  "colors": 6,
+  "decisions": 1992,
+  "winner": 1,
+  "rounds": 170,
+  "hash": 477481783
+ },
+ {
+  "seed": 2,
+  "mode": "two",
+  "n": 2,
+  "colors": 4,
+  "decisions": 511,
+  "winner": 1,
+  "rounds": 97,
+  "hash": 169783849
+ },
+ {
+  "seed": 33,
+  "mode": "two",
+  "n": 2,
+  "colors": 4,
+  "decisions": 395,
+  "winner": 1,
+  "rounds": 70,
+  "hash": 701701205
+ },
+ {
+  "seed": 64,
+  "mode": "two",
+  "n": 2,
+  "colors": 4,
+  "decisions": 454,
+  "winner": 0,
+  "rounds": 84,
+  "hash": 4127205649
+ },
+ {
+  "seed": 95,
+  "mode": "two",
+  "n": 2,
+  "colors": 4,
+  "decisions": 568,
+  "winner": 1,
+  "rounds": 105,
+  "hash": 3555177867
+ },
+ {
+  "seed": 126,
+  "mode": "two",
+  "n": 2,
+  "colors": 4,
+  "decisions": 514,
+  "winner": 1,
+  "rounds": 90,
+  "hash": 2249955818
+ },
+ {
+  "seed": 2,
+  "mode": "one",
+  "n": 2,
+  "colors": 4,
+  "decisions": 315,
+  "winner": 0,
+  "rounds": 80,
+  "hash": 330594906
+ },
+ {
+  "seed": 33,
+  "mode": "one",
+  "n": 2,
+  "colors": 4,
+  "decisions": 482,
+  "winner": 0,
+  "rounds": 122,
+  "hash": 1780970338
+ },
+ {
+  "seed": 64,
+  "mode": "one",
+  "n": 2,
+  "colors": 4,
+  "decisions": 281,
+  "winner": 1,
+  "rounds": 71,
+  "hash": 3884232081
+ },
+ {
+  "seed": 95,
+  "mode": "one",
+  "n": 2,
+  "colors": 4,
+  "decisions": 259,
+  "winner": 0,
+  "rounds": 64,
+  "hash": 2268650264
+ },
+ {
+  "seed": 126,
+  "mode": "one",
+  "n": 2,
+  "colors": 4,
+  "decisions": 360,
+  "winner": 1,
+  "rounds": 92,
+  "hash": 2019598322
+ },
+ {
+  "seed": 4,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 766,
+  "winner": 0,
+  "rounds": 98,
+  "hash": 2482161400
+ },
+ {
+  "seed": 35,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 1027,
+  "winner": 0,
+  "rounds": 132,
+  "hash": 2553777581
+ },
+ {
+  "seed": 66,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 864,
+  "winner": 1,
+  "rounds": 115,
+  "hash": 3687639936
+ },
+ {
+  "seed": 97,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 646,
+  "winner": 1,
+  "rounds": 82,
+  "hash": 579883715
+ },
+ {
+  "seed": 128,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 450,
+  "winner": 1,
+  "rounds": 57,
+  "hash": 806061311
+ },
+ {
+  "seed": 4,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 766,
+  "winner": 0,
+  "rounds": 98,
+  "hash": 2482161400
+ },
+ {
+  "seed": 35,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 1027,
+  "winner": 0,
+  "rounds": 132,
+  "hash": 2553777581
+ },
+ {
+  "seed": 66,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 864,
+  "winner": 1,
+  "rounds": 115,
+  "hash": 3687639936
+ },
+ {
+  "seed": 97,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 646,
+  "winner": 1,
+  "rounds": 82,
+  "hash": 579883715
+ },
+ {
+  "seed": 128,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 450,
+  "winner": 1,
+  "rounds": 57,
+  "hash": 806061311
+ }
+]

@@ -1,0 +1,68 @@
+# SuperMensch
+
+A multi-color *Mensch ärgere dich nicht*–style board game with a 3D board, written in
+plain JavaScript. It runs completely in the browser — no server, no install, works offline.
+
+Choose a **6-color six-arm board** (60 fields, 10 per corridor, shaped like the wooden
+6-player boards) or the **4-color classic cross** (40 fields), played with **two colors per
+player** or **one color per player**, against people at the same screen or the computer.
+
+Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**.
+
+## Play
+
+* **One file:** download `supermensch.html` from the **Releases** page (`latest`) and open it
+  in Chrome, Edge, Firefox or Safari. Code and font are inside that one file.
+* **Online:** GitHub Pages publishes the same page (one-time setup: repository
+  **Settings → Pages → Source: GitHub Actions**).
+
+Drag to turn the board, mouse wheel to zoom, right-drag to move; *Top view* and *Reset view*
+are in the side panel. Click a piece to show only its moves; hover a move to see it on the board.
+
+**Debug (set dice)** in the side panel is for testing the rules: every throw waits until you
+set the dice (click a die: +1, right-click: −1, or *Random*) and press *Continue*; computer
+moves are shown first and wait for *Continue* too.
+
+## Rules in the game
+
+Two-color dice play (free split, burnt die, full use of both dice, sum moves, six first),
+bonus throws for doubles, help for a stuck player (three dice, gift six), triple-dice cards,
+the hunter, walls and castles (with castle-break declarations), scoring and piece ranks
+(soldier, general, marshal), and tunnels (declared before the roll, paid with points, with
+the debt rule at the threshold).
+
+Not yet in the game: the castle-breaker special piece and point loans.
+The fortress (four pieces in a row) is planned for the Pro version.
+
+## Development
+
+```
+npm ci
+npm test            # rule tests and the fixed-game regression check
+npm run simulate    # computer-vs-computer games
+npm run build       # dist/supermensch.html, the single-file game
+```
+
+While working on the code, serve the folder (`npx serve .` or any static server) and open
+`index.html`; it loads the modules from `js/` directly. Every push runs the tests, builds the
+page and publishes it to the `latest` release.
+
+After a deliberate rule change, record the fixed games again with
+`node tests/golden.mjs --record`.
+
+| Path | Purpose |
+| --- | --- |
+| `js/config.js` | All game parameters |
+| `js/engine.js` | Rules engine (no graphics) |
+| `js/ai.js` | Simple computer player |
+| `js/boards.js` | Board geometry (six arms, classic cross) |
+| `js/strings.js`, `js/i18n.js` | Texts and translation |
+| `js/render3d.js` | 3D board with Three.js |
+| `js/main.js` | Setup screen, side panel, game loop |
+| `tests/` | Rule tests, fixed-game regression, simulations |
+| `tools/build.mjs` | Builds the single-file page |
+| `docs/rules-fa.docx` | The rules document (Farsi) |
+
+The full game rules (Farsi, with diagrams) are in [`docs/rules-fa.docx`](docs/rules-fa.docx).
+
+Font: Vazirmatn (SIL Open Font License, in `fonts/`).

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperMensch</title>
+<link rel="stylesheet" href="css/style.css">
+<!-- Development page: modules load from js/. `npm run build` makes dist/supermensch.html,
+     one file that also works offline straight from the disk. -->
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <aside id="panel"></aside>
+</div>
+<div id="setup" hidden></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
