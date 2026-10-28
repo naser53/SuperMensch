@@ -9,6 +9,7 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    hunter_ready: "Your hunter can come in: click the pale diamond with ? (with a 6).",
     info: "Info",
     close: "Close",
     info_title: "Scoring on the {n}-color board",
@@ -150,6 +151,7 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    hunter_ready: "شکارچی شما می‌تواند وارد شود: روی الماس کم‌رنگ با علامت ? کلیک کنید (با تاس ۶).",
     info: "Info",
     close: "بستن",
     info_title: "امتیازها در صفحه‌ی {n} رنگ",
@@ -291,6 +293,7 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    hunter_ready: "Dein Jäger kann hinein: klicke den blassen Diamanten mit ? an (mit einer 6).",
     info: "Info",
     close: "Schließen",
     info_title: "Punkte auf dem {n}-Farben-Brett",

@@ -201,6 +201,7 @@ export class Board3D {
     for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
     this.hunterMeshes.clear();
+    if (this.hunterGhosts) this.hunterGhosts.clear();
     this.buildBoard();
     this.buildPieces();
     this.fitView();
@@ -488,8 +489,47 @@ export class Board3D {
       }
       grp.userData.target = this.xz(this.data.track[h[1]], this.surfaceY());
       grp.userData.dir = h[2];
+      const sel = highlight && highlight[0] === "h" && highlight[1] === p;
+      grp.userData.body.material.emissive.set(sel ? "#664400" : "#000000");
+    });
+    // §9 a hunter that may come in waits as a pale diamond in its completed color's yard
+    this.hunterGhosts = this.hunterGhosts || new Map();
+    g.players.forEach((_, p) => {
+      const cc = g.hunterEligible(p, st);
+      let ghost = this.hunterGhosts.get(p);
+      if (cc === null) {
+        if (ghost) { this.pieceGroup.remove(ghost); this.hunterGhosts.delete(p); }
+        return;
+      }
+      if (!ghost || ghost.userData.color !== cc) {
+        if (ghost) this.pieceGroup.remove(ghost);
+        ghost = this.hunterGhost(p, cc);
+        this.hunterGhosts.set(p, ghost);
+      }
+      const sel = highlight && highlight[0] === "hn" && highlight[1] === p;
+      ghost.userData.body.material.opacity = sel ? 0.95 : 0.55;
+      ghost.scale.setScalar(sel ? 1.15 : 1);
     });
     this.drawTunnels(st);
+  }
+
+  hunterGhost(p, color) {
+    const grp = new THREE.Group();
+    const y = this.data.yard[color];
+    const cx = y.reduce((a, q) => a + q[0], 0) / y.length, cz = y.reduce((a, q) => a + q[1], 0) / y.length;
+    grp.position.copy(this.xz([cx, cz], TOP + 0.03));
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.42),
+      new THREE.MeshStandardMaterial({ color: COLORS[color], roughness: 0.3, transparent: true, opacity: 0.55 }));
+    m.position.y = 0.45;
+    m.userData.piece = ["hn", p];
+    const lab = this.numberSprite("?", COLORS[color]);
+    lab.position.y = 1.12;
+    lab.scale.set(0.4, 0.4, 1);
+    lab.userData.piece = ["hn", p];
+    grp.add(m, lab);
+    grp.userData = { piece: ["hn", p], body: m, color };
+    this.pieceGroup.add(grp);
+    return grp;
   }
 
   // §13: tunnels are see-through tubes; the current player's in full, the others' fainter.

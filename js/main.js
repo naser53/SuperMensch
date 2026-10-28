@@ -208,6 +208,9 @@ class App {
       const hint = sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece"
         : (sel.die === null ? "pick_die" : "pick_piece");
       h += `<div class="pad" style="padding-top:0"><div class="note">${this.T(hint)}</div>`;
+      if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) {
+        h += `<div class="small muted">${this.T("hunter_ready")}</div>`;
+      }
       if (sel.ambig) {
         opts = sel.ambig;
         h += '<div class="options" style="padding:0">' + opts.map((c, k) =>
@@ -342,6 +345,7 @@ class App {
     const sel = this.sel, g = this.game;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
     const inYard = pc[0] === "p" && shown.pos[pc[1]][pc[2]] === -1;
+    if (pc[0] === "hn") return m => m[0] === "hn" && m[1] === pc[1];   // the waiting hunter: either direction
     return m => (m[0] === pc[0] && m.join() === pc.join())
       || (inYard && m[0] === "p" && m[1] === pc[1] && shown.pos[m[1]][m[2]] === -1);
   }
