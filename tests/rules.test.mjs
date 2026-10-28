@@ -363,3 +363,20 @@ test("ranks and tunnel costs: general from 3 captures, marshal from 4; bounties 
   assert.equal(g.tunnelCost(1, 3), 120);
   assert.equal(g.tunnelCost(1, 4), 160);
 });
+
+test("six first only when an own piece stands on the gate", () => {
+  // blue piece on the board (not on its gate), 6 and 5: the 5 for that piece, then the 6 brings a new one in
+  const g = make();
+  put(g, 1, 0, 7); put(g, 4, 0, 3);
+  g.turn = 1;
+  const seqOk = g.playsFor(1, [6, 5]).some(p => p.steps.length === 2 && p.state.pos[1][0] === 12 && p.state.pos[1].includes(0));
+  assert.ok(seqOk);
+  // in click order too: 5 first, then the 6 brings the piece in
+  g.manual = true;
+  g.pending = new Decision("pre_roll", 1, [new Option("r", "roll")]);
+  g.choose(g.pending.options[0]);
+  g.choose(new Option(null, ["dice", [6, 5]]));
+  const fiveFirst = g.sequences().some(q => q.steps[0].die === 5 && q.steps[0].mover.join() === "p,1,0"
+    && q.steps[1].die === 6 && q.steps[1].entered);
+  assert.ok(fiveFirst);
+});

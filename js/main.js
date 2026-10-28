@@ -109,8 +109,11 @@ class App {
       const cols = this.seatColors(i);
       const who = t(this.lang, s.seats[i] === "human" ? "human" : "computer");
       const names = cols.map(c => COLOR_NAMES[this.lang][c]).join(tr(this.lang, M("and")));
+      const nm = (s.names && s.names[i]) || "";
+      const ph = t(this.lang, s.seats[i] === "ai" ? "player_ai" : "player_human", { n: i + 1 });
       h += `<div class="seat">${choice(esc(shape(tr(this.lang, M("seat", { n: i + 1, who, colors: names })))), "seat", i, false)}` +
-        cols.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") + "</div>";
+        cols.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
+        `<input class="name" type="text" maxlength="16" data-name="${i}" value="${esc(nm)}" placeholder="${esc(ph)}" aria-label="${this.T("name")}" autocomplete="off"></div>`;
     }
     h += `<button class="btn primary start" data-act="start">${this.T("start")}</button></div>`;
     el.innerHTML = h;
@@ -137,7 +140,8 @@ class App {
     const players = [];
     for (let i = 0; i < s.n; i++) {
       const ai = s.seats[i] === "ai";
-      players.push(Player(M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
+      const nm = ((s.names && s.names[i]) || "").trim();
+      players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
     this.game = new Game(players, s.mode, Config.forBoard(s.colors), null, this.debug);
     this.ais = {};
@@ -221,7 +225,7 @@ class App {
           sel.picks.map(x => `<div>${this.S(g.describe({ steps: [x.step] })[0])}</div>`).join("") + "</div>";
       }
       h += '<div class="btns small">' +
-        (sel.picks.length ? `<button class="btn" data-act="undo">${this.T("undo")}</button>` : "") +
+        `<button class="btn undo" data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}">${this.T("undo")}</button>` +
         `<button class="btn" data-act="list">${this.T("all_moves", { n: dec.options.length })}</button></div></div>`;
       h += '<div class="grow"></div>';
     } else if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
@@ -665,6 +669,13 @@ function wire(app) {
     const k = +b.dataset.die;
     app.game.pending.dice[k] = (app.game.pending.dice[k] + 4) % 6 + 1;
     app.render();
+  });
+  document.addEventListener("input", e => {
+    if (e.target.dataset.name === undefined) return;
+    const s = app.setup;
+    s.names = s.names || [];
+    s.names[+e.target.dataset.name] = e.target.value;
+    app.persist();
   });
   document.addEventListener("change", e => {
     const act = e.target.dataset.act;

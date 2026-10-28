@@ -157,11 +157,17 @@ label.check.on { color: var(--accent); }
 .foot .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
 .scores-note { background: var(--soft); border-top: 1px solid var(--line); }
 
+#setup .seat .name { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; width: 170px; }
+#setup .seat .name:focus { outline: 2px solid var(--hi); border-color: var(--accent); }
+.btn.undo:disabled { opacity: .35; cursor: default; background: var(--btn); }
+
 @media (max-width: 520px) {
   body { font-size: 14px; }
   #setup .card { padding: 20px 16px 32px; }
   #setup h1 { font-size: 24px; }
+  #setup .seat { flex-wrap: wrap; }
   #setup .seat .choice { min-width: 0; flex: 1; }
+  #setup .seat .name { width: 100%; }
   #setup .choice { padding: 9px 12px; }
   .pad { padding: 10px 12px; }
   .die { width: 42px; height: 42px; }

@@ -494,7 +494,7 @@ export class Game {
   }
 
   // ------------------------------------------------------------ sequences
-  _valid(p, steps, structs, breakRoll = false, target = null) {
+  _valid(p, steps, structs, breakRoll = false, target = null, st0 = null) {
     const own = new Set(this.players[p].colors);
     const prot = new Map();
     for (const s of steps) {
@@ -522,11 +522,14 @@ export class Game {
     for (const s of steps) {
       if (s.tun && steps.filter(x => sameMover(x.mover, s.mover)).length > 1) return false;
     }
-    // §4.5 six first
-    if (steps.length === 2 && !breakRoll) {
+    // §4.5 six first: when a piece of that color stands on its own gate at the start of the
+    // play and the throw has a 6, the 6 is played first (no clearing the gate with the other
+    // die to bring a new piece in with the 6).
+    if (steps.length === 2 && !breakRoll && st0) {
       const [a, b] = steps;
       if (a.mover[0] === "p" && b.mover[0] === "p" && a.mover[1] === b.mover[1]
-          && !sameMover(a.mover, b.mover) && a.die !== b.die && b.die === 6) return false;
+          && !sameMover(a.mover, b.mover) && a.die !== b.die && b.die === 6
+          && st0.pos[a.mover[1]].includes(0)) return false;
     }
     return true;
   }
@@ -556,10 +559,10 @@ export class Game {
     return out;
   }
 
-  _playsFrom(p, seqs, structs, kind = "normal", breakRoll = false, target = null) {
+  _playsFrom(p, seqs, structs, kind = "normal", breakRoll = false, target = null, st0 = null) {
     const plays = [], seen = new Set();
     for (const [steps, ns] of seqs) {
-      if (!this._valid(p, steps, structs, breakRoll, target)) continue;
+      if (!this._valid(p, steps, structs, breakRoll, target, st0)) continue;
       const k = ns.key();
       if (seen.has(k)) continue;
       seen.add(k);
@@ -572,9 +575,9 @@ export class Game {
   playsFor(p, dice, st = null) {
     st = st || this.state;
     const structs = this.structures(st);
-    if (dice.length === 1) return this._playsFrom(p, this._gen(p, st, dice, structs), structs);
-    const p1 = this._playsFrom(p, this._gen(p, st, [dice[0]], structs).concat(this._gen(p, st, [dice[1]], structs)), structs);
-    const p2 = this._playsFrom(p, this._gen(p, st, dice, structs), structs);
+    if (dice.length === 1) return this._playsFrom(p, this._gen(p, st, dice, structs), structs, "normal", false, null, st);
+    const p1 = this._playsFrom(p, this._gen(p, st, [dice[0]], structs).concat(this._gen(p, st, [dice[1]], structs)), structs, "normal", false, null, st);
+    const p2 = this._playsFrom(p, this._gen(p, st, dice, structs), structs, "normal", false, null, st);
     const colors = this.players[p].colors;
     const has = new Map(colors.map(c => [c, false]));
     for (const pl of p1.concat(p2)) {
@@ -607,7 +610,7 @@ export class Game {
     let plays = [];
     for (const t of targets) {
       const seqs = this._gen(p, st, dice, structs, true, t);
-      plays = plays.concat(this._playsFrom(p, seqs, structs, "break", true, t));
+      plays = plays.concat(this._playsFrom(p, seqs, structs, "break", true, t, st));
     }
     return plays;
   }
@@ -639,7 +642,7 @@ export class Game {
       const rec = (cur, used, steps, states, movers) => {
         if (steps.length === nd) {
           const o = legal.get(cur.key());
-          if (o && this._valid(p, steps, structs, isBreak, target)) out.push({ steps, states, option: o, dieIdx: used });
+          if (o && this._valid(p, steps, structs, isBreak, target, st0)) out.push({ steps, states, option: o, dieIdx: used });
           return;
         }
         dec.dice.forEach((d, di) => {
