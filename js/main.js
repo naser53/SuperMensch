@@ -27,13 +27,14 @@ class App {
     this.setup = Object.assign({ colors: 6, mode: "two", n: 3, pairing: "opposite",
       seats: ["human", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
     this.delay = st.delay || 650;
+    this.follow = !!st.follow;
     this.debug = false;
     this.game = null;
     this.ais = {};
     this.aiPlan = null;
     this.sel = null;
     this.nextAi = 0;
-    this.board = new Board3D($("#stage"), { onPick: hit => this.boardClick(hit) });
+    this.board = new Board3D($("#stage"), { onPick: (hit, ev) => this.boardClick(hit, ev) });
     const hint = document.createElement("div");
     hint.className = "hint3d";
     $("#stage").appendChild(hint);
@@ -48,7 +49,7 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay }); }
+  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay, follow: this.follow }); }
 
   setLang(l) {
     this.lang = l;
@@ -184,7 +185,7 @@ class App {
     if (dec && dec.note && !(human && dec.kind === "keep")) h += `<div class="note">${this.S(dec.note)}</div>`;
     h += "</div>";
 
-    let opts = [], targets = [], shown = g.state;
+    let opts = [], shown = g.state;
     if (dec && dec.kind === "dice") {
       h += `<div class="pad" style="padding-top:0"><div class="muted small">${this.T("dice_hint")}</div>
         <div class="btns"><button class="btn primary" data-act="dice_go">${this.T("continue")}</button>
@@ -199,7 +200,7 @@ class App {
     } else if (human && dec.kind === "play" && !this.sel.list) {
       const sel = this.sel;
       shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
-      const hint = sel.ambig ? "pick_which" : (sel.die === null ? "pick_die" : "pick_target");
+      const hint = sel.ambig ? "pick_which" : (sel.die === null ? (sel.needDie ? "need_die" : "pick_die") : "pick_piece");
       h += `<div class="pad" style="padding-top:0"><div class="note">${this.T(hint)}</div>`;
       if (sel.ambig) {
         opts = sel.ambig;
@@ -211,10 +212,9 @@ class App {
           sel.picks.map(x => `<div>${this.S(g.describe({ steps: [x.step] })[0])}</div>`).join("") + "</div>";
       }
       h += '<div class="btns small">' +
-        (sel.picks.length || sel.die !== null ? `<button class="btn" data-act="undo">${this.T("undo")}</button>` : "") +
+        (sel.picks.length ? `<button class="btn" data-act="undo">${this.T("undo")}</button>` : "") +
         `<button class="btn" data-act="list">${this.T("all_moves", { n: dec.options.length })}</button></div></div>`;
       h += '<div class="grow"></div>';
-      targets = sel.ambig ? [] : this.targets();
     } else if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
       h += `<div class="pad" style="padding-top:0"><div class="note">${this.T("pick_keep")}</div><div class="btns small">` +
         dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
@@ -236,8 +236,12 @@ class App {
     this.shownOpts = opts;
     h += this.logHtml() + this.footHtml();
     el.innerHTML = h;
-    this.board.sync(shown);
-    this.board.showTargets(targets);
+    this.board.sync(shown, this.sel && this.sel.look);
+    if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
+      this.followedDec = dec;
+      if (this.follow && dec && !p.isAi && this.lastFollow !== g.turn) this.board.setView({ side: p.colors[0] });
+      this.lastFollow = dec && !p.isAi ? g.turn : this.lastFollow;
+    }
     if (dec && p.isAi && this.debug && this.aiPlan) {
       const pl = this.aiPlan[1].payload;
       this.board.preview(pl && pl.steps ? pl : null, Array.isArray(pl) && pl[0] === "tunnel" ? pl : null);
@@ -247,10 +251,10 @@ class App {
   }
 
   // ------------------------------------------------------------ click-by-click moves
-  // A play is made die by die: click a die, then one of the highlighted fields (or the piece).
+  // A play is made die by die: always click a die first, then the piece that moves with it.
   // With three dice (stuck, card, bonus) the two dice clicked are the ones kept.
   resetSelection(dec) {
-    this.sel = { dec, picks: [], die: null, keep: [], ambig: null, list: false,
+    this.sel = { dec, picks: [], die: null, keep: [], ambig: null, list: false, look: null, needDie: false,
       seqs: dec && dec.kind === "play" && !this.game.players[this.game.turn].isAi ? this.game.sequences(dec) : [] };
     this.autoDie();
   }
@@ -286,37 +290,16 @@ class App {
     return [...out.values()];
   }
 
-  targets() {
-    const g = this.game;
-    return this.candidates().map((c, id) => {
-      const m = c.step.mover;
-      const pos = m[0] === "p" ? this.board.piecePos(c.state, m[1], m[2]) : this.board.hunterPos(c.state, m[1]);
-      return { id, pos, color: COLORS[g._agent(m, g.state)] };
-    });
-  }
-
   pickCandidate(c) {
     const sel = this.sel;
     sel.picks.push(c);
     sel.die = null;
     sel.ambig = null;
+    sel.look = null;
     const done = this.matching().filter(q => q.steps.length === sel.picks.length);
     if (done.length) { this.choose(done[0].option); return; }
     this.autoDie();
     this.render();
-  }
-
-  pickTarget(id) {
-    const cands = this.candidates(), c = cands[id];
-    if (!c) return;
-    const at = this.targets()[id].pos;
-    const same = this.targets().filter(t => t.pos.distanceTo(at) < 0.05).map(t => cands[t.id]);
-    if (same.length > 1) {
-      this.sel.ambig = same.map(x => ({ cand: x, label: this.game.describe({ steps: [x.step] })[0] }));
-      this.render();
-      return;
-    }
-    this.pickCandidate(c);
   }
 
   clickDie(k) {
@@ -337,6 +320,7 @@ class App {
     if (!this.usableDice().has(k)) return;
     sel.die = sel.die === k ? null : k;
     sel.ambig = null;
+    sel.needDie = false;
     this.render();
   }
 
@@ -366,10 +350,16 @@ class App {
 
   footHtml() {
     const speed = Math.round((2050 - this.delay) / 20);
-    return `<div class="foot sep"><button class="btn" data-act="menu">${this.T("menu")}</button>
-      <button class="btn" data-act="view">${this.T("reset_view")}</button>
-      <button class="btn" data-act="top">${this.T("top_view")}</button>
-      <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div>`;
+    return `<div class="foot sep"><div class="views">
+      <button class="btn" data-view="top" title="${this.T("view_top")}">${this.T("view_top")}</button>
+      <button class="btn" data-view="angled" title="${this.T("view_angled")}">${this.T("view_angled")}</button>
+      <button class="btn" data-view="low" title="${this.T("view_low")}">${this.T("view_low")}</button>
+      <button class="btn" data-view="left" title="${this.T("view_left")}">&#8634;</button>
+      <button class="btn" data-view="right" title="${this.T("view_right")}">&#8635;</button>
+      <button class="btn" data-view="mine">${this.T("view_mine")}</button></div>
+      <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
+      <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
+      <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div></div>`;
   }
 
   // ------------------------------------------------------------ actions
@@ -392,26 +382,51 @@ class App {
     this.render();
   }
 
-  // Click on the board: a highlighted field, or a piece (its move with the selected die,
-  // or, with no die selected, the first die it can use).
-  boardClick(hit) {
+  // Click on the board. With a die selected, a click on a piece moves it with that die;
+  // a piece that cannot move with it gets a short "not allowed" sign. Without a die the
+  // piece is only highlighted (to look at the board) and the sign asks for a die first.
+  // The hunter enters by clicking the gate of its completed color (then: which direction).
+  boardClick(hit, ev) {
     const g = this.game, sel = this.sel;
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
-    if (hit.target !== undefined) { this.pickTarget(hit.target); return; }
-    const key = hit.piece.join(), hk = hit.piece[0] === "h" ? "h," + hit.piece[1] : null;
-    const isMe = c => c.step.mover.join() === key || (hk && c.step.mover[0] !== "p");
-    if (sel.die === null) {
-      const n = sel.picks.length;
-      const q = this.matching().find(x => isMe({ step: x.steps[n] }));
-      if (!q) return;
-      sel.die = q.dieIdx[n];
-    }
-    const mine = this.candidates().filter(isMe);
+    const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    let mine = [];
+    if (hit.piece) {
+      const pc = hit.piece;
+      const inYard = pc[0] === "p" && shown.pos[pc[1]][pc[2]] === -1;
+      const isMe = m => (m[0] === pc[0] && m.join() === pc.join())
+        || (inYard && m[0] === "p" && m[1] === pc[1] && shown.pos[m[1]][m[2]] === -1);
+      if (sel.die === null) {
+        sel.look = pc;
+        sel.needDie = true;
+        this.board.forbid(ev);
+        this.render();
+        return;
+      }
+      mine = this.candidates().filter(c => isMe(c.step.mover));
+    } else if (hit.field !== undefined) {
+      if (sel.die === null) { sel.needDie = true; this.board.forbid(ev); this.render(); return; }
+      mine = this.candidates().filter(c => c.step.mover[0] === "hn" && g.gate(g._completedColor(g.turn, shown)) === hit.field);
+    } else return;
     if (mine.length === 1) this.pickCandidate(mine[0]);
     else if (mine.length > 1) {
       sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
       this.render();
-    } else this.render();
+    } else {
+      this.board.forbid(ev);
+    }
+  }
+
+  // Board views, as in chess programs: from above, angled, low; turn by one seat; my side.
+  view(name) {
+    const g = this.game;
+    if (!g) return;
+    const step = 360 / g.cfg.n_colors;
+    if (name === "left" || name === "right") this.board.setView({ turn: name === "left" ? -step : step });
+    else if (name === "mine") {
+      const hum = g.players[g.turn].isAi ? g.players.find(x => !x.isAi) : g.players[g.turn];
+      this.board.setView({ side: (hum || g.players[0]).colors[0] });
+    } else this.board.setView({ tilt: name });
   }
 
   tick() {
@@ -426,7 +441,7 @@ class App {
 // ------------------------------------------------------------ event wiring
 function wire(app) {
   document.addEventListener("click", e => {
-    const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay]");
+    const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay],[data-view]");
     if (!b) return;
     if (b.closest("#setup")) {
       if (b.dataset.act && b.dataset.act !== "lang") app.setupAction(b.dataset.act, b.dataset.val);
@@ -441,6 +456,7 @@ function wire(app) {
       return;
     }
     if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie); return; }
+    if (b.dataset.view !== undefined) { app.view(b.dataset.view); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
       return;
@@ -459,8 +475,6 @@ function wire(app) {
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
-    else if (act === "view") app.board.fitView(false);
-    else if (act === "top") app.board.fitView(true);
   });
   document.addEventListener("contextmenu", e => {
     const b = e.target.closest("[data-die]");
@@ -474,6 +488,11 @@ function wire(app) {
     const act = e.target.dataset.act;
     if (act === "lang") app.setLang(e.target.value);
     else if (act === "debug") app.setDebug(e.target.checked);
+    else if (act === "follow") {
+      app.follow = e.target.checked;
+      app.persist();
+      if (app.follow && app.game && !app.game.players[app.game.turn].isAi) app.view("mine");
+    }
     else if (act === "speed") { app.delay = 2050 - 20 * +e.target.value; app.persist(); }
   });
   const hover = e => {

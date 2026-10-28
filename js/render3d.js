@@ -77,8 +77,7 @@ export class Board3D {
     this.tunnelGroup = new THREE.Group();
     this.previewGroup = new THREE.Group();
     this.pieceGroup = new THREE.Group();
-    this.targetGroup = new THREE.Group();
-    this.scene.add(this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup);
+    this.scene.add(this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup);
 
     this.pawnGeo = pawnGeometry();
     this.pieceMeshes = new Map();   // "col,i" -> group
@@ -94,7 +93,7 @@ export class Board3D {
     el.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
     el.addEventListener("pointerup", e => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || e.button !== 0) return;
-      this.onPick(this.pick(e));
+      this.onPick(this.pick(e), e);
     });
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -108,21 +107,79 @@ export class Board3D {
     this.renderer.domElement.style.height = h + "px";
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    if (this.game) this.fitView(this._top);
+    if (this.game && this.view) {
+      const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
+      this.placeCamera(sph.theta, sph.phi, this.viewDistance(sph.phi));
+    }
   }
 
-  // Default camera: tilted view from the front; top = straight down.
-  fitView(top = false) {
-    this._top = top;
+  // ------------------------------------------------------------ views
+  // The camera sits on a sphere around the board centre: `polar` is the angle from straight
+  // above (0 = top view), `az` turns around the board (0 = from the front edge).
+  static TILT = { top: 0.0005, angled: 0.62, low: 1.0 };
+
+  viewDistance(polar) {
     const r = this.n === 4 ? 6.4 : 9.2;
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.max(r / Math.tan(vfov / 2), r / (Math.tan(vfov / 2) * this.camera.aspect));
-    const d = fit * (top ? 1.05 : 1.12);
-    if (top) this.camera.position.set(0, d, 0.31);       // a hair in front: screen-up stays 'far side'
-    else this.camera.position.set(0, d * Math.cos(0.62), d * Math.sin(0.62));
-    this.controls.target.set(0, 0, 0.3);
-    this.camera.lookAt(this.controls.target);
+    return fit * (polar > 0.8 ? 0.9 : 1.05 + 0.08 * polar);
+  }
+
+  placeCamera(az, polar, dist) {
+    const t = this.controls.target;
+    this.camera.position.set(t.x + dist * Math.sin(polar) * Math.sin(az), t.y + dist * Math.cos(polar),
+      t.z + dist * Math.sin(polar) * Math.cos(az));
+    this.camera.lookAt(t);
     this.controls.update();
+  }
+
+  // Start position: angled, from the front.
+  fitView() {
+    this.controls.target.set(0, 0, 0.3);
+    this.view = { az: 0, polar: Board3D.TILT.angled };
+    this.anim = null;
+    this.placeCamera(0, this.view.polar, this.viewDistance(this.view.polar));
+  }
+
+  // Animate to a preset: {tilt: "top"|"angled"|"low"}, {turn: degrees}, {side: color}.
+  setView(v) {
+    const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
+    let az = sph.theta, polar = sph.phi;
+    if (v.tilt) polar = Board3D.TILT[v.tilt];
+    if (v.turn) az += THREE.MathUtils.degToRad(v.turn);
+    if (v.side !== undefined) {
+      const y = this.data.yard[v.side];
+      const cx = y.reduce((a, p) => a + p[0], 0) / y.length, cz = y.reduce((a, p) => a + p[1], 0) / y.length;
+      az = Math.atan2(cx, cz);
+    }
+    let d = az - sph.theta;                          // shortest way round
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    this.anim = { t0: performance.now(), from: [sph.theta, sph.phi, sph.radius],
+      to: [sph.theta + d, polar, this.viewDistance(polar)] };
+    this.controls.target.set(0, 0, 0.3);
+  }
+
+  stepAnim() {
+    const a = this.anim;
+    if (!a) return;
+    const u = Math.min(1, (performance.now() - a.t0) / 650);
+    const e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+    const v = a.from.map((x, i) => x + (a.to[i] - x) * e);
+    this.placeCamera(v[0], Math.max(0.0005, v[1]), v[2]);
+    if (u >= 1) this.anim = null;
+  }
+
+  // A red "not allowed" sign where the player clicked; it fades out by itself.
+  forbid(ev) {
+    if (!ev) return;
+    const r = this.container.getBoundingClientRect();
+    const el = document.createElement("div");
+    el.className = "forbid";
+    el.style.left = ev.clientX - r.left + "px";
+    el.style.top = ev.clientY - r.top + "px";
+    el.innerHTML = '<svg viewBox="0 0 40 40" width="44" height="44"><circle cx="20" cy="20" r="16" fill="rgba(255,255,255,.85)" stroke="#d62828" stroke-width="5"/><line x1="9" y1="31" x2="31" y2="9" stroke="#d62828" stroke-width="5" stroke-linecap="round"/></svg>';
+    this.container.appendChild(el);
+    setTimeout(() => el.remove(), 650);
   }
 
   // ------------------------------------------------------------ board
@@ -131,12 +188,12 @@ export class Board3D {
     this.playerName = playerName;    // (playerIndex) -> display text
     this.n = game.cfg.n_colors;
     this.data = BOARDS[String(this.n)];
-    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
+    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup]) g.clear();
     this.pieceMeshes.clear();
     this.hunterMeshes.clear();
     this.buildBoard();
     this.buildPieces();
-    this.fitView(false);
+    this.fitView();
   }
 
   // Rebuild the board (player names change with the language); the camera stays.
@@ -245,13 +302,15 @@ export class Board3D {
     // track
     for (let a = 0; a < g.L; a++) {
       const p = d.track[a];
+      let f;
       if (a % cl === 0) {
         const c = a / cl;
-        this.field(p, COLORS[c], { r: FIELD_R * GATE_SCALE, h: FIELD_H * 1.6, side: COLORS[c] });
+        f = this.field(p, COLORS[c], { r: FIELD_R * GATE_SCALE, h: FIELD_H * 1.6, side: COLORS[c] });
       } else {
         const thr = a % cl === cl - 1 ? ((a + 1) / cl) % n : null;
-        this.field(p, null, { top: this.numberTexture(a + 1, thr !== null ? COLORS[thr] : null) });
+        f = this.field(p, null, { top: this.numberTexture(a + 1, thr !== null ? COLORS[thr] : null) });
       }
+      f.userData.field = a;
     }
     // nests and yards
     for (let c = 0; c < n; c++) {
@@ -468,40 +527,15 @@ export class Board3D {
     return this.xz(this.data.track[h[1]], this.surfaceY());
   }
 
-  // Fields the selected die can reach: pulsing rings; a click on one picks that move.
-  showTargets(list) {
-    this.targetGroup.clear();
-    for (const t of list) {
-      const grp = new THREE.Group();
-      grp.position.set(t.pos.x, this.surfaceY() + 0.02, t.pos.z);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(FIELD_R * 1.05, 0.07, 10, 40),
-        new THREE.MeshBasicMaterial({ color: HILITE }));
-      ring.rotation.x = Math.PI / 2;
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.04, 32),
-        new THREE.MeshBasicMaterial({ color: HILITE, transparent: true, opacity: 0.35, depthWrite: false }));
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshBasicMaterial({ color: t.color }));
-      dot.position.y = 0.12;
-      for (const m of [ring, disc, dot]) { m.userData.targetId = t.id; grp.add(m); }
-      // a tall invisible column, so a pawn standing on the field does not hide the target
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R, FIELD_R, 1.2, 12),
-        new THREE.MeshBasicMaterial({ visible: false }));
-      col.position.y = 0.6;
-      col.userData.targetId = t.id;
-      grp.add(col);
-      grp.userData.pulse = ring;
-      this.targetGroup.add(grp);
-    }
-  }
-
   pick(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
-      if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
     for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))
       if (h.object.userData.piece) return { piece: h.object.userData.piece };
-    return null;
+    for (const h of this.raycaster.intersectObjects(this.boardGroup.children, false))
+      if (h.object.userData.field !== undefined) return { field: h.object.userData.field };
+    return {};
   }
 
   frame() {
@@ -519,8 +553,7 @@ export class Board3D {
       grp.position.y += (tg.y + lift - grp.position.y) * Math.min(1, k * 1.5);
       if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
     }
-    const pulse = 1 + 0.12 * Math.sin(tnow * 6);
-    for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
+    this.stepAnim();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
