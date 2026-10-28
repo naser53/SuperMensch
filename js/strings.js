@@ -9,6 +9,10 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    dice_level: "Dice",
+    level_beginner: "Beginner (fair dice)",
+    level_intermediate: "Intermediate (a 6 comes less often)",
+    info_dice: "Dice: chance of a 6",
     name: "Name",
     undo_hint: "Take back the first move (only before the second one)",
     scores: "Scores",
@@ -156,6 +160,10 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    dice_level: "تاس",
+    level_beginner: "مبتدی (تاس منصفانه)",
+    level_intermediate: "متوسط (۶ کمتر می‌آید)",
+    info_dice: "تاس: شانس آمدن ۶",
     name: "نام",
     undo_hint: "برگرداندن حرکت اول (فقط پیش از حرکت دوم)",
     scores: "Scores",
@@ -303,6 +311,10 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    dice_level: "Würfel",
+    level_beginner: "Anfänger (faire Würfel)",
+    level_intermediate: "Mittel (die 6 kommt seltener)",
+    info_dice: "Würfel: Chance auf eine 6",
     name: "Name",
     undo_hint: "Ersten Zug zurücknehmen (nur vor dem zweiten)",
     scores: "Punkte",

@@ -380,3 +380,16 @@ test("six first only when an own piece stands on the gate", () => {
     && q.steps[1].die === 6 && q.steps[1].entered);
   assert.ok(fiveFirst);
 });
+
+test("dice levels: fair for beginners, a 6 one time in ten for intermediate", () => {
+  const count = level => {
+    const g = new Game([Player("A", [0, 3]), Player("B", [1, 4])], "two", Config.forBoard(6, level), 7);
+    const n = 60000, c = [0, 0, 0, 0, 0, 0, 0];
+    for (let k = 0; k < n; k++) c[g._die()]++;
+    return c.map(x => x / n);
+  };
+  const fair = count("beginner"), mid = count("intermediate");
+  for (let v = 1; v <= 6; v++) assert.ok(Math.abs(fair[v] - 1 / 6) < 0.01);
+  assert.ok(Math.abs(mid[6] - 0.1) < 0.01);
+  for (let v = 1; v <= 5; v++) assert.ok(Math.abs(mid[v] - 0.18) < 0.01);
+});

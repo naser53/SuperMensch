@@ -780,7 +780,15 @@ export class Game {
   }
 
   // ------------------------------------------------------------ turn flow
-  roll(n) { return Array.from({ length: n }, () => 1 + Math.floor(this.rng() * 6)); }
+  roll(n) { return Array.from({ length: n }, () => this._die()); }
+
+  // one die: fair, or with a smaller chance of a 6 on the harder dice level
+  _die() {
+    const six = this.cfg.six_chance;
+    if (six == null) return 1 + Math.floor(this.rng() * 6);
+    const u = this.rng();
+    return u < six ? 6 : 1 + Math.floor((u - six) / (1 - six) * 5);
+  }
 
   // Roll n dice and continue with them; in manual (debug) mode ask for the values.
   _withDice(n, cont) {

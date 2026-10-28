@@ -94,6 +94,9 @@ class App {
       <div class="muted">${this.T("subtitle")}</div></div>${this.langSelect()}</div>`;
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
       choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
+    h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
+      choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
+      choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") + "</div>";
     h += `<h2>${this.T("game_type")}</h2><div class="choices">` +
       choice(this.T("mode_two"), "mode", "two", s.mode === "two") + choice(this.T("mode_one"), "mode", "one", s.mode === "one") + "</div>";
     h += `<h2>${this.T("players")}</h2><div class="choices">`;
@@ -129,6 +132,7 @@ class App {
       s.n = s.mode === "two" ? s.colors / 2 : 4;
     } else if (act === "n") s.n = +val;
     else if (act === "pairing") s.pairing = val;
+    else if (act === "level") s.level = val;
     else if (act === "seat") s.seats[+val] = s.seats[+val] === "human" ? "ai" : "human";
     else if (act === "start") { this.startGame(); return; }
     this.persist();
@@ -143,7 +147,7 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.game = new Game(players, s.mode, Config.forBoard(s.colors), null, this.debug);
+    this.game = new Game(players, s.mode, Config.forBoard(s.colors, s.level || "beginner"), null, this.debug);
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
     this.aiPlan = null;
@@ -587,6 +591,8 @@ class App {
     el.innerHTML = `<div class="info-card"><div class="row between"><h2>${this.T("info_title", { n: N(n) })}</h2>
       <button class="btn" data-act="info_close">${this.T("close")}</button></div>
       <p class="muted small">${this.T("info_lead")}</p>
+      ${table("info_dice", [row(this.T(c.six_chance == null ? "level_beginner" : "level_intermediate"),
+        c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
       ${table("info_hits", corr)}${table("info_breaks", brk)}${table("info_ranks", ranks)}
       ${table("info_end", end)}${table("info_tunnels", tun)}
       <p class="muted small">${this.T("info_note")}</p></div>`;

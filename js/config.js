@@ -34,17 +34,25 @@ export class Config {
       tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5
       max_active_tunnels: 2,          // MAX_ACTIVE_TUNNELS
       tunnel_declare_range: 6,        // TUNNEL_DECLARE_RANGE
+
+      // Dice level: chance of a 6 on one die. null = fair dice (1/6, beginner);
+      // 0.1 = intermediate (a 6 comes one time in ten, the other numbers share the rest)
+      six_chance: null,               // SIX_CHANCE
     }, o);
   }
 
   // Defaults for the 6-color (six arms) or 4-color (classic cross) board.
-  static forBoard(n) {
+  static forBoard(n, level = "beginner") {
+    const dice = { six_chance: Config.LEVELS[level] ?? null };
     if (n === 4) {
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
-                          tunnel_max_skip: 2, tunnel_last_corridor: 3 });
+                          tunnel_max_skip: 2, tunnel_last_corridor: 3, ...dice });
     }
-    return new Config({ n_colors: 6 });
+    return new Config({ n_colors: 6, ...dice });
   }
+
+  // dice levels for everybody at the table (same dice for people and computers)
+  static LEVELS = { beginner: null, intermediate: 0.1 };
 
   // (entry corridor, exit corridor) pairs; corridors 1..n, the final one is never an exit.
   tunnels() {
