@@ -610,6 +610,46 @@ export class Game {
     return out;
   }
 
+  // Every way to play the current "play" decision step by step, for the click-by-click
+  // interface: [{steps, states, option}], where states[k] is the board after steps[k].
+  // Unlike the option list (one entry per resulting position), the same position can be
+  // reached by several sequences here, e.g. die A first or die B first. Only sequences
+  // the rules allow (six first, wall break, tunnels...) are listed.
+  sequences(dec = this.pending) {
+    if (!dec || dec.kind !== "play" || !dec.options.length) return [];
+    const p = this.turn, st0 = this.state;
+    const structs = this.structures(st0);
+    const legal = new Map(dec.options.map(o => [o.payload.state.key(), o]));
+    const first = dec.options[0].payload;
+    const isBreak = first.kind === "break";
+    const nd = first.steps.length;
+    const targets = isBreak ? [...new Set(dec.options.map(o => o.payload.target))] : [null];
+    const out = [];
+    for (const target of targets) {
+      const rec = (cur, used, steps, states, movers) => {
+        if (steps.length === nd) {
+          const o = legal.get(cur.key());
+          if (o && this._valid(p, steps, structs, isBreak, target)) out.push({ steps, states, option: o, dieIdx: used });
+          return;
+        }
+        dec.dice.forEach((d, di) => {
+          if (used.includes(di)) return;
+          for (const m of this.movers(p, cur)) {
+            if (isBreak && movers.has(mk(m))) continue;
+            if (m[0] === "hn" && cur.hunters[p] !== null) continue;
+            const r = this.step(cur, p, m, d, structs, target);
+            if (r === null) continue;
+            const mm = m[0] === "hn" ? ["h", p] : m;
+            const mv = new Set(movers); mv.add(mk(mm));
+            rec(r[0], used.concat([di]), steps.concat([r[1]]), states.concat([r[0]]), mv);
+          }
+        });
+      };
+      rec(st0, [], [], [], new Set());
+    }
+    return out;
+  }
+
   // ------------------------------------------------------------ scoring §11
   piecePoints(color, rel) {
     const c = this.cfg;

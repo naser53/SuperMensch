@@ -16,8 +16,8 @@ function save(d) {
 }
 
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-const dieHtml = (v, edit, k) =>
-  `<div class="die${edit ? " edit" : ""}" ${edit ? `data-die="${k}"` : ""}>` +
+const dieHtml = (v, cls, attrs) =>
+  `<div class="die ${cls}" ${attrs}>` +
   Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[v].includes(i) ? "on" : ""}"></i>`).join("") + "</div>";
 
 class App {
@@ -30,10 +30,10 @@ class App {
     this.debug = false;
     this.game = null;
     this.ais = {};
-    this.filterPiece = null;
     this.aiPlan = null;
+    this.sel = null;
     this.nextAi = 0;
-    this.board = new Board3D($("#stage"), { onPick: m => this.pickPiece(m) });
+    this.board = new Board3D($("#stage"), { onPick: hit => this.boardClick(hit) });
     const hint = document.createElement("div");
     hint.className = "hint3d";
     $("#stage").appendChild(hint);
@@ -139,8 +139,8 @@ class App {
     this.game = new Game(players, s.mode, Config.forBoard(s.colors), null, this.debug);
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
-    this.filterPiece = null;
     this.aiPlan = null;
+    this.sel = null;
     $("#setup").hidden = true;
     this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
     this.nextAi = performance.now() + this.delay;
@@ -178,12 +178,13 @@ class App {
     const who = t(this.lang, p.isAi ? "thinking" : "your_turn");
     h += `<div class="turnline"><b>${this.T("turn", { p: tr(this.lang, p.name), who })}</b>
       <span class="muted small">${this.T("round", { n: g.turnNo })}</span></div>`;
-    const dice = dec && dec.kind === "dice" ? dec.dice : g.lastDice;
-    h += `<div class="dice">${dice.map((v, k) => dieHtml(v, dec && dec.kind === "dice", k)).join("")}</div>`;
-    if (dec && dec.note) h += `<div class="note">${this.S(dec.note)}</div>`;
+    const human = dec && !p.isAi;
+    if (dec !== (this.sel && this.sel.dec)) this.resetSelection(dec);
+    h += this.diceHtml(dec, human);
+    if (dec && dec.note && !(human && dec.kind === "keep")) h += `<div class="note">${this.S(dec.note)}</div>`;
     h += "</div>";
 
-    let opts = [];
+    let opts = [], targets = [], shown = g.state;
     if (dec && dec.kind === "dice") {
       h += `<div class="pad" style="padding-top:0"><div class="muted small">${this.T("dice_hint")}</div>
         <div class="btns"><button class="btn primary" data-act="dice_go">${this.T("continue")}</button>
@@ -195,16 +196,39 @@ class App {
       h += `<div class="pad" style="padding-top:0"><div class="muted small">${this.T("ai_will")}</div>` +
         lines.map(x => `<div>${this.S(x)}</div>`).join("") +
         `<div class="btns"><button class="btn primary" data-act="ai_go">${this.T("continue")}</button></div></div><div class="grow"></div>`;
-    } else if (dec && !p.isAi) {
-      opts = dec.options;
-      if (dec.kind === "play" && this.filterPiece) {
-        const fp = this.filterPiece.join(",");
-        opts = opts.filter(o => o.payload.steps.some(s => s.mover.join(",") === fp));
+    } else if (human && dec.kind === "play" && !this.sel.list) {
+      const sel = this.sel;
+      shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+      const hint = sel.ambig ? "pick_which" : (sel.die === null ? "pick_die" : "pick_target");
+      h += `<div class="pad" style="padding-top:0"><div class="note">${this.T(hint)}</div>`;
+      if (sel.ambig) {
+        opts = sel.ambig;
+        h += '<div class="options" style="padding:0">' + opts.map((c, k) =>
+          `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join("") + "</div>";
       }
-      if (dec.kind === "play") h += `<div class="pad muted small" style="padding-top:0">${this.T("moves_hint", { n: opts.length })}</div>`;
+      if (sel.picks.length) {
+        h += '<div class="small muted" style="margin-top:6px">' +
+          sel.picks.map(x => `<div>${this.S(g.describe({ steps: [x.step] })[0])}</div>`).join("") + "</div>";
+      }
+      h += '<div class="btns small">' +
+        (sel.picks.length || sel.die !== null ? `<button class="btn" data-act="undo">${this.T("undo")}</button>` : "") +
+        `<button class="btn" data-act="list">${this.T("all_moves", { n: dec.options.length })}</button></div></div>`;
+      h += '<div class="grow"></div>';
+      targets = sel.ambig ? [] : this.targets();
+    } else if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
+      h += `<div class="pad" style="padding-top:0"><div class="note">${this.T("pick_keep")}</div><div class="btns small">` +
+        dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
+          `<button class="btn" data-pay="${esc(o.payload)}">${this.S(o.label)}</button>`).join("") +
+        "</div></div><div class=\"grow\"></div>";
+    } else if (human) {
+      opts = dec.options;
+      if (dec.kind === "play") {
+        h += `<div class="pad small" style="padding-top:0"><button class="btn" data-act="clicks">${this.T("by_clicks")}</button></div>`;
+      }
       h += '<div class="options grow">' + opts.map((o, k) => {
         const lines = Array.isArray(o.label) ? o.label : [o.label];
-        return `<button class="opt" data-opt="${k}">${lines.map(x => `<div>${this.S(x)}</div>`).join("")}</button>`;
+        const prim = dec.kind === "pre_roll" && o.payload === "roll" ? " primary" : "";
+        return `<button class="opt${prim}" data-opt="${k}">${lines.map(x => `<div>${this.S(x)}</div>`).join("")}</button>`;
       }).join("") + "</div>";
     } else {
       h += '<div class="grow"></div>';
@@ -212,13 +236,127 @@ class App {
     this.shownOpts = opts;
     h += this.logHtml() + this.footHtml();
     el.innerHTML = h;
-    this.board.sync(g.state, this.filterPiece);
+    this.board.sync(shown);
+    this.board.showTargets(targets);
     if (dec && p.isAi && this.debug && this.aiPlan) {
       const pl = this.aiPlan[1].payload;
       this.board.preview(pl && pl.steps ? pl : null, Array.isArray(pl) && pl[0] === "tunnel" ? pl : null);
     } else {
       this.board.preview(null);
     }
+  }
+
+  // ------------------------------------------------------------ click-by-click moves
+  // A play is made die by die: click a die, then one of the highlighted fields (or the piece).
+  // With three dice (stuck, card, bonus) the two dice clicked are the ones kept.
+  resetSelection(dec) {
+    this.sel = { dec, picks: [], die: null, keep: [], ambig: null, list: false,
+      seqs: dec && dec.kind === "play" && !this.game.players[this.game.turn].isAi ? this.game.sequences(dec) : [] };
+    this.autoDie();
+  }
+
+  // sequences that agree with what has been clicked so far
+  matching() {
+    const { picks, seqs } = this.sel;
+    return seqs.filter(q => picks.every((x, k) => q.dieIdx[k] === x.di && q.steps[k].mover.join() === x.step.mover.join()));
+  }
+
+  usableDice() {
+    const n = this.sel.picks.length;
+    return new Set(this.matching().map(q => q.dieIdx[n]));
+  }
+
+  // Select the die by itself when there is no real choice (one die left, or equal values).
+  autoDie() {
+    const sel = this.sel;
+    if (!sel.dec || sel.dec.kind !== "play" || sel.die !== null) return;
+    const use = [...this.usableDice()];
+    if (use.length && use.every(di => sel.dec.dice[di] === sel.dec.dice[use[0]])) sel.die = Math.min(...use);
+  }
+
+  // candidate next steps for the selected die, one per mover
+  candidates() {
+    const sel = this.sel, n = sel.picks.length, out = new Map();
+    if (sel.die === null) return [];
+    for (const q of this.matching()) {
+      if (q.dieIdx[n] !== sel.die) continue;
+      const key = q.steps[n].mover.join();
+      if (!out.has(key)) out.set(key, { step: q.steps[n], state: q.states[n], di: sel.die });
+    }
+    return [...out.values()];
+  }
+
+  targets() {
+    const g = this.game;
+    return this.candidates().map((c, id) => {
+      const m = c.step.mover;
+      const pos = m[0] === "p" ? this.board.piecePos(c.state, m[1], m[2]) : this.board.hunterPos(c.state, m[1]);
+      return { id, pos, color: COLORS[g._agent(m, g.state)] };
+    });
+  }
+
+  pickCandidate(c) {
+    const sel = this.sel;
+    sel.picks.push(c);
+    sel.die = null;
+    sel.ambig = null;
+    const done = this.matching().filter(q => q.steps.length === sel.picks.length);
+    if (done.length) { this.choose(done[0].option); return; }
+    this.autoDie();
+    this.render();
+  }
+
+  pickTarget(id) {
+    const cands = this.candidates(), c = cands[id];
+    if (!c) return;
+    const at = this.targets()[id].pos;
+    const same = this.targets().filter(t => t.pos.distanceTo(at) < 0.05).map(t => cands[t.id]);
+    if (same.length > 1) {
+      this.sel.ambig = same.map(x => ({ cand: x, label: this.game.describe({ steps: [x.step] })[0] }));
+      this.render();
+      return;
+    }
+    this.pickCandidate(c);
+  }
+
+  clickDie(k) {
+    const g = this.game, dec = g.pending, sel = this.sel;
+    if (!dec || g.players[g.turn].isAi) return;
+    if (dec.kind === "keep") {
+      if (!dec.options.some(o => Array.isArray(o.payload))) return;
+      sel.keep = sel.keep.includes(k) ? sel.keep.filter(x => x !== k) : sel.keep.concat([k]);
+      if (sel.keep.length === 2) {
+        const pair = sel.keep.map(i => dec.dice[i]).sort((a, b) => a - b).join();
+        const o = dec.options.find(x => Array.isArray(x.payload) && x.payload[1].join() === pair);
+        if (o) { this.choose(o); return; }
+      }
+      this.render();
+      return;
+    }
+    if (dec.kind !== "play" || sel.list) return;
+    if (!this.usableDice().has(k)) return;
+    sel.die = sel.die === k ? null : k;
+    sel.ambig = null;
+    this.render();
+  }
+
+  diceHtml(dec, human) {
+    const g = this.game;
+    if (dec && dec.kind === "dice") {
+      return `<div class="dice">${dec.dice.map((v, k) => dieHtml(v, "edit", `data-die="${k}"`)).join("")}</div>`;
+    }
+    if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
+      return `<div class="dice">${dec.dice.map((v, k) =>
+        dieHtml(v, "pick" + (this.sel.keep.includes(k) ? " sel" : ""), `data-pdie="${k}"`)).join("")}</div>`;
+    }
+    if (human && dec.kind === "play" && !this.sel.list) {
+      const sel = this.sel, used = new Set(sel.picks.map(x => x.di)), use = this.usableDice();
+      return `<div class="dice">${dec.dice.map((v, k) => {
+        const cls = used.has(k) ? "used" : (sel.die === k ? "pick sel" : (use.has(k) ? "pick" : "off"));
+        return dieHtml(v, cls, `data-pdie="${k}"`);
+      }).join("")}</div>`;
+    }
+    return `<div class="dice">${g.lastDice.map(v => dieHtml(v, "", "")).join("")}</div>`;
   }
 
   logHtml() {
@@ -237,7 +375,6 @@ class App {
   // ------------------------------------------------------------ actions
   choose(opt) {
     this.game.choose(opt);
-    this.filterPiece = null;
     this.aiPlan = null;
     this.nextAi = performance.now() + this.delay;
     this.render();
@@ -255,11 +392,26 @@ class App {
     this.render();
   }
 
-  pickPiece(m) {
-    const g = this.game;
-    if (!g || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi) return;
-    this.filterPiece = m && this.filterPiece && m.join(",") === this.filterPiece.join(",") ? null : m;
-    this.render();
+  // Click on the board: a highlighted field, or a piece (its move with the selected die,
+  // or, with no die selected, the first die it can use).
+  boardClick(hit) {
+    const g = this.game, sel = this.sel;
+    if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
+    if (hit.target !== undefined) { this.pickTarget(hit.target); return; }
+    const key = hit.piece.join(), hk = hit.piece[0] === "h" ? "h," + hit.piece[1] : null;
+    const isMe = c => c.step.mover.join() === key || (hk && c.step.mover[0] !== "p");
+    if (sel.die === null) {
+      const n = sel.picks.length;
+      const q = this.matching().find(x => isMe({ step: x.steps[n] }));
+      if (!q) return;
+      sel.die = q.dieIdx[n];
+    }
+    const mine = this.candidates().filter(isMe);
+    if (mine.length === 1) this.pickCandidate(mine[0]);
+    else if (mine.length > 1) {
+      sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+      this.render();
+    } else this.render();
   }
 
   tick() {
@@ -274,7 +426,7 @@ class App {
 // ------------------------------------------------------------ event wiring
 function wire(app) {
   document.addEventListener("click", e => {
-    const b = e.target.closest("[data-act],[data-opt],[data-die]");
+    const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay]");
     if (!b) return;
     if (b.closest("#setup")) {
       if (b.dataset.act && b.dataset.act !== "lang") app.setupAction(b.dataset.act, b.dataset.val);
@@ -288,11 +440,24 @@ function wire(app) {
       app.render();
       return;
     }
-    if (b.dataset.opt !== undefined) { app.choose(app.shownOpts[+b.dataset.opt]); return; }
+    if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie); return; }
+    if (b.dataset.pay !== undefined) {
+      app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
+      return;
+    }
+    if (b.dataset.opt !== undefined) {
+      const o = app.shownOpts[+b.dataset.opt];
+      if (o && o.cand) app.pickCandidate(o.cand);
+      else if (o) app.choose(o);
+      return;
+    }
     const act = b.dataset.act;
     if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
     else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
+    else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
+    else if (act === "list") { app.sel.list = true; app.render(); }
+    else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
     else if (act === "view") app.board.fitView(false);
     else if (act === "top") app.board.fitView(true);
@@ -316,7 +481,7 @@ function wire(app) {
     if (!app.game || !app.shownOpts) return;
     if (!b) { if (e.type === "mouseout") app.board.preview(null); return; }
     const o = app.shownOpts[+b.dataset.opt];
-    if (!o) return;
+    if (!o || o.cand) return;
     const pl = o.payload;
     if (e.type === "mouseout") app.board.preview(null);
     else app.board.preview(pl && pl.steps ? pl : null, Array.isArray(pl) && pl[0] === "tunnel" ? pl : null);

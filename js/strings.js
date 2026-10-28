@@ -9,6 +9,13 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    pick_die: "Click a die",
+    pick_target: "Click a yellow field (or the piece) to move with this die",
+    pick_which: "Which one?",
+    pick_keep: "Click the two dice you keep",
+    undo: "Undo",
+    all_moves: "List of all moves ({n})",
+    by_clicks: "Move by clicking",
     board: "Board",
     board6: "6 colors (six arms, 60 fields)",
     board4: "4 colors (classic cross, 40 fields)",
@@ -100,6 +107,13 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    pick_die: "روی یک تاس کلیک کنید",
+    pick_target: "روی یک خانه‌ی زرد (یا خود مهره) کلیک کنید تا با این تاس حرکت کند",
+    pick_which: "کدام؟",
+    pick_keep: "روی دو تاسی که نگه می‌دارید کلیک کنید",
+    undo: "برگرداندن",
+    all_moves: "فهرست همه‌ی حرکت‌ها ({n})",
+    by_clicks: "حرکت با کلیک",
     board: "صفحه",
     board6: "۶ رنگ (شش بازو، ۶۰ خانه)",
     board4: "۴ رنگ (صلیبی کلاسیک، ۴۰ خانه)",
@@ -191,6 +205,13 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    pick_die: "Klicke einen Würfel an",
+    pick_target: "Klicke ein gelbes Feld (oder die Figur), um mit diesem Würfel zu ziehen",
+    pick_which: "Welche?",
+    pick_keep: "Klicke die zwei Würfel an, die du behältst",
+    undo: "Zurück",
+    all_moves: "Liste aller Züge ({n})",
+    by_clicks: "Mit Klicks ziehen",
     board: "Spielbrett",
     board6: "6 Farben (sechs Arme, 60 Felder)",
     board4: "4 Farben (klassisches Kreuz, 40 Felder)",

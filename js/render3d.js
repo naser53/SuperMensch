@@ -77,7 +77,8 @@ export class Board3D {
     this.tunnelGroup = new THREE.Group();
     this.previewGroup = new THREE.Group();
     this.pieceGroup = new THREE.Group();
-    this.scene.add(this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup);
+    this.targetGroup = new THREE.Group();
+    this.scene.add(this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup);
 
     this.pawnGeo = pawnGeometry();
     this.pieceMeshes = new Map();   // "col,i" -> group
@@ -130,7 +131,7 @@ export class Board3D {
     this.playerName = playerName;    // (playerIndex) -> display text
     this.n = game.cfg.n_colors;
     this.data = BOARDS[String(this.n)];
-    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup]) g.clear();
+    for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
     this.hunterMeshes.clear();
     this.buildBoard();
@@ -360,6 +361,7 @@ export class Board3D {
 
   // Move every pawn towards where the state says it is.
   sync(st, highlight = null) {
+    this.shownState = st;
     const g = this.game;
     for (const [k, grp] of this.pieceMeshes) {
       const [col, i] = k.split(",").map(Number);
@@ -428,7 +430,7 @@ export class Board3D {
   preview(play, tunnelPayload = null) {
     this.previewGroup.clear();
     const g = this.game;
-    this.drawTunnels(g.state, tunnelPayload);
+    this.drawTunnels(this.shownState || g.state, tunnelPayload);
     if (!play) return;
     const cur = g.state, nxt = play.state;
     const mat = new THREE.MeshBasicMaterial({ color: HILITE });
@@ -461,12 +463,44 @@ export class Board3D {
     }
   }
 
+  hunterPos(st, p) {
+    const h = st.hunters[p];
+    return this.xz(this.data.track[h[1]], this.surfaceY());
+  }
+
+  // Fields the selected die can reach: pulsing rings; a click on one picks that move.
+  showTargets(list) {
+    this.targetGroup.clear();
+    for (const t of list) {
+      const grp = new THREE.Group();
+      grp.position.set(t.pos.x, this.surfaceY() + 0.02, t.pos.z);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(FIELD_R * 1.05, 0.07, 10, 40),
+        new THREE.MeshBasicMaterial({ color: HILITE }));
+      ring.rotation.x = Math.PI / 2;
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.04, 32),
+        new THREE.MeshBasicMaterial({ color: HILITE, transparent: true, opacity: 0.35, depthWrite: false }));
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshBasicMaterial({ color: t.color }));
+      dot.position.y = 0.12;
+      for (const m of [ring, disc, dot]) { m.userData.targetId = t.id; grp.add(m); }
+      // a tall invisible column, so a pawn standing on the field does not hide the target
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R, FIELD_R, 1.2, 12),
+        new THREE.MeshBasicMaterial({ visible: false }));
+      col.position.y = 0.6;
+      col.userData.targetId = t.id;
+      grp.add(col);
+      grp.userData.pulse = ring;
+      this.targetGroup.add(grp);
+    }
+  }
+
   pick(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const hits = this.raycaster.intersectObjects(this.pieceGroup.children, true);
-    for (const h of hits) if (h.object.userData.piece) return h.object.userData.piece;
+    for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
+      if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
+    for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))
+      if (h.object.userData.piece) return { piece: h.object.userData.piece };
     return null;
   }
 
@@ -485,6 +519,8 @@ export class Board3D {
       grp.position.y += (tg.y + lift - grp.position.y) * Math.min(1, k * 1.5);
       if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
     }
+    const pulse = 1 + 0.12 * Math.sin(tnow * 6);
+    for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }

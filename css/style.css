@@ -71,6 +71,15 @@ label.check.on { color: var(--accent); }
 .die i.on { visibility: visible; }
 .die.edit { border: 3px solid var(--accent); background: var(--soft); cursor: pointer; }
 .die.edit:hover { transform: translateY(-1px); }
+.die.pick { cursor: pointer; border-color: var(--accent); transition: transform .12s, box-shadow .12s; }
+.die.pick:hover { transform: translateY(-2px); box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+.die.pick.sel { background: #ffe27a; border: 3px solid var(--accent); transform: translateY(-3px);
+  box-shadow: 0 0 0 3px rgba(255,196,0,.45); }
+.die.used { opacity: .3; }
+.die.off { opacity: .45; border-style: dashed; }
+.btns.small .btn { flex: none; padding: 5px 12px; font-size: 13px; }
+.opt.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+.opt.primary:hover { background: var(--accent); filter: brightness(1.07); }
 
 .options { overflow-y: auto; padding: 0 16px 8px; display: flex; flex-direction: column; gap: 6px; }
 .opt {
