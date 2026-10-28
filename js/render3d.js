@@ -54,6 +54,7 @@ export class Board3D {
     this.controls.maxPolarAngle = Math.PI * 0.46;
     this.controls.minDistance = 6;
     this.controls.maxDistance = 45;
+    this.setViewMode(false);
 
     this.scene.add(new THREE.HemisphereLight("#fffaf0", "#8a7a60", 1.6));
     const sun = new THREE.DirectionalLight("#ffffff", 1.6);
@@ -93,7 +94,7 @@ export class Board3D {
     el.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
     el.addEventListener("pointerup", e => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || e.button !== 0) return;
-      this.onPick(this.pick(e), e);
+      if (!this.viewMode) this.onPick(this.pick(e), e);
     });
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -111,6 +112,15 @@ export class Board3D {
       const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
       this.placeCamera(sph.theta, sph.phi, this.viewDistance(sph.phi));
     }
+  }
+
+  // Turning, moving and zooming the board with the mouse or fingers only works in view mode,
+  // so clicks on pieces never turn the board by accident. Preset views work in both modes.
+  setViewMode(on) {
+    this.viewMode = on;
+    this.controls.enabled = on;
+    this.renderer.domElement.style.cursor = on ? "grab" : "default";
+    this.container.classList.toggle("viewmode", on);
   }
 
   // ------------------------------------------------------------ views

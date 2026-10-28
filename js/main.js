@@ -153,7 +153,7 @@ class App {
     if (!this.game) { this.renderSetup(); return; }
     const g = this.game, el = $("#panel");
     el.dir = this.rtl ? "rtl" : "ltr";
-    this.hint.textContent = t(this.lang, "view_hint");
+    this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
     let h = `<div class="pad row between"><label class="check${this.debug ? " on" : ""}">
       <input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${this.T("debug")}</label>${this.langSelect()}</div>`;
@@ -308,6 +308,7 @@ class App {
   clickDie(k) {
     const g = this.game, dec = g.pending, sel = this.sel;
     if (!dec || g.players[g.turn].isAi) return;
+    if (this.board.viewMode) this.board.setViewMode(false);   // back to playing
     if (dec.kind === "keep") {
       if (!dec.options.some(o => Array.isArray(o.payload))) return;
       sel.keep = sel.keep.includes(k) ? sel.keep.filter(x => x !== k) : sel.keep.concat([k]);
@@ -359,7 +360,8 @@ class App {
       <button class="btn" data-view="low" title="${this.T("view_low")}">${this.T("view_low")}</button>
       <button class="btn" data-view="left" title="${this.T("view_left")}">&#8634;</button>
       <button class="btn" data-view="right" title="${this.T("view_right")}">&#8635;</button>
-      <button class="btn" data-view="mine">${this.T("view_mine")}</button></div>
+      <button class="btn" data-view="mine">${this.T("view_mine")}</button>
+      <button class="btn${this.board.viewMode ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(this.board.viewMode ? "view_free_done" : "view_free")}</button></div>
       <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
       <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
       <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div></div>`;
@@ -424,6 +426,11 @@ class App {
   view(name) {
     const g = this.game;
     if (!g) return;
+    if (name === "free") {                   // view mode on / off
+      this.board.setViewMode(!this.board.viewMode);
+      this.render();
+      return;
+    }
     const step = 360 / g.cfg.n_colors;
     if (name === "left" || name === "right") this.board.setView({ turn: name === "left" ? -step : step });
     else if (name === "mine") {

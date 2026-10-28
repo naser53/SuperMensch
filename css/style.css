@@ -134,3 +134,5 @@ label.check.on { color: var(--accent); }
 .player.done { opacity: .75; }
 .ranking { margin: 0 0 14px; padding: 0; list-style: none; }
 .ranking li { margin: 4px 0; }
+.views .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
+#stage.viewmode { box-shadow: inset 0 0 0 4px var(--hi); }

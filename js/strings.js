@@ -9,6 +9,10 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    view_free: "Turn the board",
+    view_free_done: "Done turning",
+    view_free_hint: "Turn, move and zoom the board with the mouse; pieces cannot be clicked meanwhile",
+    view_hint_off: "To turn or zoom the board: press Turn the board",
     log_bonus_clean: "  {piece} reaches the nest without ever being captured: +{pts}",
     log_bonus_color: "  {color} is complete: +{pts}",
     log_finish: "{p} finishes in place {n} (+{pts})",
@@ -120,6 +124,10 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    view_free: "تغییر زاویه",
+    view_free_done: "پایان تغییر زاویه",
+    view_free_hint: "چرخاندن، جابه‌جایی و زوم صفحه با ماوس؛ در این حالت روی مهره‌ها نمی‌شود کلیک کرد",
+    view_hint_off: "برای چرخاندن یا زوم صفحه: دکمه‌ی «تغییر زاویه»",
     log_bonus_clean: "  {piece} بدون اینکه زده شود به آشیانه رسید: +{pts}",
     log_bonus_color: "  رنگ {color} کامل شد: +{pts}",
     log_finish: "{p} در جایگاه {n} تمام کرد (+{pts})",
@@ -231,6 +239,10 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    view_free: "Brett drehen",
+    view_free_done: "Drehen beenden",
+    view_free_hint: "Brett mit der Maus drehen, verschieben und zoomen; Figuren sind währenddessen nicht anklickbar",
+    view_hint_off: "Zum Drehen oder Zoomen: Brett drehen drücken",
     log_bonus_clean: "  {piece} erreicht das Ziel, ohne je geschlagen worden zu sein: +{pts}",
     log_bonus_color: "  {color} ist komplett: +{pts}",
     log_finish: "{p} beendet auf Platz {n} (+{pts})",
