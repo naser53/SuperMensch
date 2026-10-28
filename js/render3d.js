@@ -465,7 +465,7 @@ export class Board3D {
       const [col, i] = k.split(",").map(Number);
       grp.userData.target = this.piecePos(st, col, i);
       const kills = st.kills[col][i];
-      const marshal = kills >= g.cfg.marshal_at, general = kills >= g.cfg.general_at;
+      const marshal = g.rank(kills) === 2, general = g.rank(kills) >= 1;
       grp.userData.r1.visible = general;
       grp.userData.r2.visible = marshal;
       grp.userData.g1.visible = general && !marshal;

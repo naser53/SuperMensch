@@ -58,8 +58,8 @@ export function mulberry32(seed) {
 export class State {
   constructor(pos, kills, hunters, scores, tunnels = null, tmark = null, hit = null, earned = null, hits = null) {
     this.pos = pos;           // pos[color][i] -> rel
-    this.kills = kills;       // kills[color][i]
-    this.hunters = hunters;   // hunters[player] -> null | [color, abs, dir, kills]
+    this.kills = kills;       // kills[color][i]: rank points (§11) won by captures since it last came in
+    this.hunters = hunters;   // hunters[player] -> null | [color, abs, dir, rank points]
     this.scores = scores;     // scores[player]
     // §13 active tunnels: [player, color, piece, from_corridor, to_corridor, t]
     // t is null while declared (piece still on the track), else 1..T inside
@@ -673,18 +673,20 @@ export class Game {
     return pts;
   }
 
-  bounty(kills) {
+  // §11 ranks come from the points a piece has won with its own captures since it last came
+  // in (general from GENERAL_POINTS, marshal from MARSHAL_POINTS); a captured piece starts again.
+  rank(pts) {
     const c = this.cfg;
-    if (kills >= c.marshal_at) return c.marshal_bounty;
-    if (kills >= c.general_at) return c.general_bounty;
-    return 0;
+    return pts >= c.marshal_points ? 2 : pts >= c.general_points ? 1 : 0;
   }
 
-  rankName(kills) {
-    const c = this.cfg;
-    if (kills >= c.marshal_at) return M("marshal");
-    if (kills >= c.general_at) return M("general");
-    return M("soldier");
+  bounty(pts) {
+    const r = this.rank(pts);
+    return r === 2 ? this.cfg.marshal_bounty : r === 1 ? this.cfg.general_bounty : 0;
+  }
+
+  rankName(pts) {
+    return M(["soldier", "general", "marshal"][this.rank(pts)]);
   }
 
   // the "scores" view: points shared by the pieces that made a capture or a break
@@ -735,26 +737,22 @@ export class Game {
     }
     for (const [s, c] of caps) {
       const m = s.mover;
-      let k;
-      if (m[0] === "p") {
-        st.kills[m[1]][m[2]] += 1;
-        k = st.kills[m[1]][m[2]];
-      } else {
-        const h = st.hunters[p];
-        if (h) { h[3] += 1; k = h[3]; } else k = 1;
-      }
-      let mult = 1;
-      if (k > this.cfg.marshal_at) mult = this.cfg.marshal_mult;
-      else if (k > this.cfg.general_at) mult = this.cfg.general_mult;
+      const h = m[0] === "p" ? null : st.hunters[p];
+      const before = m[0] === "p" ? st.kills[m[1]][m[2]] : (h ? h[3] : 0);
+      const r = this.rank(before);                 // the rank the piece has when it captures
+      const mult = r === 2 ? this.cfg.marshal_mult : r === 1 ? this.cfg.general_mult : 1;
       const base = this.piecePoints(c.color, c.rel) * mult;
       const b = this.bounty(c.vkills);
+      const after = before + base + b;
+      if (m[0] === "p") st.kills[m[1]][m[2]] = after;
+      else if (h) h[3] = after;
       st.scores[p] += base + b;
       this._credit(st, [m], base + b, 1);
       if (b) st.scores[this.ownerOf(c.victim)] -= b;
       const extra = b ? M("log_bounty", { b, rank: this.rankName(c.vkills) }) : "";
       msgs.push(M("log_score_hit", { v: this.moverName(c.victim, this.state), pts: base, extra }));
-      if ((k === this.cfg.general_at || k === this.cfg.marshal_at) && m[0] === "p")
-        msgs.push(M("log_rank_up", { piece: this.moverName(m), rank: this.rankName(k) }));
+      if (this.rank(after) > r && m[0] === "p")
+        msgs.push(M("log_rank_up", { piece: this.moverName(m), rank: this.rankName(after) }));
     }
     return msgs;
   }

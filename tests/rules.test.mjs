@@ -352,13 +352,14 @@ test("single-color game: a 6 throws again, as long as 6 comes", () => {
   assert.equal(g.turn, 1);                 // next player
 });
 
-test("ranks and tunnel costs: general from 3 captures, marshal from 4; bounties 40 / 60; tunnels 80 / 120 / 160", () => {
+test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 40 / 60; tunnels 80 / 120 / 160", () => {
   const g = make();
-  assert.equal(g.rankName(2).key, "soldier");
-  assert.equal(g.rankName(3).key, "general");
-  assert.equal(g.rankName(4).key, "marshal");
-  assert.equal(g.bounty(3), 40);
-  assert.equal(g.bounty(4), 60);
+  assert.equal(g.rankName(14).key, "soldier");
+  assert.equal(g.rankName(15).key, "general");
+  assert.equal(g.rankName(24).key, "general");
+  assert.equal(g.rankName(25).key, "marshal");
+  assert.equal(g.bounty(15), 40);
+  assert.equal(g.bounty(25), 60);
   assert.equal(g.tunnelCost(1, 2), 80);
   assert.equal(g.tunnelCost(1, 3), 120);
   assert.equal(g.tunnelCost(1, 4), 160);
@@ -392,4 +393,23 @@ test("dice levels: fair for beginners, a 6 one time in ten for intermediate", ()
   for (let v = 1; v <= 6; v++) assert.ok(Math.abs(fair[v] - 1 / 6) < 0.01);
   assert.ok(Math.abs(mid[6] - 0.1) < 0.01);
   for (let v = 1; v <= 5; v++) assert.ok(Math.abs(mid[v] - 0.18) < 0.01);
+});
+
+test("ranks come from the points the piece wins with its own captures", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 3, 0, 1);
+  g.state.kills[0][0] = 10;                       // a soldier with 10 points
+  put(g, 1, 0, g.relOf(1, 8));                    // blue on abs 8 = its corridor... worth piecePoints
+  const p = g.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === YARD && x.steps[0].mover.join() === "p,0,0");
+  const pts = g.piecePoints(1, g.relOf(1, 8));
+  g._applyScore(0, p);
+  assert.equal(p.state.kills[0][0], 10 + pts);    // soldier: no multiplier
+  // a general (15+) doubles its capture points
+  const h = make();
+  put(h, 0, 0, 5); put(h, 3, 0, 1);
+  h.state.kills[0][0] = 15;
+  put(h, 1, 0, h.relOf(1, 8));
+  const q = h.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === YARD && x.steps[0].mover.join() === "p,0,0");
+  h._applyScore(0, q);
+  assert.equal(q.state.scores[0], 2 * pts);
 });

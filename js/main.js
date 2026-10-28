@@ -574,8 +574,8 @@ class App {
     corr.push(row(this.T("info_threshold"), P("+", c.threshold_bonus)));
     const brk = [row(this.T("info_wall"), P("+", c.wall_break)), row(this.T("info_castle"), P("+", c.castle_break))];
     const ranks = [
-      row(this.T("info_general", { n: N(c.general_at) }), P("×", c.general_mult)),
-      row(this.T("info_marshal", { n: N(c.marshal_at) }), P("×", c.marshal_mult)),
+      row(this.T("info_general", { n: N(c.general_points) }), P("×", c.general_mult)),
+      row(this.T("info_marshal", { n: N(c.marshal_points) }), P("×", c.marshal_mult)),
       row(this.T("info_hit_general"), P("+", c.general_bounty) + " / " + P("−", c.general_bounty)),
       row(this.T("info_hit_marshal"), P("+", c.marshal_bounty) + " / " + P("−", c.marshal_bounty)),
     ];
