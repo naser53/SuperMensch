@@ -152,6 +152,7 @@ class App {
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
     this.aiPlan = null;
     this.sel = null;
+    this.doneNests = new Set();
     $("#setup").hidden = true;
     this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
     this.nextAi = performance.now() + this.delay;
@@ -183,7 +184,7 @@ class App {
       h += `<div class="won">${this.T("game_over")}</div><ol class="ranking">` +
         g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") +
         `</ol><button class="btn primary" data-act="menu">${this.T("new_game")}</button></div>`;
-      h += this.logHtml() + this.footHtml();
+      h += this.footHtml();
       el.innerHTML = h;
       this.board.sync(g.state);
       this.board.preview(null);
@@ -255,7 +256,7 @@ class App {
       h = h.replace('<div class="grow"></div>', "").replace('<div class="options grow">', '<div class="options grow" hidden>');
       h += `<div class="pad scores-note"><b>${this.T("scores_on")}</b><div class="small">${this.T("scores_legend")}</div></div><div class="grow"></div>`;
     }
-    h += this.logHtml() + this.footHtml();
+    h += this.footHtml();
     el.innerHTML = h;
     if (g.lastDice !== this.diceRef) {      // a new throw: let the dice tumble
       const prev = this.diceRef || [], now = g.lastDice;
@@ -335,6 +336,17 @@ class App {
   }
 
   hop() { return Math.max(50, Math.min(200, this.delay * 0.22)); }
+
+  // a nest that has just been filled shines (after the piece has landed)
+  checkNests(when = performance.now()) {
+    const g = this.game;
+    this.doneNests = this.doneNests || new Set();
+    for (let c = 0; c < g.cfg.n_colors; c++) {
+      if (g.owner[c] === null || this.doneNests.has(c) || !g.colorComplete(g.state, c)) continue;
+      this.doneNests.add(c);
+      setTimeout(() => this.board.celebrate(c), Math.max(0, when - performance.now()));
+    }
+  }
 
   // the play step by step, for the animation: [{before, after, step}]
   replay(play) {
@@ -474,11 +486,6 @@ class App {
     return `<div class="dice">${g.lastDice.map(v => dieHtml(v, "", "")).join("")}</div>`;
   }
 
-  logHtml() {
-    const lines = this.game.log.slice(-14).reverse();
-    return `<div class="log sep">${lines.map(m => `<div>${this.S(m)}</div>`).join("")}</div>`;
-  }
-
   footHtml() {
     const speed = Math.round((2050 - this.delay) / 20);
     return `<div class="foot sep"><div class="views">
@@ -505,6 +512,7 @@ class App {
     this.render();
     let end = performance.now();
     if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
+    this.checkNests(end);
     this.nextAi = end + this.delay;
   }
 
@@ -595,7 +603,8 @@ class App {
         c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
       ${table("info_hits", corr)}${table("info_breaks", brk)}${table("info_ranks", ranks)}
       ${table("info_end", end)}${table("info_tunnels", tun)}
-      <p class="muted small">${this.T("info_note")}</p></div>`;
+      <p class="muted small">${this.T("info_note")}</p>
+      <h3>${this.T("log")}</h3><div class="info-log">${g.log.slice().reverse().map(m => `<div>${this.S(m)}</div>`).join("")}</div></div>`;
   }
 
   // Board views, as in chess programs: from above, angled, low; turn by one seat; my side.

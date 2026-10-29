@@ -17,7 +17,7 @@ export class Config {
       threshold_bonus: 20,      // THRESHOLD_BONUS
       wall_break: 15,           // WALL_BREAK
       castle_break: 40,         // CASTLE_BREAK
-      color_bonus: 20,          // COLOR_BONUS: a color's last piece reaches the nest
+      color_bonus: 100,         // COLOR_BONUS: a nest is full (a color's last piece reaches it)
       finish_bonus: [50, 25],   // FINISH_BONUS: first and second player to finish (others 0)
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 

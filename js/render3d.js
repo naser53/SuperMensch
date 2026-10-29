@@ -200,6 +200,7 @@ export class Board3D {
     this.data = BOARDS[String(this.n)];
     for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
+    this.resetShine();
     this.hunterMeshes.clear();
     if (this.hunterGhosts) this.hunterGhosts.clear();
     this.buildBoard();
@@ -211,6 +212,13 @@ export class Board3D {
   relabel() {
     this.boardGroup.clear();
     this.buildBoard();
+  }
+
+  // forget the shining nests (new game)
+  resetShine() {
+    this.shining = new Set();
+    if (this.fx) for (const f of this.fx) this.scene.remove(f.sp);
+    this.fx = [];
   }
 
   xz(p, y = 0) { return new THREE.Vector3(p[0], y, p[1]); }
@@ -325,8 +333,10 @@ export class Board3D {
     }
     // nests and yards
     for (let c = 0; c < n; c++) {
+      this.nestFields = this.nestFields || {};
+      this.nestFields[c] = [];
       for (const p of d.home[c]) {
-        this.field(p, LIGHT[c], { side: LIGHT[c] });
+        this.nestFields[c].push(this.field(p, LIGHT[c], { side: LIGHT[c] }));
         this.ring(p, COLORS[c], FIELD_R, 0.04);
       }
       for (const p of d.yard[c]) {
@@ -408,18 +418,50 @@ export class Board3D {
     return s;
   }
 
-  // The hunter: a turning diamond with F (forward) or R (backward) over it.
-  hunterMesh(p, color, dir) {
+  // The hunter: a pawn of its color holding a bow; the arrow points the way it runs.
+  // Local +x is where the arrow points; the group is turned to face along the track.
+  hunterFigure(color, piece, opacity = 1) {
     const grp = new THREE.Group();
-    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.42),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.2 }));
-    m.position.y = 0.45; m.castShadow = true;
-    m.userData.piece = ["h", p];
-    const lab = this.numberSprite(dir === 1 ? "F" : "R", color);
-    lab.position.y = 1.12;
-    lab.scale.set(0.42, 0.42, 1);
-    grp.add(m, lab);
-    grp.userData = { piece: ["h", p], body: m, dir };
+    const see = opacity < 1 ? { transparent: true, opacity } : {};
+    const body = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.05, ...see });
+    for (const geo of this.pawnGeo) {
+      const m = new THREE.Mesh(geo, body);
+      m.castShadow = opacity === 1;
+      m.userData.piece = piece;
+      grp.add(m);
+    }
+    const bow = new THREE.Group();
+    const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
+    const R = 0.36;
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(R, 0.035, 8, 24, Math.PI), wood);
+    arc.rotation.z = -Math.PI / 2;                  // limbs up and down, bulging towards +x
+    const str = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 2 * R, 6),
+      new THREE.MeshBasicMaterial({ color: "#f4efe2", ...see }));
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.78, 6), wood);
+    shaft.rotation.z = Math.PI / 2;
+    shaft.position.x = 0.2;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 10),
+      new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3, ...see }));
+    tip.rotation.z = -Math.PI / 2;
+    tip.position.x = 0.66;
+    bow.add(arc, str, shaft, tip);
+    bow.position.set(0.05, 0.6, 0.32);             // held at the pawn's side, at chest height
+    bow.scale.setScalar(1.35);
+    for (const m of bow.children) m.userData.piece = piece;
+    grp.add(bow);
+    grp.userData = { piece, mat: body };
+    return grp;
+  }
+
+  // turn a hunter figure so that its arrow points along the track in direction dir
+  aimHunter(grp, a, dir) {
+    const L = this.data.track.length, p0 = this.data.track[a], p1 = this.data.track[((a + dir) % L + L) % L];
+    grp.userData.aim = Math.atan2(-(p1[1] - p0[1]), p1[0] - p0[0]);
+  }
+
+  hunterMesh(p, color, dir) {
+    const grp = this.hunterFigure(color, ["h", p]);
+    grp.userData.dir = dir;
     this.pieceGroup.add(grp);
     return grp;
   }
@@ -490,7 +532,8 @@ export class Board3D {
       grp.userData.target = this.xz(this.data.track[h[1]], this.surfaceY());
       grp.userData.dir = h[2];
       const sel = highlight && highlight[0] === "h" && highlight[1] === p;
-      grp.userData.body.material.emissive.set(sel ? "#664400" : "#000000");
+      grp.userData.mat.emissive.set(sel ? "#664400" : "#000000");
+      this.aimHunter(grp, h[1], h[2]);
     });
     // §9 a hunter that may come in waits as a pale diamond in its completed color's yard
     this.hunterGhosts = this.hunterGhosts || new Map();
@@ -507,27 +550,24 @@ export class Board3D {
         this.hunterGhosts.set(p, ghost);
       }
       const sel = highlight && highlight[0] === "hn" && highlight[1] === p;
-      ghost.userData.body.material.opacity = sel ? 0.95 : 0.55;
+      ghost.userData.mat.opacity = sel ? 0.95 : 0.55;
       ghost.scale.setScalar(sel ? 1.15 : 1);
     });
     this.drawTunnels(st);
   }
 
   hunterGhost(p, color) {
-    const grp = new THREE.Group();
     const y = this.data.yard[color];
     const cx = y.reduce((a, q) => a + q[0], 0) / y.length, cz = y.reduce((a, q) => a + q[1], 0) / y.length;
+    const grp = this.hunterFigure(COLORS[color], ["hn", p], 0.55);
     grp.position.copy(this.xz([cx, cz], TOP + 0.03));
-    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.42),
-      new THREE.MeshStandardMaterial({ color: COLORS[color], roughness: 0.3, transparent: true, opacity: 0.55 }));
-    m.position.y = 0.45;
-    m.userData.piece = ["hn", p];
+    grp.userData.aim = Math.atan2(cz, -cx);          // waiting: the arrow points to the board centre
     const lab = this.numberSprite("?", COLORS[color]);
-    lab.position.y = 1.12;
+    lab.position.y = 1.18;
     lab.scale.set(0.4, 0.4, 1);
     lab.userData.piece = ["hn", p];
-    grp.add(m, lab);
-    grp.userData = { piece: ["hn", p], body: m, color };
+    grp.add(lab);
+    grp.userData.color = color;
     this.pieceGroup.add(grp);
     return grp;
   }
@@ -754,6 +794,71 @@ export class Board3D {
     }
   }
 
+  // ------------------------------------------------------------ a full nest shines
+  // A burst of golden sparkles over the nest, then its fields keep a soft golden glow.
+  celebrate(color, burst = true) {
+    this.shining = this.shining || new Set();
+    this.shining.add(color);
+    if (!burst) return;
+    const tex = this.sparkTex || (this.sparkTex = canvasTex(64, 64, (g) => {
+      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, "rgba(255,255,255,1)");
+      grd.addColorStop(0.2, "rgba(255,247,200,0.95)");
+      grd.addColorStop(0.5, "rgba(255,225,120,0.35)");
+      grd.addColorStop(1, "rgba(255,215,90,0)");
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    }));
+    this.fx = this.fx || [];
+    const t0 = performance.now();
+    for (const p of this.data.home[color]) {
+      for (let k = 0; k < 14; k++) {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,
+          blending: THREE.AdditiveBlending }));
+        const base = this.xz(p, this.surfaceY() + 0.1);
+        sp.position.copy(base);
+        sp.scale.setScalar(0.3);
+        this.scene.add(sp);
+        const a = Math.random() * Math.PI * 2, v = 0.4 + Math.random() * 0.9;
+        this.fx.push({ sp, base, t0: t0 + Math.random() * 500, life: 1600 + Math.random() * 1000,
+          vx: Math.cos(a) * v * 0.5, vz: Math.sin(a) * v * 0.5, vy: 1.4 + Math.random() * 1.6 });
+      }
+    }
+  }
+
+  stepShine(now) {
+    if (this.fx && this.fx.length) {
+      this.fx = this.fx.filter(f => {
+        const t = (now - f.t0) / 1000;
+        if (t < 0) { f.sp.visible = false; return true; }
+        f.sp.visible = true;
+        const u = t * 1000 / f.life;
+        if (u >= 1) { this.scene.remove(f.sp); f.sp.material.dispose(); return false; }
+        f.sp.position.set(f.base.x + f.vx * t, f.base.y + f.vy * t - 0.9 * t * t, f.base.z + f.vz * t);
+        f.sp.material.opacity = 1 - u;
+        f.sp.scale.setScalar(0.12 + 0.18 * Math.sin(Math.PI * u) * (0.75 + 0.25 * Math.sin(t * 25)));
+        return true;
+      });
+    }
+    if (this.shining && this.nestFields) {
+      const glow = 0.35 + 0.25 * Math.sin(now / 350);
+      for (const c of this.shining) {
+        for (const m of this.nestFields[c] || []) {
+          const top = Array.isArray(m.material) ? m.material[1] : m.material;
+          top.emissive.set("#ffc400");
+          top.emissiveIntensity = glow;
+        }
+      }
+    }
+  }
+
+  turnToAim(grp, k) {
+    const aim = grp.userData.aim;
+    if (aim === undefined) return;
+    let d = aim - grp.rotation.y;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    grp.rotation.y += d * Math.min(1, k * 1.5);
+  }
+
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     const k = 1 - Math.exp(-dt * 9);
@@ -761,7 +866,7 @@ export class Board3D {
     const now = performance.now();
     for (const grp of this.pieceGroup.children) {
       if (this.playMove(grp, now)) {
-        if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
+        this.turnToAim(grp, k);
         continue;
       }
       const tg = grp.userData.target;
@@ -772,9 +877,10 @@ export class Board3D {
       grp.position.z += flat.z * k;
       const lift = Math.min(1.2, dist * 0.35);            // hop while moving
       grp.position.y += (tg.y + lift - grp.position.y) * Math.min(1, k * 1.5);
-      if (grp.userData.body) grp.userData.body.rotation.y = tnow * 1.2 * (grp.userData.dir || 1);
+      this.turnToAim(grp, k);
     }
     this.stepAnim();
+    this.stepShine(now);
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);
     for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
