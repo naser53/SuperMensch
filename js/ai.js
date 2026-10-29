@@ -1,11 +1,18 @@
 // A simple heuristic computer player.
 import { TUN, YARD, mulberry32 } from "./engine.js";
 
+// Weights of the position value beyond plain progress (see evaluate):
+// reach = per opponent pawn one of ours can hit next turn (half for 7..12 fields ahead),
+// colors = per own color with a pawn in play (two colors in play split the dice and reach more),
+// capture = scale of the immediate capture bonus.
+export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1 };
+
 export class SimpleAI {
   // cardZ: a triple-dice card is played only for a throw that gains this many standard
   // deviations more than this player's usual throw (less as the player's pieces get home)
-  constructor(seed = null, cardZ = 2.4, breakRate = 0.5, tunnelReserve = 40) {
+  constructor(seed = null, cardZ = 2.4, breakRate = 0.5, tunnelReserve = 40, weights = AI_WEIGHTS) {
     this.rng = mulberry32(seed == null ? (Math.random() * 2 ** 32) >>> 0 : seed);
+    this.w = weights;
     this.cardZ = cardZ;
     this.gains = { n: 0, sum: 0, sq: 0 };
     this.breakRate = breakRate;
@@ -16,10 +23,17 @@ export class SimpleAI {
   evaluate(g, st, p) {
     const L = g.L;
     let v = 0;
-    const occ = g.occupancy(st);
+    const occ = g.occupancy(st), reach = new Map();
     for (const col of g.players[p].colors) {
+      if (st.pos[col].some((r, i) => r !== YARD && !g.finished(st, col, i))) v += this.w.colors;
       st.pos[col].forEach((r, i) => {
         if (r === YARD) return;
+        // opponents this pawn can hit next turn: 1..6 ahead with one die, 7..12 with the sum
+        if (r >= 0 && r < L && this.w.reach)
+          for (let k = 1; k <= 12 && r + k < L; k++) {
+            const a = g.absOf(col, r + k), m = occ.get(a);
+            if (m && g.ownerOf(m) !== p) reach.set(a, Math.max(reach.get(a) || 0, k <= 6 ? 1 : 0.5));
+          }
         if (r === TUN) { v += 10 + g.effectiveRel(st, col, i) + 2; return; }   // safe inside a tunnel
         v += 10 + r;
         if (r >= L) {
@@ -35,6 +49,7 @@ export class SimpleAI {
         }
       });
     }
+    for (const x of reach.values()) v += this.w.reach * x;
     if (st.hunters[p]) v += 20;
     v += 1.2 * st.scores[p];
     for (let q = 0; q < g.players.length; q++) {
@@ -51,7 +66,7 @@ export class SimpleAI {
     let bonus = 0;
     for (const s of play.steps)
       for (const c of s.captures) bonus += 6 + g.piecePoints(c.color, c.rel) + g.bounty(c.vkills);
-    return this.evaluate(g, play.state, p) + bonus;
+    return this.evaluate(g, play.state, p) + this.w.capture * bonus;
   }
 
   scorePlay(g, play, p) { return this.playValue(g, play, p) + this.rng() * 0.5; }

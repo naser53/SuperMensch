@@ -12,7 +12,10 @@ const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
 // rank colors and the pawn's progress line (from its foot almost to its head)
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
-const BAR_W = 0.085, BAR_H = 0.78, BAR_Y = 0.1, BAR_Z = 0.22;
+const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
+// per pawn color (COLORS): light turquoise on red, yellow on blue, light pink on green, navy on
+// orange, yellow on purple, coral on teal
+const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a"];
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -423,7 +426,7 @@ export class Board3D {
         const star = this.starSprite(), halo = this.haloSprite();
         star.position.y = halo.position.y = 1.52;
         star.visible = halo.visible = false;
-        const bar = this.progressBar();
+        const bar = this.progressBar(col);
         grp.add(r1, r2, star, halo, bar);
         grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, hop: 0 };
         const p = this.piecePos(g.state, col, i);
@@ -467,23 +470,25 @@ export class Board3D {
     return s;
   }
 
-  // A line up the pawn's body that grows with its own points: to general, then again to marshal.
-  // A white fill on a dark track, so it reads on every pawn color; gold between general and
-  // marshal. It turns with the camera (around the pawn's axis), sits on the side facing it and
-  // draws over the body.
-  progressBar() {
+  // A line up the pawn's body that gets longer with every point the pawn has won itself, from its
+  // foot to its head at marshal (the star tells the rank). In a color that stands out on that
+  // pawn (BAR_COLORS), with a thin dark edge. It turns with the camera (around the pawn's axis),
+  // sits on the side facing it and draws over the body.
+  progressBar(col) {
     const grp = new THREE.Group();
     const plane = (w, h) => { const geo = new THREE.PlaneGeometry(w, h); geo.translate(0, h / 2, 0); return geo; };
-    const track = new THREE.Mesh(plane(BAR_W + 0.04, BAR_H + 0.04),
-      new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.6, depthTest: false }));
-    track.position.set(0, BAR_Y - 0.02, BAR_Z);
-    track.renderOrder = 9;
-    const fill = new THREE.Mesh(plane(BAR_W, BAR_H), new THREE.MeshBasicMaterial({ color: "#ffffff", depthTest: false, toneMapped: false }));
-    fill.position.y = BAR_Y;
-    fill.position.z = BAR_Z + 0.001;
+    const bar = new THREE.Group();
+    const edge = new THREE.Mesh(plane(BAR_W + 0.024, BAR_H),
+      new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.45, depthTest: false }));
+    edge.renderOrder = 9;
+    const fill = new THREE.Mesh(plane(BAR_W, BAR_H),
+      new THREE.MeshBasicMaterial({ color: BAR_COLORS[col], transparent: true, depthTest: false, toneMapped: false }));
+    fill.position.z = 0.001;
     fill.renderOrder = 9.5;
-    grp.add(track, fill);
-    grp.userData = { fill };
+    bar.add(edge, fill);
+    bar.position.set(0, BAR_Y, BAR_Z);
+    grp.add(bar);
+    grp.userData = { bar };
     grp.visible = false;
     return grp;
   }
@@ -588,9 +593,7 @@ export class Board3D {
       u.star.scale.setScalar(marshal ? 0.5 : 0.42);
       u.halo.visible = marshal;
       u.bar.visible = kills > 0;
-      const fill = u.bar.userData.fill;
-      fill.scale.y = Math.max(0.001, marshal ? 1 : general ? t : kills / gp);
-      fill.material.color.set(marshal ? GOLD_BRIGHT : general ? GOLD : "#ffffff");
+      u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
       const sel = highlight && highlight[0] === "p" && highlight[1] === col && highlight[2] === i;
       grp.children[0].material.emissive?.set(sel ? "#664400" : "#000000");
       grp.scale.setScalar(sel ? 1.12 : 1);

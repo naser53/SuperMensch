@@ -280,8 +280,10 @@ numbers are wrapped in `<bdi dir="ltr">`.
 
 ### Pieces
 * Pawns in color with a number. A **progress line** up the front of the pawn (it turns with the
-  camera) grows with the pawn's own points: white on a dark track up to general (15), then it
-  starts again in gold up to marshal (25), and stays full in bright gold for a marshal. Rank star
+  camera) gets longer with every point the pawn has won itself, from its foot to its head at
+  marshal (25); no empty track. Its color stands out on that pawn (light turquoise on red, yellow
+  on blue, light pink on green, navy on orange, yellow on purple, coral on teal), with a thin dark
+  edge. Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
   gold with a glow. The base ring is silver for a general, gold (with a second ring) for a marshal.
 * The **hunter** is a pawn holding a bow; the arrow points in its running direction (forward or
@@ -311,7 +313,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | --- | --- |
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
-| `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments) |
+| `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
@@ -381,6 +383,14 @@ npm run build       # dist/supermensch.html
   corridor, not on the yard (it is full of pawns), in a straight row parallel to the corridor (a
   slanted row let the third die land on the corridor), and touch
   areas are larger than the dice so children can hit them on tablets.
+* **Computer reach and second color:** every pawn used to count the same, so with a 6 the
+  computer often brought out another pawn of its first color instead of the first of its second.
+  The owner pointed out that two colors in play reach and hit far more. The position value now
+  adds, per opponent pawn one of ours can hit next turn, `reach` (half for 7..12 fields ahead),
+  and `colors` per own color in play (`AI_WEIGHTS` in `js/ai.js`). In simulation (two-color
+  game, 4-board, 200 games, seats switched) the new computer won 60% against the old one; an
+  aggressive test player (twice the weights, 1.6× capture bonus) won 62% against the old one
+  and about even (49%) against the new one.
 * **Computer cards:** the computer used its three triple-dice cards in the first rounds. It now
   measures how much a third die would help this turn (the best kept pair of three against two
   dice, over all throws) and plays a card only when that is well above what it has seen so far.
