@@ -206,19 +206,23 @@ Language, board (6 or 4 colors), game type (two colors / one color per player), 
 players, where a player's two colors sit (opposite / next to each other), seats (click to switch
 human/computer), **player names** typed in, dice level. *Start game*.
 
-### Side panel (top to bottom)
-* Top row: **View** button, language select, **Debug (set dice)** checkbox.
-* Player list: color dots, name, score, cards left, "stuck".
-* Turn line, round number, hints. **The dice are not in the panel any more**; they are on the
-  board (below). This is the first step of moving the panel onto the board as a ribbon.
-* Action buttons: roll, triple-dice card, castle-break declaration, tunnel declarations, second
-  try, gift six, **Undo**.
-* Bottom row: **Menu** (new game), **Info**, **Scores**, computer speed slider.
-* The move log is not in the panel any more; it is at the end of **Info** (scrollable).
+### Ribbon (top of the screen)
+The old side panel is gone; the board takes the whole screen under a ribbon.
+* Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
+  when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
+  Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens).
+* Row 2: whose turn and the round, the hint in red, and the **actions** of the moment: a big
+  **die button** to roll, triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
+  list), Undo and *List of all moves* while moving, *Second try* / *Take the gift six*,
+  *Continue* / *Random* in debug.
+* Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
+  places) open in a card at the top left of the board (`#drop`).
+* The rows wrap on narrow screens (phones get more rows).
+* The dice are on the board (below). The move log is at the end of **Info** (scrollable).
 
 ### Dice on the board
-* A throw lands in the **middle of the board**, tumbles, then hops to a free row **beside the yard**
-  of the player whose turn it is (of a two-color player's yards, the one nearest the camera). The
+* A throw lands in the **middle of the board**, tumbles, then hops to a free row **between the yard
+  and the gate** (away from the yard pawns and the name) of the player whose turn it is (of a two-color player's yards, the one nearest the camera). The
   spots are fixed per color in `js/boards.js` (`dice`), chosen to keep clear of every field.
 * The dice are clicked **there**. A die is never drawn smaller than about 28 px on the screen and
   has a larger invisible touch area (1.7× the die).
@@ -248,7 +252,7 @@ Two orders work, and you can switch at any time:
 * Every legal option is reachable by clicks (verified on 10,000 decisions).
 
 ### View
-* **View** button at the top of the panel opens a menu that grows out of the button and folds
+* **View** button in the ribbon opens a menu that grows out of the button and folds
   back into it. Presets: Top, Angled, Low, Turn left, Turn right, My side, Turn the board to the
   player (follow).
 * Board rotation and zoom work only in **Turn the board** mode, so clicking a piece never turns
@@ -292,11 +296,11 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
 | `js/ai.js` | Simple computer player |
-| `js/boards.js` | Board geometry (six arms, classic cross), dice spots beside the yards |
+| `js/boards.js` | Board geometry (six arms, classic cross), dice spots between yard and gate |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
-| `js/main.js` | `App`: setup screen, side panel, click state machine, game loop |
-| `css/style.css` | Layout, panel, card, menus, responsive rules |
+| `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
+| `css/style.css` | Layout, ribbon, card, menus, responsive rules |
 | `tests/rules.test.mjs` | 37 rule tests (`node:test`) |
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
@@ -357,7 +361,9 @@ npm run build       # dist/supermensch.html
   worth more than one full nest.
 * **Dice levels:** intermediate games were shorter in simulation (about 224 vs 325 rounds).
 * **Dice on the board:** the owner wants the panel to shrink so the board can grow; the dice went
-  first. They settle beside the yard rather than on it (the yard is full of pawns), and touch
+  first, then the whole panel became a ribbon on top. The dice settle between the yard and the
+  gate, not on the yard (it is full of pawns; the owner asked for them a third of the way to the
+  gate), and touch
   areas are larger than the dice so children can hit them on tablets.
 * **Upright names:** names turn smoothly with the camera instead of flipping by 180°.
 * **Ranked survival:** dying as a general or marshal felt unfair; one rank down and a push back
@@ -376,8 +382,7 @@ npm run build       # dist/supermensch.html
 * `pages.yml` fails until Pages is enabled.
 
 ## 11. Backlog
-1. Panel → ribbon on the board, step by step: action buttons, then the player strip, then remove
-   the panel (agreed with the owner; the dice were step 1).
+1. Done: the side panel became the ribbon on top (dice on the board first, then the ribbon).
 2. Castle-breaker piece (§3.13).
 3. Point loans.
 4. Advanced dice level.

@@ -20,6 +20,25 @@ const dieHtml = (v, cls, attrs) =>
   `<div class="die ${cls}" ${attrs}>` +
   Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[v].includes(i) ? "on" : ""}"></i>`).join("") + "</div>";
 
+// ribbon icons (inline SVG, drawn in the button's text color)
+const svg = (body, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const ICON = {
+  die: '<svg class="die-ico" viewBox="0 0 48 48" width="46" height="46" aria-hidden="true"><rect x="3" y="3" width="42" height="42" rx="9" fill="#fffdf6" stroke="currentColor" stroke-width="3"/>' +
+    [[14, 14], [34, 14], [24, 24], [14, 34], [34, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.2" fill="currentColor"/>`).join("") + "</svg>",
+  card: svg('<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="9.5" cy="8" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="14.5" cy="16" r="1" fill="currentColor"/>'),
+  cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
+  castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
+  tunnel: svg('<path d="M3 20v-6a9 9 0 0 1 18 0v6"/><path d="M7 20v-6a5 5 0 0 1 10 0v6"/>'),
+  undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
+  list: svg('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
+  star: svg('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),
+  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor"/>'),
+  bug: svg('<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M12 7V4M8 11H4M16 11h4M8 16H4M16 16h4M9 5l-2-2M15 5l2-2"/>'),
+  speed: svg('<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>'),
+  menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  stuck: svg('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>', 14),
+};
+
 class App {
   constructor() {
     const st = load();
@@ -163,105 +182,88 @@ class App {
     this.render();
   }
 
-  // ------------------------------------------------------------ game panel
+  // ------------------------------------------------------------ ribbon
+  // The ribbon at the top holds everything that is not on the board: the players, whose turn it
+  // is, the hint, the actions (a big die to roll, card, castle break, tunnels, undo...) and the
+  // tools (view, scores, info, debug, language, speed, menu). Longer lists (all moves, which
+  // move, the computer's plan, the final places) open in a card under the ribbon.
   render() {
     if (!this.game) { this.renderSetup(); return; }
-    const g = this.game, el = $("#panel");
-    el.dir = this.rtl ? "rtl" : "ltr";
+    const g = this.game, el = $("#ribbon"), drop = $("#drop");
+    el.dir = drop.dir = this.rtl ? "rtl" : "ltr";
     this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
-    let h = `<div class="pad row between top-row"><label class="check${this.debug ? " on" : ""}">
-      <input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${this.T("debug")}</label>${this.viewMenuHtml()}${this.langSelect()}</div>`;
-    h += '<div class="players sep">';
-    g.players.forEach((pl, i) => {
-      const parts = [t(this.lang, "score", { n: g.state.scores[i] })];
-      if (g.mode === "two") parts.push(t(this.lang, "cards", { n: g.cards[i] }));
-      if (g.stuck(i) && !g.places.includes(i)) parts.push(t(this.lang, "stuck"));
-      const place = g.places.indexOf(i);
-      if (place >= 0) parts.unshift(t(this.lang, "place", { n: place + 1 }));
-      h += `<div class="player${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}">` +
-        pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
-        `<span>${this.S(pl.name)}</span><span class="stats">${esc(parts.join(" · "))}</span></div>`;
-    });
-    h += '</div><div class="pad sep">';
+    const human = dec && !p.isAi && !g.over;
+    if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = false; }
+    let status, hint = "", acts = "", list = "", opts = [], shown = g.state;
+    const btn = (attrs, label, cls = "", icon = "") =>
+      `<button class="btn rb-btn ${cls}" ${attrs}>${icon}<span>${label}</span></button>`;
+    const optHtml = (o, k) => {
+      const lines = Array.isArray(o.label) ? o.label : [o.label];
+      return `<button class="opt" data-opt="${k}">${lines.map(x => `<div>${this.S(x)}</div>`).join("")}</button>`;
+    };
     if (g.over) {
-      h += `<div class="won">${this.T("game_over")}</div><ol class="ranking">` +
-        g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") +
-        `</ol><button class="btn primary" data-act="menu">${this.T("new_game")}</button></div>`;
-      h += this.footHtml();
-      el.innerHTML = h;
+      status = `<b>${this.T("game_over")}</b>`;
+      list = `<ol class="ranking">` + g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") + "</ol>";
+      acts = btn('data-act="menu"', this.T("new_game"), "primary");
+    } else {
+      const who = t(this.lang, p.isAi ? "thinking" : "your_turn");
+      status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
+      if (dec && dec.note && !(human && dec.kind === "keep")) hint = this.S(dec.note);
+      if (dec && dec.kind === "dice") {
+        hint = `${hint} · ${this.T("dice_hint")}`;
+        acts = btn('data-act="dice_go"', this.T("continue"), "primary") + btn('data-act="dice_rand"', this.T("random"));
+      } else if (dec && p.isAi && this.debug) {
+        if (!this.aiPlan || this.aiPlan[0] !== dec) this.aiPlan = [dec, this.ais[g.turn].choose(g)];
+        const o = this.aiPlan[1], lines = Array.isArray(o.label) ? o.label : [o.label];
+        list = `<div class="muted small">${this.T("ai_will")}</div>` + lines.map(x => `<div>${this.S(x)}</div>`).join("");
+        acts = btn('data-act="ai_go"', this.T("continue"), "primary");
+      } else if (human && dec.kind === "play" && !this.sel.list) {
+        const sel = this.sel;
+        shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+        hint = this.T(sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece" : (sel.die === null ? "pick_die" : "pick_piece"));
+        if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) hint += ` <span class="muted">${this.T("hunter_ready")}</span>`;
+        if (sel.picks.length) hint += `<div class="muted small">${sel.picks.map(x => this.S(g.describe({ steps: [x.step] })[0])).join(" · ")}</div>`;
+        if (sel.ambig) { opts = sel.ambig; list = opts.map((c, k) => `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join(""); }
+        acts = btn(`data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}"`, this.T("undo"), "undo", ICON.undo) +
+          btn('data-act="list"', this.T("all_moves", { n: dec.options.length }), "", ICON.list);
+      } else if (human && dec.kind === "keep") {
+        if (dec.options.some(o => Array.isArray(o.payload))) hint = this.T("pick_keep");
+        acts = dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
+          btn(`data-pay="${esc(o.payload)}"`, this.S(o.label), o.payload === "gift" ? "primary" : "")).join("");
+      } else if (human && dec.kind === "pre_roll") {
+        opts = dec.options;
+        const tunnels = [];
+        dec.options.forEach((o, k) => {
+          if (o.payload === "roll") acts = `<button class="btn rb-roll" data-opt="${k}" title="${this.S(o.label)}">${ICON.die}<span>${this.T("roll_short")}</span></button>` + acts;
+          else if (o.payload === "triple") acts += btn(`data-opt="${k}" title="${this.S(o.label)}"`, this.T("card_short", { n: g.cards[g.turn] }), "", ICON.card);
+          else if (o.payload === "break") acts += btn(`data-opt="${k}" title="${this.S(o.label)}"`, this.T("break_short"), "", ICON.castle);
+          else tunnels.push(k);
+        });
+        if (tunnels.length) {
+          acts += btn('data-act="tunnels"', this.T("tunnel_menu", { n: tunnels.length }), this.tunnelOpen ? "on" : "", ICON.tunnel);
+          if (this.tunnelOpen) list = tunnels.map(k => optHtml(dec.options[k], k)).join("");
+        }
+      } else if (human) {
+        opts = dec.options;
+        list = opts.map(optHtml).join("");
+        if (dec.kind === "play") acts = btn('data-act="clicks"', this.T("by_clicks"));
+      }
+    }
+    if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
+    this.shownOpts = opts;
+    el.innerHTML = `<div class="rb-players">${this.playersHtml()}</div>
+      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div>${hint ? `<div class="rb-hint">${hint}</div>` : ""}</div>
+      <div class="rb-actions">${acts}</div></div>
+      <div class="rb-tools">${this.toolsHtml()}</div>`;
+    drop.innerHTML = list;
+    drop.hidden = !list;
+    if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);
       this.board.clearDice();
       return;
     }
-    const who = t(this.lang, p.isAi ? "thinking" : "your_turn");
-    h += `<div class="turnline"><b>${this.T("turn", { p: tr(this.lang, p.name), who })}</b>
-      <span class="muted small">${this.T("round", { n: g.turnNo })}</span></div>`;
-    const human = dec && !p.isAi;
-    if (dec !== (this.sel && this.sel.dec)) this.resetSelection(dec);
-    if (dec && dec.note && !(human && dec.kind === "keep")) h += `<div class="note">${this.S(dec.note)}</div>`;
-    h += "</div>";
-
-    let opts = [], shown = g.state;
-    if (dec && dec.kind === "dice") {
-      h += `<div class="pad" style="padding-top:0"><div class="muted small">${this.T("dice_hint")}</div>
-        <div class="btns"><button class="btn primary" data-act="dice_go">${this.T("continue")}</button>
-        <button class="btn" data-act="dice_rand">${this.T("random")}</button></div></div><div class="grow"></div>`;
-    } else if (dec && p.isAi && this.debug) {
-      if (!this.aiPlan || this.aiPlan[0] !== dec) this.aiPlan = [dec, this.ais[g.turn].choose(g)];
-      const o = this.aiPlan[1];
-      const lines = Array.isArray(o.label) ? o.label : [o.label];
-      h += `<div class="pad" style="padding-top:0"><div class="muted small">${this.T("ai_will")}</div>` +
-        lines.map(x => `<div>${this.S(x)}</div>`).join("") +
-        `<div class="btns"><button class="btn primary" data-act="ai_go">${this.T("continue")}</button></div></div><div class="grow"></div>`;
-    } else if (human && dec.kind === "play" && !this.sel.list) {
-      const sel = this.sel;
-      shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
-      const hint = sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece"
-        : (sel.die === null ? "pick_die" : "pick_piece");
-      h += `<div class="pad" style="padding-top:0"><div class="note">${this.T(hint)}</div>`;
-      if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) {
-        h += `<div class="small muted">${this.T("hunter_ready")}</div>`;
-      }
-      if (sel.ambig) {
-        opts = sel.ambig;
-        h += '<div class="options" style="padding:0">' + opts.map((c, k) =>
-          `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join("") + "</div>";
-      }
-      if (sel.picks.length) {
-        h += '<div class="small muted" style="margin-top:6px">' +
-          sel.picks.map(x => `<div>${this.S(g.describe({ steps: [x.step] })[0])}</div>`).join("") + "</div>";
-      }
-      h += '<div class="btns small">' +
-        `<button class="btn undo" data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}">${this.T("undo")}</button>` +
-        `<button class="btn" data-act="list">${this.T("all_moves", { n: dec.options.length })}</button></div></div>`;
-      h += '<div class="grow"></div>';
-    } else if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
-      h += `<div class="pad" style="padding-top:0"><div class="note">${this.T("pick_keep")}</div><div class="btns small">` +
-        dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
-          `<button class="btn" data-pay="${esc(o.payload)}">${this.S(o.label)}</button>`).join("") +
-        "</div></div><div class=\"grow\"></div>";
-    } else if (human) {
-      opts = dec.options;
-      if (dec.kind === "play") {
-        h += `<div class="pad small" style="padding-top:0"><button class="btn" data-act="clicks">${this.T("by_clicks")}</button></div>`;
-      }
-      h += '<div class="options grow">' + opts.map((o, k) => {
-        const lines = Array.isArray(o.label) ? o.label : [o.label];
-        const prim = dec.kind === "pre_roll" && o.payload === "roll" ? " primary" : "";
-        return `<button class="opt${prim}" data-opt="${k}">${lines.map(x => `<div>${this.S(x)}</div>`).join("")}</button>`;
-      }).join("") + "</div>";
-    } else {
-      h += '<div class="grow"></div>';
-    }
-    this.shownOpts = opts;
-    if (this.scoresMode) {
-      h = h.replace('<div class="grow"></div>', "").replace('<div class="options grow">', '<div class="options grow" hidden>');
-      h += `<div class="pad scores-note"><b>${this.T("scores_on")}</b><div class="small">${this.T("scores_legend")}</div></div><div class="grow"></div>`;
-    }
-    h += this.footHtml();
-    el.innerHTML = h;
     this.syncDice(dec, human);
     this.board.sync(shown, this.sel && this.sel.piece);
     this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
@@ -276,6 +278,33 @@ class App {
     } else {
       this.board.preview(null);
     }
+  }
+
+  // one chip per player: colors, name, score, cards left, stuck / place
+  playersHtml() {
+    const g = this.game;
+    return g.players.map((pl, i) => {
+      const place = g.places.indexOf(i);
+      const tags = [];
+      if (place >= 0) tags.push(`<span class="tag">${this.T("place", { n: place + 1 })}</span>`);
+      if (g.mode === "two") tags.push(`<span class="cards" title="${this.T("cards", { n: g.cards[i] })}">${ICON.cardSmall}${num(this.lang, g.cards[i])}</span>`);
+      if (g.stuck(i) && place < 0) tags.push(`<span class="stuck" title="${this.T("stuck")}">${ICON.stuck}</span>`);
+      return `<div class="chip${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}">` +
+        pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
+        `<span class="nm">${this.S(pl.name)}</span><b class="pts" title="${this.T("score", { n: g.state.scores[i] })}">${esc(num(this.lang, g.state.scores[i]))}</b>${tags.join("")}</div>`;
+    }).join("");
+  }
+
+  // view, scores, info, debug, language, computer speed, menu
+  toolsHtml() {
+    const speed = Math.round((2050 - this.delay) / 20);
+    return this.viewMenuHtml() +
+      `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
+      `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
+      `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>` +
+      this.langSelect() +
+      `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<input type="range" min="0" max="100" value="${speed}" data-act="speed" aria-label="${this.T("speed")}"></label>` +
+      `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
   }
 
   // ------------------------------------------------------------ click-by-click moves
@@ -561,15 +590,15 @@ class App {
   }
 
   openViewMenu(open) {
-    const pop = document.querySelector("#panel .viewpop");
+    const pop = document.querySelector("#ribbon .viewpop");
     if (open) {
       this.viewOpen = true;
       this.viewOpening = true;
       this.render();
       setTimeout(() => {                                   // next tick: let the panel start folded, then grow
         this.viewOpening = false;
-        const p = document.querySelector("#panel .viewpop");
-        const btn = document.querySelector("#panel .vm-btn");
+        const p = document.querySelector("#ribbon .viewpop");
+        const btn = document.querySelector("#ribbon .vm-btn");
         if (p && btn) {                                    // grow out of the button, fold back into it
           const r = btn.getBoundingClientRect(), q = p.getBoundingClientRect();
           p.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
@@ -580,7 +609,7 @@ class App {
     }
     if (!this.viewOpen) return;
     this.viewOpen = false;
-    const btn = document.querySelector("#panel .vm-btn");
+    const btn = document.querySelector("#ribbon .vm-btn");
     if (pop && btn) {
       const r = btn.getBoundingClientRect(), q = pop.getBoundingClientRect();
       pop.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
@@ -588,15 +617,6 @@ class App {
     if (pop) pop.classList.remove("open");                 // folds back into the button
     if (btn) { btn.classList.remove("open"); btn.classList.add("pulse"); }
     setTimeout(() => this.render(), 260);
-  }
-
-  footHtml() {
-    const speed = Math.round((2050 - this.delay) / 20);
-    return `<div class="foot sep">
-      <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
-      <button class="btn" data-act="info">${this.T("info")}</button>
-      <button class="btn${this.scoresMode ? " on" : ""}" data-act="scores">${this.T("scores")}</button>
-      <span class="muted">${this.T("speed")}</span><input type="range" min="0" max="100" value="${speed}" data-act="speed"></div></div>`;
   }
 
   // ------------------------------------------------------------ actions
@@ -770,6 +790,7 @@ function wire(app) {
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
     else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
     else if (act === "list") { app.sel.list = true; app.render(); }
+    else if (act === "tunnels") { app.tunnelOpen = !app.tunnelOpen; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
