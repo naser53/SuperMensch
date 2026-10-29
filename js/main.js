@@ -205,6 +205,7 @@ class App {
     const human = dec && !p.isAi && !g.over;
     if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = false; }
     let status, hint = "", acts = "", list = "", opts = [], shown = g.state;
+    const pre = {};                     // the roll-time buttons: roll, card, castle break, tunnels
     const btn = (attrs, label, cls = "", icon = "") =>
       `<button class="btn rb-btn ${cls}" ${attrs}>${icon}<span>${label}</span></button>`;
     const optHtml = (o, k) => {
@@ -244,13 +245,14 @@ class App {
         opts = dec.options;
         const tunnels = [];
         dec.options.forEach((o, k) => {
-          if (o.payload === "roll") acts = `<button class="btn rb-roll" data-opt="${k}" title="${this.S(o.label)}">${ICON.die}<span>${this.T("roll_short")}</span></button>` + acts;
-          else if (o.payload === "triple") acts += btn(`data-opt="${k}" title="${this.S(o.label)}"`, this.T("card_short", { n: g.cards[g.turn] }), "", ICON.card);
-          else if (o.payload === "break") acts += btn(`data-opt="${k}" title="${this.S(o.label)}"`, this.T("break_short"), "", ICON.castle);
+          if (o.payload === "roll") pre.roll = `data-opt="${k}" title="${this.S(o.label)}"`;
+          else if (o.payload === "triple") pre.card = `data-opt="${k}" title="${this.S(o.label)}"`;
+          else if (o.payload === "break") pre.brk = `data-opt="${k}" title="${this.S(o.label)}"`;
           else tunnels.push(k);
         });
         if (tunnels.length) {
-          acts += btn('data-act="tunnels"', this.T("tunnel_menu", { n: tunnels.length }), this.tunnelOpen ? "on" : "", ICON.tunnel);
+          pre.tun = `data-act="tunnels"`;
+          pre.tunN = tunnels.length;
           if (this.tunnelOpen) list = tunnels.map(k => optHtml(dec.options[k], k)).join("");
         }
       } else if (human) {
@@ -258,8 +260,13 @@ class App {
         list = opts.map(optHtml).join("");
         if (dec.kind === "play") acts = btn('data-act="clicks"', this.T("by_clicks"));
       }
-      // the roll button stays in its place, greyed out until it is time to roll
-      if (!acts.includes("rb-roll")) acts = `<button class="btn rb-roll" disabled>${ICON.die}<span>${this.T("roll_short")}</span></button>` + acts;
+      // the roll-time buttons stay in their places, greyed out until they can be used
+      const two = g.mode === "two";
+      acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
+        (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
+        (two ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
+        btn(`${pre.tun || "disabled"} data-n="${pre.tunN || 0}"`, this.T("tunnel_menu", { n: pre.tunN || 0 }),
+          `pre${pre.tun && this.tunnelOpen ? " on" : ""}`, ICON.tunnel) + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;

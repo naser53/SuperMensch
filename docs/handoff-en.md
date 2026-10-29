@@ -213,7 +213,9 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
   Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens).
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
-  place and is greyed out, standing still, until it is the human's time to roll), triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
+  place and is greyed out, standing still, until it is the human's time to roll), triple-dice card,
+  castle-break declaration and tunnels (these three are also always shown, greyed out when they
+  cannot be used; card and castle break only in the two-color game; on phones as icon + count), castle-break declaration, **Tunnels (n)** (opens the
   list), Undo and *List of all moves* while moving, *Second try* / *Take the gift six*,
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
