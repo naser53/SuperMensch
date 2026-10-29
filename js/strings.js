@@ -9,6 +9,7 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    log_demoted: "  {v} was a {rank}: survives as a {to}, pushed back",
     view_menu: "View",
     card_fx: "Triple-dice card!",
     dice_level: "Dice",
@@ -162,6 +163,7 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    log_demoted: "  {v} {rank} بود: به {to} تنزل کرد و به عقب پرت شد",
     view_menu: "نما",
     card_fx: "کارت سه‌تاس!",
     dice_level: "تاس",
@@ -315,6 +317,7 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    log_demoted: "  {v} war {rank}: bleibt als {to}, zurückgestoßen",
     view_menu: "Ansicht",
     card_fx: "Dreiwürfel-Karte!",
     dice_level: "Würfel",

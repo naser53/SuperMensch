@@ -4,180 +4,180 @@
   "mode": "two",
   "n": 2,
   "colors": 6,
-  "decisions": 579,
+  "decisions": 698,
   "places": [
-   0,
-   1
+   1,
+   0
   ],
   "scores": [
-   78,
-   27
+   -37,
+   184
   ],
-  "rounds": 113,
-  "hash": 1261606621
+  "rounds": 139,
+  "hash": 1040407712
  },
  {
   "seed": 33,
   "mode": "two",
   "n": 2,
   "colors": 6,
-  "decisions": 607,
+  "decisions": 636,
   "places": [
    1,
    0
   ],
   "scores": [
-   -78,
-   198
+   -100,
+   174
   ],
-  "rounds": 104,
-  "hash": 3525530726
+  "rounds": 110,
+  "hash": 673482350
  },
  {
   "seed": 64,
   "mode": "two",
   "n": 2,
   "colors": 6,
-  "decisions": 589,
+  "decisions": 754,
   "places": [
    1,
    0
   ],
   "scores": [
-   -116,
-   148
+   -46,
+   181
   ],
-  "rounds": 105,
-  "hash": 1304270247
+  "rounds": 129,
+  "hash": 3385171510
  },
  {
   "seed": 95,
   "mode": "two",
   "n": 2,
   "colors": 6,
-  "decisions": 639,
+  "decisions": 641,
   "places": [
    1,
    0
   ],
   "scores": [
-   -82,
-   287
+   36,
+   223
   ],
-  "rounds": 116,
-  "hash": 145468534
+  "rounds": 114,
+  "hash": 2360802302
  },
  {
   "seed": 126,
   "mode": "two",
   "n": 2,
   "colors": 6,
-  "decisions": 528,
+  "decisions": 651,
   "places": [
    1,
    0
   ],
   "scores": [
-   -24,
-   170
+   -50,
+   314
   ],
-  "rounds": 84,
-  "hash": 2887624706
+  "rounds": 106,
+  "hash": 4123682057
  },
  {
   "seed": 3,
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 1803,
+  "decisions": 1255,
   "places": [
-   2,
    0,
-   1
+   1,
+   2
   ],
   "scores": [
-   116,
-   -76,
-   195
+   208,
+   100,
+   33
   ],
-  "rounds": 244,
-  "hash": 925645807
+  "rounds": 156,
+  "hash": 3335229423
  },
  {
   "seed": 34,
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 1337,
+  "decisions": 865,
   "places": [
-   0,
    1,
-   2
+   2,
+   0
   ],
   "scores": [
-   387,
-   63,
-   -10
+   -124,
+   219,
+   240
   ],
-  "rounds": 170,
-  "hash": 1317788027
+  "rounds": 115,
+  "hash": 2204258231
  },
  {
   "seed": 65,
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 1042,
+  "decisions": 1313,
   "places": [
    1,
    0,
    2
   ],
   "scores": [
-   13,
-   249,
-   -46
+   351,
+   138,
+   -23
   ],
-  "rounds": 124,
-  "hash": 2095800756
+  "rounds": 171,
+  "hash": 2132913190
  },
  {
   "seed": 96,
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 1432,
+  "decisions": 1128,
   "places": [
-   0,
+   1,
    2,
-   1
+   0
   ],
   "scores": [
-   99,
-   -75,
-   28
+   -53,
+   187,
+   145
   ],
-  "rounds": 177,
-  "hash": 1867822051
+  "rounds": 141,
+  "hash": 3914750826
  },
  {
   "seed": 127,
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 2056,
+  "decisions": 1160,
   "places": [
-   0,
+   2,
    1,
-   2
+   0
   ],
   "scores": [
-   198,
-   65,
-   -50
+   -18,
+   75,
+   217
   ],
-  "rounds": 294,
-  "hash": 2367949493
+  "rounds": 154,
+  "hash": 2650846714
  },
  {
   "seed": 2,
@@ -218,17 +218,17 @@
   "mode": "one",
   "n": 2,
   "colors": 6,
-  "decisions": 453,
+  "decisions": 376,
   "places": [
-   1,
-   0
+   0,
+   1
   ],
   "scores": [
-   -59,
-   161
+   101,
+   -9
   ],
-  "rounds": 84,
-  "hash": 3952155470
+  "rounds": 68,
+  "hash": 1406387132
  },
  {
   "seed": 95,
@@ -252,240 +252,247 @@
   "mode": "one",
   "n": 2,
   "colors": 6,
-  "decisions": 501,
+  "decisions": 420,
   "places": [
    1,
    0
   ],
   "scores": [
-   -76,
-   89
+   -126,
+   75
   ],
-  "rounds": 93,
-  "hash": 1657968036
+  "rounds": 81,
+  "hash": 2196422035
  },
  {
   "seed": 4,
   "mode": "one",
   "n": 4,
   "colors": 6,
-  "decisions": 845,
+  "decisions": 1128,
   "places": [
    0,
-   1,
    3,
+   1,
    2
   ],
   "scores": [
-   56,
-   -30,
-   -147,
-   -15
+   39,
+   82,
+   -143,
+   255
   ],
-  "rounds": 86,
-  "hash": 391922412
+  "rounds": 134,
+  "hash": 1185861040
  },
  {
   "seed": 35,
   "mode": "one",
   "n": 4,
   "colors": 6,
-  "decisions": 1477,
+  "decisions": 1047,
   "places": [
-   0,
-   3,
+   1,
    2,
-   1
+   0,
+   3
   ],
   "scores": [
-   113,
-   -87,
-   16,
-   60
+   -16,
+   124,
+   76,
+   -37
   ],
-  "rounds": 152,
-  "hash": 183997422
+  "rounds": 116,
+  "hash": 4151400443
  },
  {
   "seed": 66,
   "mode": "one",
   "n": 4,
   "colors": 6,
-  "decisions": 1400,
+  "decisions": 1417,
   "places": [
-   3,
-   1,
    0,
-   2
+   1,
+   2,
+   3
   ],
   "scores": [
-   -19,
-   92,
-   -69,
-   133
+   137,
+   62,
+   84,
+   -61
   ],
-  "rounds": 142,
-  "hash": 4206144693
+  "rounds": 160,
+  "hash": 4142878063
  },
  {
   "seed": 97,
   "mode": "one",
   "n": 4,
   "colors": 6,
-  "decisions": 1264,
+  "decisions": 1061,
   "places": [
    0,
-   2,
    1,
-   3
+   3,
+   2
   ],
   "scores": [
-   90,
-   51,
-   98,
-   -74
+   66,
+   67,
+   -62,
+   25
   ],
-  "rounds": 116,
-  "hash": 420830973
+  "rounds": 103,
+  "hash": 2530172272
  },
  {
   "seed": 128,
   "mode": "one",
   "n": 4,
   "colors": 6,
-  "decisions": 1607,
+  "decisions": 1042,
   "places": [
    3,
-   1,
    2,
-   0
+   0,
+   1
   ],
   "scores": [
-   -65,
-   -24,
-   58,
-   173
+   -18,
+   -8,
+   119,
+   144
   ],
-  "rounds": 161,
-  "hash": 3597215101
+  "rounds": 101,
+  "hash": 3074624212
  },
  {
   "seed": 6,
   "mode": "one",
   "n": 6,
   "colors": 6,
-  "decisions": 2500,
+  "decisions": 1952,
   "places": [
+   1,
+   5,
    2,
-   0
+   3,
+   0,
+   4
   ],
   "scores": [
-   52,
-   -62,
-   91,
-   -76,
-   -17,
-   -82
+   -30,
+   168,
+   -52,
+   19,
+   -82,
+   223
   ],
-  "rounds": 179,
-  "hash": 3601520642
+  "rounds": 158,
+  "hash": 1355757486
  },
  {
   "seed": 37,
   "mode": "one",
   "n": 6,
   "colors": 6,
-  "decisions": 2230,
+  "decisions": 1889,
   "places": [
-   0,
-   5,
-   2,
+   3,
    1,
    4,
-   3
+   0,
+   5,
+   2
   ],
   "scores": [
-   231,
-   -10,
-   35,
-   -33,
-   0,
-   123
+   65,
+   102,
+   -26,
+   129,
+   120,
+   -10
   ],
-  "rounds": 155,
-  "hash": 4158672333
+  "rounds": 140,
+  "hash": 4206183458
  },
  {
   "seed": 68,
   "mode": "one",
   "n": 6,
   "colors": 6,
-  "decisions": 2469,
+  "decisions": 1986,
   "places": [
+   4,
+   5,
+   1,
    0,
    3,
-   4,
-   1,
-   2,
-   5
+   2
   ],
   "scores": [
    68,
-   -11,
-   50,
-   94,
-   133,
-   34
+   18,
+   -72,
+   105,
+   180,
+   -51
   ],
-  "rounds": 181,
-  "hash": 3485052275
+  "rounds": 170,
+  "hash": 987158416
  },
  {
   "seed": 99,
   "mode": "one",
   "n": 6,
   "colors": 6,
-  "decisions": 2437,
+  "decisions": 2242,
   "places": [
-   2,
-   1,
-   4,
-   3,
    5,
-   0
+   1,
+   0,
+   3,
+   4,
+   2
   ],
   "scores": [
-   -11,
-   100,
-   156,
-   -44,
-   108,
-   -41
+   66,
+   193,
+   -42,
+   52,
+   -21,
+   100
   ],
-  "rounds": 182,
-  "hash": 453905639
+  "rounds": 175,
+  "hash": 2529773794
  },
  {
   "seed": 130,
   "mode": "one",
   "n": 6,
   "colors": 6,
-  "decisions": 2500,
+  "decisions": 1752,
   "places": [
-   5,
+   4,
    3,
-   4
+   5,
+   0,
+   2,
+   1
   ],
   "scores": [
-   -78,
-   -46,
-   12,
-   68,
-   13,
-   157
+   -22,
+   -54,
+   -17,
+   118,
+   191,
+   -54
   ],
-  "rounds": 174,
-  "hash": 1670123476
+  "rounds": 126,
+  "hash": 3502296909
  },
  {
   "seed": 2,
@@ -519,58 +526,58 @@
    -55
   ],
   "rounds": 53,
-  "hash": 196022979
+  "hash": 1409226941
  },
  {
   "seed": 64,
   "mode": "two",
   "n": 2,
   "colors": 4,
-  "decisions": 413,
+  "decisions": 464,
   "places": [
    0,
    1
   ],
   "scores": [
-   53,
-   -58
+   96,
+   -28
   ],
-  "rounds": 70,
-  "hash": 10105029
+  "rounds": 82,
+  "hash": 1953076844
  },
  {
   "seed": 95,
   "mode": "two",
   "n": 2,
   "colors": 4,
-  "decisions": 934,
+  "decisions": 686,
   "places": [
    1,
    0
   ],
   "scores": [
-   -21,
-   54
+   -111,
+   14
   ],
-  "rounds": 172,
-  "hash": 403387271
+  "rounds": 121,
+  "hash": 2746163823
  },
  {
   "seed": 126,
   "mode": "two",
   "n": 2,
   "colors": 4,
-  "decisions": 448,
+  "decisions": 464,
   "places": [
    0,
    1
   ],
   "scores": [
-   79,
-   -17
+   60,
+   -50
   ],
-  "rounds": 71,
-  "hash": 3932421496
+  "rounds": 75,
+  "hash": 3767005841
  },
  {
   "seed": 2,
@@ -662,7 +669,49 @@
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 745,
+  "decisions": 736,
+  "places": [
+   0,
+   3,
+   2,
+   1
+  ],
+  "scores": [
+   -24,
+   -69,
+   -2,
+   39
+  ],
+  "rounds": 75,
+  "hash": 2495005388
+ },
+ {
+  "seed": 35,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 1180,
+  "places": [
+   0,
+   1,
+   3,
+   2
+  ],
+  "scores": [
+   47,
+   61,
+   -78,
+   111
+  ],
+  "rounds": 120,
+  "hash": 1577564222
+ },
+ {
+  "seed": 66,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 800,
   "places": [
    0,
    3,
@@ -670,104 +719,104 @@
    2
   ],
   "scores": [
-   -24,
-   -44,
-   -27,
-   39
+   28,
+   -23,
+   -91,
+   53
   ],
-  "rounds": 79,
-  "hash": 2774453961
- },
- {
-  "seed": 35,
-  "mode": "one",
-  "n": 4,
-  "colors": 4,
-  "decisions": 761,
-  "places": [
-   2,
-   0,
-   3,
-   1
-  ],
-  "scores": [
-   -50,
-   -59,
-   64,
-   3
-  ],
-  "rounds": 82,
-  "hash": 3155287079
- },
- {
-  "seed": 66,
-  "mode": "one",
-  "n": 4,
-  "colors": 4,
-  "decisions": 945,
-  "places": [
-   2,
-   0,
-   1,
-   3
-  ],
-  "scores": [
-   37,
-   15,
-   17,
-   -25
-  ],
-  "rounds": 101,
-  "hash": 3516279009
+  "rounds": 90,
+  "hash": 1717679635
  },
  {
   "seed": 97,
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 1101,
+  "decisions": 1055,
   "places": [
    2,
-   1,
    0,
+   1,
    3
   ],
   "scores": [
-   15,
-   36,
+   35,
+   16,
    80,
-   -49
+   -43
   ],
-  "rounds": 108,
-  "hash": 936923562
+  "rounds": 97,
+  "hash": 330949401
  },
  {
   "seed": 128,
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 984,
+  "decisions": 895,
   "places": [
-   1,
    3,
+   0,
    2,
-   0
+   1
   ],
   "scores": [
-   -1,
-   64,
-   -21,
-   14
+   31,
+   -79,
+   -31,
+   55
   ],
-  "rounds": 96,
-  "hash": 1182342861
+  "rounds": 84,
+  "hash": 702329580
  },
  {
   "seed": 4,
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 745,
+  "decisions": 736,
+  "places": [
+   0,
+   3,
+   2,
+   1
+  ],
+  "scores": [
+   -24,
+   -69,
+   -2,
+   39
+  ],
+  "rounds": 75,
+  "hash": 2495005388
+ },
+ {
+  "seed": 35,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 1180,
+  "places": [
+   0,
+   1,
+   3,
+   2
+  ],
+  "scores": [
+   47,
+   61,
+   -78,
+   111
+  ],
+  "rounds": 120,
+  "hash": 1577564222
+ },
+ {
+  "seed": 66,
+  "mode": "one",
+  "n": 4,
+  "colors": 4,
+  "decisions": 800,
   "places": [
    0,
    3,
@@ -775,96 +824,54 @@
    2
   ],
   "scores": [
-   -24,
-   -44,
-   -27,
-   39
+   28,
+   -23,
+   -91,
+   53
   ],
-  "rounds": 79,
-  "hash": 2774453961
- },
- {
-  "seed": 35,
-  "mode": "one",
-  "n": 4,
-  "colors": 4,
-  "decisions": 761,
-  "places": [
-   2,
-   0,
-   3,
-   1
-  ],
-  "scores": [
-   -50,
-   -59,
-   64,
-   3
-  ],
-  "rounds": 82,
-  "hash": 3155287079
- },
- {
-  "seed": 66,
-  "mode": "one",
-  "n": 4,
-  "colors": 4,
-  "decisions": 945,
-  "places": [
-   2,
-   0,
-   1,
-   3
-  ],
-  "scores": [
-   37,
-   15,
-   17,
-   -25
-  ],
-  "rounds": 101,
-  "hash": 3516279009
+  "rounds": 90,
+  "hash": 1717679635
  },
  {
   "seed": 97,
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 1101,
+  "decisions": 1055,
   "places": [
    2,
-   1,
    0,
+   1,
    3
   ],
   "scores": [
-   15,
-   36,
+   35,
+   16,
    80,
-   -49
+   -43
   ],
-  "rounds": 108,
-  "hash": 936923562
+  "rounds": 97,
+  "hash": 330949401
  },
  {
   "seed": 128,
   "mode": "one",
   "n": 4,
   "colors": 4,
-  "decisions": 984,
+  "decisions": 895,
   "places": [
-   1,
    3,
+   0,
    2,
-   0
+   1
   ],
   "scores": [
-   -1,
-   64,
-   -21,
-   14
+   31,
+   -79,
+   -31,
+   55
   ],
-  "rounds": 96,
-  "hash": 1182342861
+  "rounds": 84,
+  "hash": 702329580
  }
 ]

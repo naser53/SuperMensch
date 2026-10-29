@@ -360,20 +360,47 @@ export class Game {
     return [ns, new Step(m, die, src, dst, captures, false, true)];
   }
 
+  // §11 a captured soldier goes back to its yard. A general or marshal survives the hit:
+  // it loses one rank (marshal -> general with GENERAL_POINTS, general -> soldier with 0)
+  // and is pushed back to the first free field behind it (towards its own gate; the hunter:
+  // against its running direction). With no free field before its gate it goes to its yard.
   _capture(st, ns, victim, a, entered, captures, free = false) {
+    const occ = this.occupancy(ns), L = this.L;
+    const freeAt = x => x !== a && !occ.has(x);
     if (victim[0] === "p") {
-      const vc = victim[1], vi = victim[2];
-      captures.push({ victim, color: vc, rel: st.pos[vc][vi], abs: a, vkills: st.kills[vc][vi],
-                      gate_right: entered, free });
+      const vc = victim[1], vi = victim[2], r = st.pos[vc][vi], pts = st.kills[vc][vi];
+      const rank = this.rank(pts);
+      const cap = { victim, color: vc, rel: r, abs: a, vkills: pts, gate_right: entered, free };
+      captures.push(cap);
+      ns.hit[vc][vi] = true;
+      if (rank > 0) {
+        let back = null;
+        for (let x = r - 1; x >= 0; x--) if (freeAt(this.absOf(vc, x))) { back = x; break; }
+        if (back !== null) {
+          ns.pos[vc][vi] = back;
+          ns.kills[vc][vi] = rank === 2 ? this.cfg.general_points : 0;
+          cap.demoted = rank;
+          return;
+        }
+      }
       ns.pos[vc][vi] = YARD;
       ns.kills[vc][vi] = 0;
       ns.tmark[vc][vi] = false;
-      ns.hit[vc][vi] = true;
       ns.tunnels = ns.tunnels.filter(t => !(t[1] === vc && t[2] === vi));
     } else {
-      const q = victim[1], hh = st.hunters[q];
-      captures.push({ victim, color: hh[0], rel: this.relOf(hh[0], hh[1]), abs: a, vkills: hh[3],
-                      gate_right: entered, free });
+      const q = victim[1], hh = st.hunters[q], rank = this.rank(hh[3]);
+      const cap = { victim, color: hh[0], rel: this.relOf(hh[0], hh[1]), abs: a, vkills: hh[3], gate_right: entered, free };
+      captures.push(cap);
+      if (rank > 0) {
+        for (let k = 1; k < L; k++) {
+          const x = ((hh[1] - hh[2] * k) % L + L) % L;
+          if (freeAt(x)) {
+            ns.hunters[q] = [hh[0], x, hh[2], rank === 2 ? this.cfg.general_points : 0];
+            cap.demoted = rank;
+            return;
+          }
+        }
+      }
       ns.hunters[q] = null;
     }
   }
@@ -699,6 +726,15 @@ export class Game {
   }
 
   _applyScore(p, play) {
+    const msgs = this._applyScoreCore(p, play);
+    for (const s of play.steps)
+      for (const c of s.captures)
+        if (c.demoted) msgs.push(M("log_demoted", { v: this.moverName(c.victim, this.state), rank: this.rankName(c.vkills),
+          to: M(c.demoted === 2 ? "general" : "soldier") }));
+    return msgs;
+  }
+
+  _applyScoreCore(p, play) {
     const st = play.state, msgs = [];
     let caps = [];
     for (const s of play.steps) for (const c of s.captures) caps.push([s, c]);

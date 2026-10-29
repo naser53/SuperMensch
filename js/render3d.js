@@ -737,6 +737,10 @@ export class Board3D {
         t += dur;
       }
       for (const c of step.captures) {
+        if (c.demoted) {                       // a general or marshal is hit: a blast and a shake
+          const at = this.xz(this.data.track[c.abs], this.surfaceY());
+          setTimeout(() => this.boom(at), Math.max(0, t - performance.now()));
+        }
         if (c.victim[0] !== "p") continue;
         const [, vc, vi] = c.victim, vg = this.meshOf(c.victim);
         if (!vg) continue;
@@ -792,6 +796,51 @@ export class Board3D {
       grp.add(sp);
       this.scoreSprites.push(sp);
     }
+  }
+
+  // ------------------------------------------------------------ blast
+  // A ranked piece is hit: a flash, a shock ring on the board, sparks and a short camera shake.
+  boom(at) {
+    const now = performance.now();
+    this.shakeUntil = now + 550;
+    this.fx = this.fx || [];
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16),
+      new THREE.MeshBasicMaterial({ color: "#ffb347", transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    flash.position.copy(at).setY(at.y + 0.5);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 48),
+      new THREE.MeshBasicMaterial({ color: "#ff7a1a", transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.copy(at).setY(at.y + 0.03);
+    this.scene.add(flash, ring);
+    this.blasts = (this.blasts || []).concat([{ flash, ring, t0: now }]);
+    const tex = this.boomTex || (this.boomTex = canvasTex(64, 64, (g) => {
+      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, "rgba(255,255,220,1)");
+      grd.addColorStop(0.3, "rgba(255,150,40,0.9)");
+      grd.addColorStop(1, "rgba(200,40,0,0)");
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    }));
+    for (let k = 0; k < 26; k++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sp.position.copy(at);
+      this.scene.add(sp);
+      const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 2.5;
+      this.fx.push({ sp, base: at.clone().setY(at.y + 0.3), t0: now, life: 500 + Math.random() * 400,
+        vx: Math.cos(a) * v, vz: Math.sin(a) * v, vy: 1 + Math.random() * 2.5 });
+    }
+  }
+
+  stepBoom(now) {
+    if (!this.blasts || !this.blasts.length) return;
+    this.blasts = this.blasts.filter(b => {
+      const u = (now - b.t0) / 800;
+      if (u >= 1) { this.scene.remove(b.flash, b.ring); return false; }
+      b.flash.scale.setScalar(0.4 + 2.2 * u);
+      b.flash.material.opacity = 0.9 * (1 - u);
+      b.ring.scale.setScalar(1 + 6 * u);
+      b.ring.material.opacity = 0.85 * (1 - u);
+      return true;
+    });
   }
 
   // ------------------------------------------------------------ a full nest shines
@@ -881,9 +930,17 @@ export class Board3D {
     }
     this.stepAnim();
     this.stepShine(now);
+    this.stepBoom(now);
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);
     for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
+    let shake = null;
+    if (now < (this.shakeUntil || 0)) {        // the board trembles after a blast
+      const amp = 0.18 * (this.shakeUntil - now) / 550;
+      shake = new THREE.Vector3((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp);
+      this.camera.position.add(shake);
+    }
     this.renderer.render(this.scene, this.camera);
+    if (shake) this.camera.position.sub(shake);
   }
 }

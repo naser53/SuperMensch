@@ -413,3 +413,34 @@ test("ranks come from the points the piece wins with its own captures", () => {
   h._applyScore(0, q);
   assert.equal(q.state.scores[0], 2 * pts);
 });
+
+// ---------------------------------------------------------------- §11 ranked pieces survive a hit
+test("a general hit becomes a soldier and is pushed back; a marshal becomes a general", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 3, 0, 1);
+  const b8 = g.relOf(1, 8);
+  put(g, 1, 0, b8);
+  g.state.kills[1][0] = g.cfg.general_points;          // a blue general on abs 8
+  put(g, 2, 0, g.relOf(2, 7));                          // the field right behind it is taken (green)
+  const hitPlay = g.playsFor(0, [3, 1]).find(x => x.steps.some(s => s.captures.some(c => c.victim[1] === 1)));
+  assert.ok(hitPlay);
+  const st = hitPlay.state;
+  assert.equal(st.pos[1][0], b8 - 2);                   // pushed back past the taken field
+  assert.equal(st.kills[1][0], 0);                      // now a soldier
+  const before = g.state.scores.slice();
+  g._applyScore(0, hitPlay);
+  assert.equal(hitPlay.state.scores[1], before[1] - g.cfg.general_bounty);   // the owner still loses the bounty
+  // a marshal becomes a general with GENERAL_POINTS
+  const h = make();
+  put(h, 0, 0, 5); put(h, 3, 0, 1);
+  put(h, 1, 0, h.relOf(1, 8));
+  h.state.kills[1][0] = h.cfg.marshal_points;
+  const q = h.playsFor(0, [3, 1]).find(x => x.steps.some(s => s.captures.some(c => c.victim[1] === 1)));
+  assert.equal(q.state.kills[1][0], h.cfg.general_points);
+  assert.ok(q.state.pos[1][0] >= 0);
+  // a soldier still goes to the yard
+  const k = make();
+  put(k, 0, 0, 5); put(k, 3, 0, 1);
+  put(k, 1, 0, k.relOf(1, 8));
+  assert.ok(k.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));
+});
