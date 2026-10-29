@@ -18,12 +18,12 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 
 Move by clicking: click a die and then a piece, or a piece first (its possible fields show
 yellow rings with the die value) and then a ring or a die. Use **Undo** to take back the first
-move of a throw. The **View** button at the top of the panel has view presets and a
+move of a throw. The **View** button in the ribbon at the top has view presets and a
 *Turn the board* mode for turning and zooming. **Info** shows the scoring tables and the move
 log; **Scores** shows each piece's points over the board.
 
-**Debug (set dice)** in the side panel is for testing the rules: every throw waits until you
-set the dice (click a die: +1, right-click: −1, or *Random*) and press *Continue*; computer
+**Debug** in the ribbon is for testing the rules: every throw waits until you
+set the dice on the board (click a die: +1, right-click: −1, or *Random*) and press *Continue*; computer
 moves are shown first and wait for *Continue* too.
 
 ## Rules in the game
@@ -61,7 +61,7 @@ After a deliberate rule change, record the fixed games again with
 | `js/boards.js` | Board geometry (six arms, classic cross) |
 | `js/strings.js`, `js/i18n.js` | Texts and translation |
 | `js/render3d.js` | 3D board with Three.js |
-| `js/main.js` | Setup screen, side panel, game loop |
+| `js/main.js` | Setup screen, ribbon, game loop |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |
 | `docs/rules-fa.docx`, `docs/rules-fa.md` | The rules document (Farsi) |

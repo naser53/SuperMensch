@@ -9,6 +9,11 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    roll_short: "Roll",
+    card_short: "Card ({n})",
+    break_short: "Castle break",
+    tunnel_menu: "Tunnels ({n})",
+    debug_short: "Debug",
     log_demoted: "  {v} was a {rank}: survives as a {to}, pushed back",
     view_menu: "View",
     card_fx: "Triple-dice card!",
@@ -163,6 +168,11 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    roll_short: "بریز",
+    card_short: "کارت ({n})",
+    break_short: "قلعه‌شکن",
+    tunnel_menu: "تونل‌ها ({n})",
+    debug_short: "دیباگ",
     log_demoted: "  {v} {rank} بود: به {to} تنزل کرد و به عقب پرت شد",
     view_menu: "نما",
     card_fx: "کارت سه‌تاس!",
@@ -317,6 +327,11 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    roll_short: "Würfeln",
+    card_short: "Karte ({n})",
+    break_short: "Burgbruch",
+    tunnel_menu: "Tunnel ({n})",
+    debug_short: "Debug",
     log_demoted: "  {v} war {rank}: bleibt als {to}, zurückgestoßen",
     view_menu: "Ansicht",
     card_fx: "Dreiwürfel-Karte!",
