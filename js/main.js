@@ -203,6 +203,8 @@ class App {
     this.prevTurn = undefined;
     $("#setup").hidden = true;
     this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
+    const me = players.find(p => !p.isAi);              // start with my pieces in front, not far away
+    if (me) this.board.fitView(me.colors);
     this.nextAi = performance.now() + this.delay;
     this.render();
   }

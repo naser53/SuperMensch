@@ -144,7 +144,7 @@ export class Board3D {
     this.camera.updateProjectionMatrix();
     if (this.game && this.view) {
       const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
-      this.placeCamera(sph.theta, sph.phi, this.viewDistance(sph.phi));
+      this.placeCamera(sph.theta, sph.phi, this.viewDistance(sph.phi, sph.theta));
     }
   }
 
@@ -162,8 +162,9 @@ export class Board3D {
   // above (0 = top view), `az` turns around the board (0 = from the front edge).
   static TILT = { top: 0.0005, angled: 0.62, low: 1.0 };
 
-  viewDistance(polar) {
-    const r = this.n === 4 ? 6.4 : 9.2;
+  // (the square board seen over a corner needs a little more room)
+  viewDistance(polar, az = 0) {
+    const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : 9.2;
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.max(r / Math.tan(vfov / 2), r / (Math.tan(vfov / 2) * this.camera.aspect));
     return fit * (polar > 0.8 ? 0.9 : 1.05 + 0.08 * polar);
@@ -177,12 +178,22 @@ export class Board3D {
     this.controls.update();
   }
 
-  // Start position: angled, from the front.
-  fitView() {
+  // Start position: angled, from the front, or from the side of the given colors' yards.
+  fitView(colors = null) {
     this.controls.target.set(0, 0, 0.3);
-    this.view = { az: 0, polar: Board3D.TILT.angled };
+    const az = colors ? this.sideAz(colors) : 0;
+    this.view = { az, polar: Board3D.TILT.angled };
     this.anim = null;
-    this.placeCamera(0, this.view.polar, this.viewDistance(this.view.polar));
+    this.placeCamera(az, this.view.polar, this.viewDistance(this.view.polar, az));
+  }
+
+  // The camera angle that puts these colors' yards nearest the viewer (both of a player's
+  // neighbouring colors; for opposite colors the first one's).
+  sideAz(colors) {
+    const mid = c => { const y = this.data.yard[c]; return [y.reduce((a, p) => a + p[0], 0) / y.length, y.reduce((a, p) => a + p[1], 0) / y.length]; };
+    let [x, z] = colors.map(mid).reduce((a, b) => [a[0] + b[0], a[1] + b[1]]);
+    if (Math.hypot(x, z) < 1) [x, z] = mid(colors[0]);
+    return Math.atan2(x, z);
   }
 
   // Animate to a preset: {tilt: "top"|"angled"|"low"}, {turn: degrees}, {side: color}.
@@ -191,15 +202,11 @@ export class Board3D {
     let az = sph.theta, polar = sph.phi;
     if (v.tilt) polar = Board3D.TILT[v.tilt];
     if (v.turn) az += THREE.MathUtils.degToRad(v.turn);
-    if (v.side !== undefined) {
-      const y = this.data.yard[v.side];
-      const cx = y.reduce((a, p) => a + p[0], 0) / y.length, cz = y.reduce((a, p) => a + p[1], 0) / y.length;
-      az = Math.atan2(cx, cz);
-    }
+    if (v.side !== undefined) az = this.sideAz([v.side]);
     let d = az - sph.theta;                          // shortest way round
     d = Math.atan2(Math.sin(d), Math.cos(d));
     this.anim = { t0: performance.now(), from: [sph.theta, sph.phi, sph.radius],
-      to: [sph.theta + d, polar, this.viewDistance(polar)] };
+      to: [sph.theta + d, polar, this.viewDistance(polar, sph.theta + d)] };
     this.controls.target.set(0, 0, 0.3);
   }
 
@@ -1217,8 +1224,8 @@ export class Board3D {
       this.scene.add(sp);
       this.fx.push({ sp, base, t0: t0 + delay, life, vx, vy, vz, g: gr, size });
     };
-    for (let b = 0; b < 14; b++) {
-      const delay = b * 420 + Math.random() * 250, T = 0.9 + Math.random() * 0.4;
+    for (let b = 0; b < 12; b++) {                // all done within about 4 s
+      const delay = b * 130 + Math.random() * 100, T = 0.7 + Math.random() * 0.2;
       const a = Math.random() * Math.PI * 2, rr = R * (0.3 + 0.7 * Math.random());
       const ground = new THREE.Vector3(Math.cos(a) * rr * 1.3, this.surfaceY(), Math.sin(a) * rr * 1.3);
       const top = new THREE.Vector3(Math.cos(a) * rr, 2.5 + Math.random() * 2, Math.sin(a) * rr);
@@ -1227,7 +1234,7 @@ export class Board3D {
       const color = colors[b % colors.length];
       for (let k = 0; k < 46; k++) {
         const u = Math.random() * 2 - 1, ph = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = 2.2 + Math.random() * 0.8;
-        add(top.clone(), delay + T * 1000, 1300 + Math.random() * 700, s * Math.cos(ph) * v, u * v + 0.4, s * Math.sin(ph) * v,
+        add(top.clone(), delay + T * 1000, 1100 + Math.random() * 500, s * Math.cos(ph) * v, u * v + 0.4, s * Math.sin(ph) * v,
           k % 5 ? color : "#ffffff", 0.7, 1.4, !(k % 5));
       }
     }

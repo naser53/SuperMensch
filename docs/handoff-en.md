@@ -282,6 +282,8 @@ Two orders work, and you can switch at any time:
 * Board rotation and zoom work fully in **Turn the board** mode, so clicking a piece never turns
   the board by accident. Pieces and dice cannot be clicked in that mode. Outside it, a drag that
   starts beside the board (on the table) turns it too (`offBoard`; the cursor shows a hand there).
+* A new game starts with the camera behind the (first) human player's yards, so their pieces are in
+  front (`fitView(colors)`, `sideAz`); the square board seen over a corner gets a little more distance.
 * The **player names** printed on the board turn with the camera, so they always read the right
   way up for the viewer.
 * Responsive layout for landscape and portrait tablets and phones.
@@ -305,7 +307,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 ## 5. Effects and animations
 * **Moves:** pieces hop field by field. Computer players wait for the animations.
 * **Fireworks:** when the game is over, about 14 rockets rise from around the board and burst into
-  colored sparks over six seconds (`fireworks()`).
+  colored sparks, all within about four seconds (`fireworks()`).
 * **Captures:** the victim flies back to its yard in a high arc. A demoted general or marshal
   flies to its pushed-back field instead.
 * **Ranked hit (blast):** on the capture field an orange flash ball and a shock ring spread
