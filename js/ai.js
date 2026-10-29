@@ -4,8 +4,11 @@ import { TUN, YARD, mulberry32 } from "./engine.js";
 // Weights of the position value beyond plain progress (see evaluate):
 // reach = per opponent pawn one of ours can hit next turn (half for 7..12 fields ahead),
 // colors = per own color with a pawn in play (two colors in play split the dice and reach more),
-// capture = scale of the immediate capture bonus.
-export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1 };
+// capture = scale of the immediate capture bonus,
+// points = per rank point a pawn in play carries (so a soldier in the nest swaps back in, §11).
+// Cards: the bar for a triple-dice card drops by 1 for every cardPace rounds without one, and by
+// cardBlocked while one of the player's pawns is stuck behind an opponent's castle.
+export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1, points: 0.8, cardPace: 0, cardBlocked: 5 };
 
 export class SimpleAI {
   // cardZ: a triple-dice card is played only for a throw that gains this many standard
@@ -15,6 +18,7 @@ export class SimpleAI {
     this.w = weights;
     this.cardZ = cardZ;
     this.gains = { n: 0, sum: 0, sq: 0 };
+    this.lastCard = 0;            // round of the last card (or of the start)
     this.breakRate = breakRate;
     this.tunnelReserve = tunnelReserve;
   }
@@ -36,6 +40,7 @@ export class SimpleAI {
           }
         if (r === TUN) { v += 10 + g.effectiveRel(st, col, i) + 2; return; }   // safe inside a tunnel
         v += 10 + r;
+        if (r < L && this.w.points) v += this.w.points * st.kills[col][i];
         if (r >= L) {
           v += 25;
           if (g.finished(st, col, i)) v += 15;
@@ -98,7 +103,7 @@ export class SimpleAI {
     if (dec.kind === "pre_roll") {
       const find = k => opts.find(o => o.payload === k);
       if (find("break") && this._breakHopeful(g, p) && this.rng() < this.breakRate) return find("break");
-      if (find("triple") && this._cardNow(g, p)) return find("triple");
+      if (find("triple") && this._cardNow(g, p)) { this.lastCard = g.turnNo; return find("triple"); }
       const t = this._tunnelPick(g, p, opts);
       if (t) return t;
       return find("roll");
@@ -151,7 +156,22 @@ export class SimpleAI {
     const mean = s.sum / s.n, sd = Math.sqrt(Math.max(1e-6, s.sq / s.n - mean * mean));
     let home = 0, all = 0;
     for (const col of g.players[p].colors) g.state.pos[col].forEach(r => { all++; if (r >= g.L) home++; });
-    return x > mean + sd * (this.cardZ + 0.35 * (g.cards[p] - 1) - 1.5 * home / all);
+    const w = this.w, wait = w.cardPace ? Math.min(2, (g.turnNo - this.lastCard) / w.cardPace) : 0;
+    const blocked = w.cardBlocked && this._behindCastle(g, p) ? w.cardBlocked : 0;
+    return x > mean + sd * (this.cardZ + 0.35 * (g.cards[p] - 1) - 1.5 * home / all - wait - blocked);
+  }
+
+  // one of p's pawns on the track has an opponent's castle 1..6 fields ahead (it cannot pass)
+  _behindCastle(g, p) {
+    const castles = g.opponentCastles(p);
+    if (!castles.size) return false;
+    const cells = new Set();
+    for (const [, [, , cs]] of castles) cs.forEach(a => cells.add(a));
+    for (const col of g.players[p].colors)
+      for (const r of g.state.pos[col])
+        if (r >= 0 && r < g.L)
+          for (let k = 1; k <= 6 && r + k < g.L; k++) if (cells.has(g.absOf(col, r + k))) return true;
+    return false;
   }
 
   _breakHopeful(g, p) {

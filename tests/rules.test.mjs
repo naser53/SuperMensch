@@ -444,3 +444,27 @@ test("a general hit becomes a soldier and is pushed back; a marshal becomes a ge
   put(k, 1, 0, k.relOf(1, 8));
   assert.ok(k.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));
 });
+
+// ---------------------------------------------------------------- §11 nest swap
+test("nest swap: with a 6 a soldier in the nest with points comes out with them, a yard piece takes its place", () => {
+  const g = make();
+  put(g, 3, 0, 1);
+  put(g, 0, 0, g.L + 3);                          // deepest nest field
+  g.state.kills[0][0] = 9;                        // a soldier with points
+  const p = g.playsFor(0, [6, 2]).find(x => x.steps.some(s => s.swap != null));
+  assert.ok(p, "a swap is offered");
+  const s = p.steps.find(x => x.swap != null);
+  assert.equal(p.state.pos[0][0], 0);             // on its gate
+  assert.equal(p.state.pos[0][s.swap], g.L + 3);  // the yard piece is in its nest place
+  assert.equal(p.state.kills[0][0], 9);
+  assert.ok(p.state.hit[0][0] && p.state.hit[0][s.swap]);   // no clean-piece bonus from a swap
+  // not for a general, not without points, not without a yard piece, not without a 6
+  g.state.kills[0][0] = 15;
+  assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));
+  g.state.kills[0][0] = 0;
+  assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));
+  g.state.kills[0][0] = 9;
+  assert.ok(!g.playsFor(0, [5, 2]).some(x => x.steps.some(s => s.swap != null)));
+  for (let i = 1; i < 4; i++) put(g, 0, i, g.L - 1 + i - 1);   // no piece left in the yard
+  assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));
+});

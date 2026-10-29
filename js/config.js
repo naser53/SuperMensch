@@ -28,6 +28,8 @@ export class Config {
       general_bounty: 10,       // GENERAL_BOUNTY
       marshal_bounty: 15,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
+      nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps
+                                // with a yard piece and enters with its points
 
       tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP

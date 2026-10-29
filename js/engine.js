@@ -413,7 +413,7 @@ export class Game {
       st.pos[col].forEach((r, i) => {
         if (r === YARD) {
           if (!yardAdded) { ms.push(["p", col, i]); yardAdded = true; }
-        } else if (!this.finished(st, col, i)) {
+        } else if (!this.finished(st, col, i) || this._swapper(st, col, i)) {
           ms.push(["p", col, i]);
         }
       });
@@ -421,6 +421,15 @@ export class Game {
     if (st.hunters[p]) ms.push(["h", p]);
     else if (this.hunterEligible(p, st) !== null) { ms.push(["hn", p, 1]); ms.push(["hn", p, -1]); }
     return ms;
+  }
+
+  // §11 nest swap: a soldier in the nest that has won rank points, while its color has a piece
+  // in the yard, may use a 6 to swap with that piece: it comes out on its gate with its points
+  // and the yard piece takes its place in the nest (no clean-piece bonus for either).
+  _swapper(st, col, i) {
+    const k = st.kills[col][i];
+    return !!this.cfg.nest_swap && st.pos[col][i] >= this.L && k > 0 && this.rank(k) === 0
+      && st.pos[col].includes(YARD);
   }
 
   // ------------------------------------------------------------ one step
@@ -450,6 +459,22 @@ export class Game {
       const r = st.pos[col][i];
       const tr = r !== YARD ? this.tunnelOf(st, col, i) : null;
       if (tr !== null) return this._tunnelStep(st, p, m, die, tr, blocked, victimAt);
+      if (r >= L && die === 6) {                        // a 6 never moves a piece inside the nest
+        if (!this._swapper(st, col, i)) return null;
+        a = this.gate(col);
+        const [v, bad] = victimAt(a);
+        if (bad) return null;
+        const j = st.pos[col].indexOf(YARD);
+        ns = st.copy();
+        ns.pos[col][i] = 0;
+        ns.pos[col][j] = r;
+        ns.hit[col][i] = ns.hit[col][j] = true;
+        const captures = [];
+        if (v !== null) this._capture(st, ns, v, a, true, captures);
+        const s = new Step(m, die, this.fieldName(col, r), this.fieldName(col, 0), captures, true);
+        s.swap = j;
+        return [ns, s];
+      }
       let dstRel, cells;
       if (r === YARD) {
         if (die !== 6) return null;
@@ -809,6 +834,8 @@ export class Game {
     return play.steps.map(s => {
       const nm = s.mover[0] !== "hn" ? this.moverName(s.mover)
         : M(s.mover[2] === 1 ? "hunter_fwd" : "hunter_back");
+      if (s.swap != null) return M("step_swap", { name: nm, other: this.moverName(["p", s.mover[1], s.swap]), dst: s.dst,
+        cap: s.captures.length ? M("cap") : "" });
       return M("step", { name: nm, src: s.src, dst: s.dst, die: s.die, cap: s.captures.length ? M("cap") : "" });
     });
   }

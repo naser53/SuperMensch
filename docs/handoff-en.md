@@ -160,6 +160,14 @@ use a card.
   * Applies everywhere: normal captures, wall and castle breaks, tunnel exits, and hunters
     (a hunter is pushed back against its running direction).
   * A blast and a board shake mark the hit (§5).
+* **Nest swap** (`NEST_SWAP`, newest rule, the owner's idea): a soldier in the nest with rank points
+  (1..14), while its color has a piece in the yard, may spend a 6 instead of bringing a piece in:
+  it comes out on its gate with its points and the yard piece takes its place in the nest. Hit
+  later, it goes to the yard and its points go back to 0 as for any soldier. Neither piece gets
+  the clean-piece bonus from a swap (both are marked as hit). Generals and marshals do not swap.
+  In the move list: "Red 1 swaps with Red 2 and comes out on 1 with its points (6)"; by clicks:
+  the 6, then the nest pawn. The computer values rank points a pawn in play carries
+  (`AI_WEIGHTS.points`), so it swaps.
 * The final score is what is left; points spent on tunnels stay spent. A finished player has no
   more turns; pending bonus dice are dropped.
 
@@ -394,7 +402,11 @@ npm run build       # dist/supermensch.html
 * **Computer cards:** the computer used its three triple-dice cards in the first rounds. It now
   measures how much a third die would help this turn (the best kept pair of three against two
   dice, over all throws) and plays a card only when that is well above what it has seen so far.
-  The bar drops as its cards run low or its pawns get home.
+  The bar drops as its cards run low or its pawns get home. The owner saw it stuck behind a castle
+  at round 26 with three cards left: the bar now drops by `cardBlocked` (5) while one of its pawns
+  has an opponent castle within six fields ahead (three dice give more 6s and more choices). In the
+  castle scenario it went from 0/20 to 20/20 cards used. Spending simply because rounds pass
+  (`cardPace`) lost in simulation (about 35% against 44% on the six-color board), so it stays 0.
 * **Upright names:** names turn smoothly with the camera instead of flipping by 180°.
 * **Ranked survival:** dying as a general or marshal felt unfair; one rank down and a push back
   keeps the piece in play while the attacker still gets the full points.

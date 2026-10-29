@@ -789,7 +789,7 @@ export class Board3D {
     if (m[0] === "p") {
       const [, col, i] = m, r0 = a.pos[col][i], r1 = b.pos[col][i];
       const at = st => this.piecePos(st, col, i);
-      if (r0 === YARD || r0 === TUN || r1 === TUN || r1 === YARD || r0 === r1) return [at(a), at(b)];
+      if (r0 === YARD || r0 === TUN || r1 === TUN || r1 === YARD || r0 === r1 || (r0 >= L && r1 < L)) return [at(a), at(b)];   // (nest swap: a hop)
       const end = r1 < r0 ? r1 + L : r1;               // r1 < r0: a lap again (tunnel debt)
       const pts = [];
       const tmp = a.copy();
