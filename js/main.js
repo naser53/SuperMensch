@@ -34,7 +34,8 @@ class App {
     this.aiPlan = null;
     this.sel = null;
     this.nextAi = 0;
-    this.board = new Board3D($("#stage"), { onPick: (hit, ev) => this.boardClick(hit, ev) });
+    this.board = new Board3D($("#stage"), { onPick: (hit, ev) => this.boardClick(hit, ev),
+      onContext: (hit, ev) => this.dieClick(hit, ev, -1) });
     const hint = document.createElement("div");
     hint.className = "hint3d";
     $("#stage").appendChild(hint);
@@ -153,6 +154,9 @@ class App {
     this.aiPlan = null;
     this.sel = null;
     this.doneNests = new Set();
+    this.diceRef = null;
+    this.seenLast = null;
+    this.prevTurn = undefined;
     $("#setup").hidden = true;
     this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
     this.nextAi = performance.now() + this.delay;
@@ -188,6 +192,7 @@ class App {
       el.innerHTML = h;
       this.board.sync(g.state);
       this.board.preview(null);
+      this.board.clearDice();
       return;
     }
     const who = t(this.lang, p.isAi ? "thinking" : "your_turn");
@@ -195,7 +200,6 @@ class App {
       <span class="muted small">${this.T("round", { n: g.turnNo })}</span></div>`;
     const human = dec && !p.isAi;
     if (dec !== (this.sel && this.sel.dec)) this.resetSelection(dec);
-    h += this.diceHtml(dec, human);
     if (dec && dec.note && !(human && dec.kind === "keep")) h += `<div class="note">${this.S(dec.note)}</div>`;
     h += "</div>";
 
@@ -258,14 +262,7 @@ class App {
     }
     h += this.footHtml();
     el.innerHTML = h;
-    if (performance.now() < (this.cardUntil || 0)) el.querySelectorAll(".dice .die").forEach(d => d.classList.add("card-hl"));
-    if (g.lastDice !== this.diceRef) {      // a new throw: let the dice tumble
-      const prev = this.diceRef || [], now = g.lastDice;
-      const kept = now.length === 2 && prev.length === 3 &&
-        now.every((v, k) => prev.filter(x => x === v).length >= now.filter((x, j) => x === v && j <= k).length);
-      this.diceRef = now;
-      if (now.length && !kept && !(dec && dec.kind === "dice")) this.rollDice();
-    }
+    this.syncDice(dec, human);
     this.board.sync(shown, this.sel && this.sel.piece);
     this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
     if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
@@ -365,12 +362,13 @@ class App {
   // waiting for an animation (move, dice or card), or locked by the scores view
   busy() {
     const now = performance.now();
-    return this.scoresMode || this.board.isAnimating() || now < (this.rollUntil || 0) || now < (this.cardUntil || 0);
+    return this.scoresMode || this.board.isAnimating() || this.board.diceRolling() || now < (this.cardUntil || 0);
   }
 
   // A triple-dice card is played: the card flies in over the board, the three dice glow for 2 s.
   cardEffect() {
     this.cardUntil = performance.now() + 2000;
+    this.board.glowDice(2000);
     const fx = document.createElement("div");
     fx.className = "card-fx";
     const g = this.game, dice = g.pending && g.pending.kind === "dice" ? [] : g.lastDice;   // debug: dice not set yet
@@ -381,20 +379,81 @@ class App {
     setTimeout(() => this.render(), 2050);              // end of the dice glow
   }
 
-  // Dice roll: the faces tumble for half a second, then show the real numbers.
-  rollDice() {
-    this.rollUntil = performance.now() + 520;
-    clearInterval(this.rollTimer);
-    this.rollTimer = setInterval(() => {
-      const left = this.rollUntil - performance.now();
-      document.querySelectorAll("#panel .dice .die:not(.edit)").forEach(d => {
-        if (left <= 0) { d.classList.remove("rolling"); return; }
-        d.classList.add("rolling");
-        const v = 1 + Math.floor(Math.random() * 6);
-        d.querySelectorAll("i").forEach((pip, k) => pip.classList.toggle("on", PIPS[v].includes(k)));
-      });
-      if (left <= 0) { clearInterval(this.rollTimer); this.render(); }
-    }, 65);
+  // The dice live on the board. A new throw lands in the middle and settles at the player's
+  // yard; played dice dim, a burnt die gets a red cross, and the dice fade once the turn has
+  // passed. Two of three dice kept: the third fades.
+  syncDice(dec, human) {
+    const g = this.game, b = this.board, now = performance.now();
+    let cur;
+    if (dec && ["play", "keep", "dice"].includes(dec.kind)) cur = dec.dice;
+    else if (g.lastDice !== this.seenLast) cur = g.lastDice;   // a throw with no move: every die burns
+    else cur = this.diceRef;
+    this.seenLast = g.lastDice;
+    const colors = p => g.players[p].colors;
+    if (cur !== this.diceRef) {
+      const owner = dec && dec.dice === cur ? dec.player : (this.prevTurn ?? g.turn);
+      if (cur && this.keptFrom && this.keptFrom === this.diceRef && cur.length === 2) b.keepDice(this.keptIdx);
+      else if (cur && dec && dec.kind === "dice") b.placeDice(cur, colors(owner));
+      else if (cur && cur.length) {
+        const ai = g.players[owner].isAi;
+        b.throwDice(cur, colors(owner), ai ? Math.max(0.45, Math.min(1.3, this.delay / 650)) : 1);
+        this.rolling = true;
+      }
+      this.keptFrom = null;
+      this.diceRef = cur;
+      this.diceOwner = owner;
+      this.diceCleared = false;
+    } else if (cur && dec && dec.kind === "dice") b.placeDice(cur, colors(dec.player));
+    this.prevTurn = g.turn;
+    if (!cur) return;
+    if (this.diceOwner !== g.turn && !this.diceCleared && !b.diceRolling()) {   // the turn has passed: fade after the move
+      const at = Math.max(b.animEnd || 0, this.settledAt || 0) + 600;
+      if (now >= at) { b.clearDice(); this.diceCleared = true; }
+      else { clearTimeout(this.diceTimer); this.diceTimer = setTimeout(() => this.render(), at - now + 20); }
+    }
+    const sel = this.sel, mine = dec && dec.dice === cur;
+    let states;
+    if (mine && dec.kind === "dice") states = cur.map(() => "edit");
+    else if (mine && human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
+      states = cur.map((_, k) => sel.keep.includes(k) ? "sel" : "pick");
+    } else if (mine && human && dec.kind === "play" && !sel.list) {
+      const used = new Set(sel.picks.map(x => x.di));
+      const use = sel.piece ? this.pieceDice(sel.piece) : this.usableDice();
+      states = cur.map((_, k) => used.has(k) ? "used" : (sel.die === k ? "sel" : (use.has(k) ? "pick" : "off")));
+    } else if (mine) states = cur.map(() => "idle");
+    else if (this.usedFrom === cur) states = cur.map((_, k) => this.usedIdx.includes(k) ? "used" : "burnt");
+    else states = cur.map(() => "burnt");                   // no move was possible
+    b.diceStates(states);
+  }
+
+  // which of the dice a play used (matched by value)
+  usedDice(dice, play) {
+    const left = dice.map((v, k) => k), out = [];
+    for (const s of play.steps || []) {
+      const j = left.findIndex(k => dice[k] === s.die);
+      if (j >= 0) out.push(left.splice(j, 1)[0]);
+    }
+    return out;
+  }
+
+  // which two of three dice a "keep" choice keeps, in the order of the kept pair
+  keptDice(dice, pair) {
+    const pref = this.sel && this.sel.keep.length === 2 ? this.sel.keep : [];
+    const left = pref.concat(dice.map((v, k) => k).filter(k => !pref.includes(k)));
+    return pair.map(v => left.splice(left.findIndex(k => dice[k] === v), 1)[0]);
+  }
+
+  // A die on the board was clicked (step +1 or -1 for the debug dice being set).
+  dieClick(hit, ev, step = 1) {
+    const g = this.game;
+    if (!g || !hit || hit.die === undefined || !g.pending) return;
+    if (g.pending.kind === "dice") {
+      const d = g.pending.dice, k = hit.die;
+      d[k] = ((d[k] - 1 + step) % 6 + 6) % 6 + 1;
+      this.render();
+      return;
+    }
+    if (step === 1) this.clickDie(hit.die, ev);
   }
 
   toggleScores() {
@@ -481,26 +540,6 @@ class App {
     }
   }
 
-  diceHtml(dec, human) {
-    const g = this.game;
-    if (dec && dec.kind === "dice") {
-      return `<div class="dice">${dec.dice.map((v, k) => dieHtml(v, "edit", `data-die="${k}"`)).join("")}</div>`;
-    }
-    if (human && dec.kind === "keep" && dec.options.some(o => Array.isArray(o.payload))) {
-      return `<div class="dice">${dec.dice.map((v, k) =>
-        dieHtml(v, "pick" + (this.sel.keep.includes(k) ? " sel" : ""), `data-pdie="${k}"`)).join("")}</div>`;
-    }
-    if (human && dec.kind === "play" && !this.sel.list) {
-      const sel = this.sel, used = new Set(sel.picks.map(x => x.di));
-      const use = sel.piece ? this.pieceDice(sel.piece) : this.usableDice();
-      return `<div class="dice">${dec.dice.map((v, k) => {
-        const cls = used.has(k) ? "used" : (sel.die === k ? "pick sel" : (use.has(k) ? "pick" : "off"));
-        return dieHtml(v, cls, `data-pdie="${k}"`);
-      }).join("")}</div>`;
-    }
-    return `<div class="dice">${g.lastDice.map(v => dieHtml(v, "", "")).join("")}</div>`;
-  }
-
   // The view menu: a button at the top of the panel; it opens a small panel of views
   // and folds back into the button when a view is chosen.
   viewMenuHtml() {
@@ -565,6 +604,11 @@ class App {
     const g = this.game, dec = g.pending;
     const card = dec && dec.kind === "pre_roll" && opt.payload === "triple";
     if (!entries && dec && dec.kind === "play" && opt.payload && opt.payload.steps) entries = this.replay(opt.payload);
+    if (dec && dec.kind === "play") { this.usedFrom = dec.dice; this.usedIdx = this.usedDice(dec.dice, opt.payload); }
+    if (dec && dec.kind === "keep" && Array.isArray(opt.payload)) {
+      this.keptFrom = dec.dice;
+      this.keptIdx = this.keptDice(dec.dice, opt.payload[1]);
+    }
     g.choose(opt);
     if (card) this.cardEffect();
     this.aiPlan = null;
@@ -595,6 +639,7 @@ class App {
   boardClick(hit, ev) {
     const g = this.game, sel = this.sel;
     if (this.busy()) return;
+    if (g && hit && hit.die !== undefined) { this.dieClick(hit, ev); return; }
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
     if (hit.target !== undefined && sel.piece) {     // a highlighted field of the selected piece
@@ -685,6 +730,7 @@ class App {
 
   tick() {
     const g = this.game;
+    if (this.rolling && !this.board.diceRolling()) { this.rolling = false; this.settledAt = performance.now(); if (g) this.render(); }   // the dice have settled
     if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
     if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
@@ -698,7 +744,7 @@ function wire(app) {
   document.addEventListener("click", e => {
     if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
     if (app.viewOpen && !e.target.closest(".viewmenu")) app.openViewMenu(false);   // click elsewhere folds it
-    const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay],[data-view]");
+    const b = e.target.closest("[data-act],[data-opt],[data-pay],[data-view]");
     if (!b) return;
     if (b.closest("#setup")) {
       if (b.dataset.act && b.dataset.act !== "lang") app.setupAction(b.dataset.act, b.dataset.val);
@@ -706,14 +752,7 @@ function wire(app) {
     }
     const g = app.game;
     if (!g) return;
-    if (b.dataset.die !== undefined) {
-      const k = +b.dataset.die;
-      g.pending.dice[k] = g.pending.dice[k] % 6 + 1;
-      app.render();
-      return;
-    }
     if (app.scoresMode && !["scores", "info", "info_close", "menu"].includes(b.dataset.act) && b.dataset.view === undefined) return;
-    if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie, e); return; }
     if (b.dataset.view !== undefined) { app.view(b.dataset.view); app.openViewMenu(false); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
@@ -737,14 +776,6 @@ function wire(app) {
     else if (act === "info") app.showInfo(true);
     else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
-  });
-  document.addEventListener("contextmenu", e => {
-    const b = e.target.closest("[data-die]");
-    if (!b || !app.game) return;
-    e.preventDefault();
-    const k = +b.dataset.die;
-    app.game.pending.dice[k] = (app.game.pending.dice[k] + 4) % 6 + 1;
-    app.render();
   });
   document.addEventListener("input", e => {
     if (e.target.dataset.name === undefined) return;

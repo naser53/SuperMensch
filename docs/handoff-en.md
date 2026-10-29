@@ -209,11 +209,26 @@ human/computer), **player names** typed in, dice level. *Start game*.
 ### Side panel (top to bottom)
 * Top row: **View** button, language select, **Debug (set dice)** checkbox.
 * Player list: color dots, name, score, cards left, "stuck".
-* Turn line, round number, the dice, hints.
+* Turn line, round number, hints. **The dice are not in the panel any more**; they are on the
+  board (below). This is the first step of moving the panel onto the board as a ribbon.
 * Action buttons: roll, triple-dice card, castle-break declaration, tunnel declarations, second
   try, gift six, **Undo**.
 * Bottom row: **Menu** (new game), **Info**, **Scores**, computer speed slider.
 * The move log is not in the panel any more; it is at the end of **Info** (scrollable).
+
+### Dice on the board
+* A throw lands in the **middle of the board**, tumbles, then hops to a free row **beside the yard**
+  of the player whose turn it is (of a two-color player's yards, the one nearest the camera). The
+  spots are fixed per color in `js/boards.js` (`dice`), chosen to keep clear of every field.
+* The dice are clicked **there**. A die is never drawn smaller than about 28 px on the screen and
+  has a larger invisible touch area (1.7× the die).
+* States: usable dice have a pale yellow ring, the chosen die lifts and glows with a pulsing ring,
+  a die the selected piece cannot use dims, a played die dims more, a **burnt** die gets a red
+  cross. The kept two of three dice close up and the third fades. When the turn has passed (after
+  the move animation) the dice fade out.
+* The engine always decides the numbers; the animation only lands on them, so the engine stays
+  deterministic.
+* Computer throws follow the speed slider.
 
 ### Moving by clicks
 Two orders work, and you can switch at any time:
@@ -228,8 +243,8 @@ Two orders work, and you can switch at any time:
   forward / backward.
 * **Undo:** always visible; active only after the first move of a two-dice throw and before the
   second; greyed otherwise.
-* **Debug:** every throw waits for you to set the dice (click +1, right-click −1, or *Random*),
-  then *Continue*. Computer moves are shown first and wait for *Continue*.
+* **Debug:** every throw waits for you to set the dice on the board (click a die +1, right-click −1,
+  or *Random*), then *Continue*; the dice are then thrown with those numbers. Computer moves are shown first and wait for *Continue*.
 * Every legal option is reachable by clicks (verified on 10,000 decisions).
 
 ### View
@@ -237,7 +252,9 @@ Two orders work, and you can switch at any time:
   back into it. Presets: Top, Angled, Low, Turn left, Turn right, My side, Turn the board to the
   player (follow).
 * Board rotation and zoom work only in **Turn the board** mode, so clicking a piece never turns
-  the board by accident. Pieces cannot be clicked in that mode.
+  the board by accident. Pieces and dice cannot be clicked in that mode.
+* The **player names** printed on the board turn with the camera, so they always read the right
+  way up for the viewer.
 * Responsive layout for landscape and portrait tablets and phones.
 
 ### Info
@@ -257,9 +274,11 @@ numbers are wrapped in `<bdi dir="ltr">`.
 * **Ranked hit (blast):** on the capture field an orange flash ball and a shock ring spread
   (about 0.8 s), 26 sparks fly out, and the camera shakes for about 0.55 s, fading out.
   Code: `Board3D.boom()`, `stepBoom()`, the shake in `frame()`.
-* **Dice:** tumble for about 0.5 s. Not repeated after keeping two of three dice.
-* **Triple-dice card:** a card with the three dice flies in over the board, and the three dice in
-  the panel glow for 2 s.
+* **Dice:** 3D dice thrown in the middle of the board (about 0.55 s of tumbling and bouncing),
+  a short pause, then a hop to the player's yard (about 0.4 s). Not repeated after keeping two of
+  three dice. Code: `Board3D.throwDice()`, `stepDice()`.
+* **Triple-dice card:** a card with the three dice flies in over the board, and the three dice on
+  the board glow for 2 s.
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
@@ -273,11 +292,11 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
 | `js/ai.js` | Simple computer player |
-| `js/boards.js` | Board geometry (six arms, classic cross) |
+| `js/boards.js` | Board geometry (six arms, classic cross), dice spots beside the yards |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
 | `js/main.js` | `App`: setup screen, side panel, click state machine, game loop |
-| `css/style.css` | Layout, panel, dice, menus, responsive rules |
+| `css/style.css` | Layout, panel, card, menus, responsive rules |
 | `tests/rules.test.mjs` | 37 rule tests (`node:test`) |
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
@@ -302,10 +321,12 @@ numbers are wrapped in `<bdi dir="ltr">`.
   tunnels, target rings (`showTargets`), `pick()` returns `{target}` / `{piece}` / `{field}`,
   animations (`animateSteps`, `playMove`, `moverPath`), shine (`celebrate`, `stepShine`), blast
   (`boom`, `stepBoom`), scores sprites (`showScores`), `forbid(ev)`, views (`setView`,
-  `setViewMode`).
+  `setViewMode`). Dice: `throwDice`, `placeDice` (debug), `keepDice`, `clearDice`, `diceStates`,
+  `glowDice`, `diceRolling`, `stepDice`; `pick()` also returns `{die}`. Upright names:
+  `flatText(..., upright)`, turned in `frame()`.
 * `App`: selection state `sel`, `boardClick`, `clickDie`, `movePiece`, `pieceDice`,
-  `pieceTargets`, `replay(play)`, `busy()` (locks while animations, dice tumble, the card or the
-  scores view run), `rollDice`, `cardEffect`, `toggleScores`, `checkNests`, `showInfo`,
+  `pieceTargets`, `replay(play)`, `busy()` (locks while animations, the dice throw, the card or the
+  scores view run), `syncDice` (which dice the board shows and their states), `dieClick`, `cardEffect`, `toggleScores`, `checkNests`, `showInfo`,
   `openViewMenu`.
 
 ## 7. Build, test, release
@@ -335,6 +356,10 @@ npm run build       # dist/supermensch.html
   Per-board numbers were chosen so captures stay 60–80% of the points and finishing first is
   worth more than one full nest.
 * **Dice levels:** intermediate games were shorter in simulation (about 224 vs 325 rounds).
+* **Dice on the board:** the owner wants the panel to shrink so the board can grow; the dice went
+  first. They settle beside the yard rather than on it (the yard is full of pawns), and touch
+  areas are larger than the dice so children can hit them on tablets.
+* **Upright names:** names turn smoothly with the camera instead of flipping by 180°.
 * **Ranked survival:** dying as a general or marshal felt unfair; one rank down and a push back
   keeps the piece in play while the attacker still gets the full points.
 
@@ -351,11 +376,13 @@ npm run build       # dist/supermensch.html
 * `pages.yml` fails until Pages is enabled.
 
 ## 11. Backlog
-1. Castle-breaker piece (§3.13).
-2. Point loans.
-3. Advanced dice level.
-4. Smarter computer player (breaks, tunnel budget, ranked targets).
-5. Online version (below). Not started; the owner said "not now".
+1. Panel → ribbon on the board, step by step: action buttons, then the player strip, then remove
+   the panel (agreed with the owner; the dice were step 1).
+2. Castle-breaker piece (§3.13).
+3. Point loans.
+4. Advanced dice level.
+5. Smarter computer player (breaks, tunnel budget, ranked targets).
+6. Online version (below). Not started; the owner said "not now".
 
 ## 12. Online plan (not started)
 For about 10 trusted people (family; kids on Android tablets), free plans only.
