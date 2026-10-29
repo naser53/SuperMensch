@@ -415,34 +415,57 @@ test("ranks come from the points the piece wins with its own captures", () => {
 });
 
 // ---------------------------------------------------------------- §11 ranked pieces survive a hit
-test("a general hit becomes a soldier and is pushed back; a marshal becomes a general", () => {
-  const g = make();
-  put(g, 0, 0, 5); put(g, 3, 0, 1);
-  const b8 = g.relOf(1, 8);
-  put(g, 1, 0, b8);
-  g.state.kills[1][0] = g.cfg.general_points;          // a blue general on abs 8
-  put(g, 2, 0, g.relOf(2, 7));                          // the field right behind it is taken (green)
-  const hitPlay = g.playsFor(0, [3, 1]).find(x => x.steps.some(s => s.captures.some(c => c.victim[1] === 1)));
+test("a hit general becomes a soldier pushed back 7+ fields; a marshal a general; no room: yard with its points", () => {
+  // red (0) at rel x hits with 3+1 the piece standing on red's rel x+4
+  const setup = (vrel, vkills) => {
+    const g = make();
+    put(g, 3, 0, 1);
+    const at = g.absOf(1, vrel);
+    put(g, 0, 0, g.relOf(0, at) - 4);
+    put(g, 1, 0, vrel);
+    g.state.kills[1][0] = vkills;
+    return g;
+  };
+  const hit = g => g.playsFor(0, [3, 1]).find(x => x.steps.some(s => s.captures.some(c => c.victim[1] === 1)));
+  const g = setup(20, 0);
+  g.state.kills[1][0] = g.cfg.general_points;
+  put(g, 2, 0, g.relOf(2, g.absOf(1, 13)));           // 7 fields behind is taken (green)
+  const hitPlay = hit(g);
   assert.ok(hitPlay);
   const st = hitPlay.state;
-  assert.equal(st.pos[1][0], b8 - 2);                   // pushed back past the taken field
+  assert.equal(st.pos[1][0], 12);                       // first free field 7+ behind
   assert.equal(st.kills[1][0], 0);                      // now a soldier
   const before = g.state.scores.slice();
   g._applyScore(0, hitPlay);
   assert.equal(hitPlay.state.scores[1], before[1] - g.cfg.general_bounty);   // the owner still loses the bounty
   // a marshal becomes a general with GENERAL_POINTS
-  const h = make();
-  put(h, 0, 0, 5); put(h, 3, 0, 1);
-  put(h, 1, 0, h.relOf(1, 8));
+  const h = setup(20, 0);
   h.state.kills[1][0] = h.cfg.marshal_points;
-  const q = h.playsFor(0, [3, 1]).find(x => x.steps.some(s => s.captures.some(c => c.victim[1] === 1)));
+  const q = hit(h);
   assert.equal(q.state.kills[1][0], h.cfg.general_points);
-  assert.ok(q.state.pos[1][0] >= 0);
-  // a soldier still goes to the yard
-  const k = make();
-  put(k, 0, 0, 5); put(k, 3, 0, 1);
-  put(k, 1, 0, k.relOf(1, 8));
-  assert.ok(k.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));
+  assert.equal(q.state.pos[1][0], 13);
+  // close to its gate with every field behind taken: yard, rank and points kept
+  const k = setup(5, 0);
+  k.state.kills[1][0] = k.cfg.marshal_points + 3;
+  put(k, 1, 1, 0);                                      // its own gate is taken
+  const y = hit(k);
+  assert.equal(y.state.pos[1][0], YARD);
+  assert.equal(y.state.kills[1][0], k.cfg.marshal_points + 3);
+  // a soldier still goes to the yard with 0
+  const m = setup(20, 0);
+  m.state.kills[1][0] = 4;
+  const z = hit(m);
+  assert.equal(z.state.pos[1][0], YARD);
+  assert.equal(z.state.kills[1][0], 0);
+});
+
+test("the yard piece with the most points enters first", () => {
+  const g = make();
+  put(g, 3, 0, 1);
+  g.state.kills[0][2] = 30;
+  const plays = g.playsFor(0, [6, 1]);
+  assert.ok(plays.some(x => x.steps.some(s => s.mover.join() === "p,0,2" && s.entered)));
+  assert.ok(!plays.some(x => x.steps.some(s => s.mover[1] === 0 && s.mover[2] !== 2)));
 });
 
 // ---------------------------------------------------------------- §11 nest swap

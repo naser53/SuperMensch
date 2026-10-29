@@ -113,6 +113,19 @@ export class Board3D {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || e.button !== 0) return;
       if (!this.viewMode) this.onPick(this.pick(e), e);
     });
+    // A drag that starts off the board (on the table around it) turns the board even outside
+    // view mode; the capture listener runs before OrbitControls sees the press.
+    container.addEventListener("pointerdown", e => {
+      if (e.target !== el || !e.isPrimary || this.viewMode) return;
+      this.controls.enabled = !!this.game && this.offBoard(e);
+    }, true);
+    const reset = () => setTimeout(() => { if (!this.viewMode) this.controls.enabled = false; });
+    window.addEventListener("pointerup", reset);
+    window.addEventListener("pointercancel", reset);
+    el.addEventListener("pointermove", e => {
+      if (this.viewMode || e.buttons || e.pointerType !== "mouse" || !this.game) return;
+      el.style.cursor = this.offBoard(e) ? "grab" : "default";
+    });
     el.addEventListener("contextmenu", e => {          // right-click on a die (debug dice: one less)
       e.preventDefault();
       if (!this.viewMode) this.onContext(this.pick(e), e);
@@ -460,12 +473,12 @@ export class Board3D {
   haloSprite() {
     const tex = canvasTex(96, 96, (g, w, h) => {
       const grd = g.createRadialGradient(48, 48, 4, 48, 48, 48);
-      grd.addColorStop(0, "rgba(255,230,120,0.95)");
+      grd.addColorStop(0, "rgba(255,230,120,0.7)");
       grd.addColorStop(1, "rgba(255,200,40,0)");
       g.fillStyle = grd; g.fillRect(0, 0, w, h);
     });
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, blending: THREE.AdditiveBlending }));
-    s.scale.set(0.95, 0.95, 1);
+    s.scale.set(0.6, 0.6, 1);
     s.renderOrder = 10;
     return s;
   }
@@ -590,7 +603,7 @@ export class Board3D {
       u.r2.visible = marshal;
       u.star.visible = general;
       u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
-      u.star.scale.setScalar(marshal ? 0.5 : 0.42);
+      u.star.scale.setScalar(marshal ? 0.36 : 0.42);
       u.halo.visible = marshal;
       u.bar.visible = kills > 0;
       u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
@@ -756,6 +769,13 @@ export class Board3D {
     }
   }
 
+  // nothing under the pointer but the table
+  offBoard(e) {
+    const p = this.pick(e);
+    if (p.die !== undefined || p.piece || p.target !== undefined || p.field !== undefined) return false;
+    return this.raycaster.intersectObjects(this.boardGroup.children, true).length === 0;
+  }
+
   pick(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
@@ -828,7 +848,7 @@ export class Board3D {
         t += dur;
       }
       for (const c of step.captures) {
-        if (c.demoted) {                       // a general or marshal is hit: a blast and a shake
+        if (c.demoted || c.yardRank) {         // a general or marshal is hit: a blast and a shake
           const at = this.xz(this.data.track[c.abs], this.surfaceY());
           setTimeout(() => this.boom(at), Math.max(0, t - performance.now()));
         }
@@ -1154,14 +1174,7 @@ export class Board3D {
     this.shining = this.shining || new Set();
     this.shining.add(color);
     if (!burst) return;
-    const tex = this.sparkTex || (this.sparkTex = canvasTex(64, 64, (g) => {
-      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-      grd.addColorStop(0, "rgba(255,255,255,1)");
-      grd.addColorStop(0.2, "rgba(255,247,200,0.95)");
-      grd.addColorStop(0.5, "rgba(255,225,120,0.35)");
-      grd.addColorStop(1, "rgba(255,215,90,0)");
-      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-    }));
+    const tex = this.sparkTexture();
     this.fx = this.fx || [];
     const t0 = performance.now();
     for (const p of this.data.home[color]) {
@@ -1179,6 +1192,47 @@ export class Board3D {
     }
   }
 
+  sparkTexture() {
+    return this.sparkTex || (this.sparkTex = canvasTex(64, 64, (g) => {
+      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, "rgba(255,255,255,1)");
+      grd.addColorStop(0.2, "rgba(255,247,200,0.95)");
+      grd.addColorStop(0.5, "rgba(255,225,120,0.35)");
+      grd.addColorStop(1, "rgba(255,215,90,0)");
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    }));
+  }
+
+  // ------------------------------------------------------------ fireworks
+  // The game is over: rockets rise from around the board and burst into colored sparks.
+  fireworks() {
+    const tex = this.sparkTexture();
+    this.fx = this.fx || [];
+    const t0 = performance.now(), R = this.n === 4 ? 4 : 6;
+    const colors = ["#ff4d4d", "#ffd84a", "#4dd2ff", "#7dff6a", "#ff7ae6", "#ffffff", "#ffa13d"];
+    const add = (base, delay, life, vx, vy, vz, color, gr, size, glow) => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,
+        blending: glow ? THREE.AdditiveBlending : THREE.NormalBlending, color }));   // colors show on the light table
+      sp.position.copy(base); sp.visible = false;
+      this.scene.add(sp);
+      this.fx.push({ sp, base, t0: t0 + delay, life, vx, vy, vz, g: gr, size });
+    };
+    for (let b = 0; b < 14; b++) {
+      const delay = b * 420 + Math.random() * 250, T = 0.9 + Math.random() * 0.4;
+      const a = Math.random() * Math.PI * 2, rr = R * (0.3 + 0.7 * Math.random());
+      const ground = new THREE.Vector3(Math.cos(a) * rr * 1.3, this.surfaceY(), Math.sin(a) * rr * 1.3);
+      const top = new THREE.Vector3(Math.cos(a) * rr, 2.5 + Math.random() * 2, Math.sin(a) * rr);
+      const gr = 0.9, vy = (top.y - ground.y + gr * T * T) / T;
+      add(ground, delay, T * 1000, (top.x - ground.x) / T, vy, (top.z - ground.z) / T, "#fff2c0", gr, 0.6, true);
+      const color = colors[b % colors.length];
+      for (let k = 0; k < 46; k++) {
+        const u = Math.random() * 2 - 1, ph = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = 2.2 + Math.random() * 0.8;
+        add(top.clone(), delay + T * 1000, 1300 + Math.random() * 700, s * Math.cos(ph) * v, u * v + 0.4, s * Math.sin(ph) * v,
+          k % 5 ? color : "#ffffff", 0.7, 1.4, !(k % 5));
+      }
+    }
+  }
+
   stepShine(now) {
     if (this.fx && this.fx.length) {
       this.fx = this.fx.filter(f => {
@@ -1187,9 +1241,9 @@ export class Board3D {
         f.sp.visible = true;
         const u = t * 1000 / f.life;
         if (u >= 1) { this.scene.remove(f.sp); f.sp.material.dispose(); return false; }
-        f.sp.position.set(f.base.x + f.vx * t, f.base.y + f.vy * t - 0.9 * t * t, f.base.z + f.vz * t);
+        f.sp.position.set(f.base.x + f.vx * t, f.base.y + f.vy * t - (f.g ?? 0.9) * t * t, f.base.z + f.vz * t);
         f.sp.material.opacity = 1 - u;
-        f.sp.scale.setScalar(0.12 + 0.18 * Math.sin(Math.PI * u) * (0.75 + 0.25 * Math.sin(t * 25)));
+        f.sp.scale.setScalar((0.12 + 0.18 * Math.sin(Math.PI * u) * (0.75 + 0.25 * Math.sin(t * 25))) * (f.size || 1));
         return true;
       });
     }

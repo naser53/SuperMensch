@@ -153,9 +153,11 @@ use a card.
 * **Ranked pieces survive a hit** (newest rule):
   * A soldier that is hit goes back to the yard.
   * A hit **general becomes a soldier**, a hit **marshal becomes a general**. The piece stays on
-    the board and is pushed back to the first free field behind it; the attacker takes its
-    field. Rank points reset to the start of the new rank (general 15, soldier 0). If no field
-    behind is free, it goes to the yard.
+    the board and is pushed back at least `PUSHBACK_MIN` = 7 fields: to that field, or the first
+    free field behind it, never past its own gate; the attacker takes its field. Rank points reset
+    to the start of the new rank (general 15, soldier 0). If every field back to its gate is taken,
+    it goes to the yard **keeping its rank and points** (owner's call). The yard piece with the
+    most points is the one that enters first.
   * Scoring is unchanged: the capturer gets normal points plus the bounty; the owner loses the bounty.
   * Applies everywhere: normal captures, wall and castle breaks, tunnel exits, and hunters
     (a hunter is pushed back against its running direction).
@@ -218,13 +220,15 @@ human/computer), **player names** typed in, dice level. *Start game*.
 The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
-  Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens).
+  Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens). Menu (and
+  Esc) asks first while a game is running: *Leave* or *Keep playing*; the computer waits meanwhile.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
   place and is greyed out, standing still, until it is the human's time to roll), triple-dice card,
   castle-break declaration and tunnels (these three are also always shown, greyed out when they
   cannot be used; card and castle break only in the two-color game; on phones as icon + count), castle-break declaration, **Tunnels (n)** (opens the
-  list), Undo and *List of all moves* while moving, *Second try* / *Take the gift six*,
+  list), Undo while moving (the *List of all moves* button is hidden for now; the owner will
+  decide later), *Second try* / *Take the gift six*,
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
   places) open in a card at the top left of the board (`#drop`).
@@ -275,8 +279,9 @@ Two orders work, and you can switch at any time:
 * **View** button in the ribbon opens a menu that grows out of the button and folds
   back into it. Presets: Top, Angled, Low, Turn left, Turn right, My side, Turn the board to the
   player (follow).
-* Board rotation and zoom work only in **Turn the board** mode, so clicking a piece never turns
-  the board by accident. Pieces and dice cannot be clicked in that mode.
+* Board rotation and zoom work fully in **Turn the board** mode, so clicking a piece never turns
+  the board by accident. Pieces and dice cannot be clicked in that mode. Outside it, a drag that
+  starts beside the board (on the table) turns it too (`offBoard`; the cursor shows a hand there).
 * The **player names** printed on the board turn with the camera, so they always read the right
   way up for the viewer.
 * Responsive layout for landscape and portrait tablets and phones.
@@ -293,12 +298,14 @@ numbers are wrapped in `<bdi dir="ltr">`.
   on blue, light pink on green, navy on orange, yellow on purple, coral on teal), with a thin dark
   edge. Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
-  gold with a glow. The base ring is silver for a general, gold (with a second ring) for a marshal.
+  gold with a small, soft glow (made smaller at the owner's request). The base ring is silver for a general, gold (with a second ring) for a marshal.
 * The **hunter** is a pawn holding a bow; the arrow points in its running direction (forward or
   backward).
 
 ## 5. Effects and animations
 * **Moves:** pieces hop field by field. Computer players wait for the animations.
+* **Fireworks:** when the game is over, about 14 rockets rise from around the board and burst into
+  colored sparks over six seconds (`fireworks()`).
 * **Captures:** the victim flies back to its yard in a high arc. A demoted general or marshal
   flies to its pushed-back field instead.
 * **Ranked hit (blast):** on the capture field an orange flash ball and a shock ring spread

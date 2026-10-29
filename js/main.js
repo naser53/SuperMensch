@@ -71,7 +71,8 @@ class App {
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
       if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
-      if (e.key === "Escape" && this.game) this.showSetup();
+      if (e.key === "Escape" && this.confirming) { this.askLeave(false); return; }
+      if (e.key === "Escape" && this.game) this.askLeave(true);
     });
     this.showSetup();
   }
@@ -105,6 +106,20 @@ class App {
       return s.pairing === "opposite" ? [i, i + half] : [2 * i, 2 * i + 1];
     }
     return [i];
+  }
+
+  // Leaving a running game for the menu asks first; a finished game just goes.
+  askLeave(open) {
+    let el = $("#confirm");
+    if (open && (!this.game || this.game.over)) { this.showSetup(); return; }
+    this.confirming = open;
+    if (!open) { if (el) el.hidden = true; return; }
+    if (!el) { el = document.createElement("div"); el.id = "confirm"; document.body.appendChild(el); }
+    el.dir = this.rtl ? "rtl" : "ltr";
+    el.innerHTML = `<div class="confirm-card"><p>${this.T("leave_q")}</p><div class="acts">
+      <button class="btn" data-act="leave_no">${this.T("leave_no")}</button>
+      <button class="btn primary" data-act="leave_yes">${this.T("leave_yes")}</button></div></div>`;
+    el.hidden = false;
   }
 
   showSetup() {
@@ -182,6 +197,7 @@ class App {
     this.aiPlan = null;
     this.sel = null;
     this.doneNests = new Set();
+    this.fireworksDone = false;
     this.diceRef = null;
     this.seenLast = null;
     this.prevTurn = undefined;
@@ -235,8 +251,7 @@ class App {
         if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) hint += ` <span class="muted">${this.T("hunter_ready")}</span>`;
         if (sel.picks.length) hint += `<div class="muted small">${sel.picks.map(x => this.S(g.describe({ steps: [x.step] })[0])).join(" · ")}</div>`;
         if (sel.ambig) { opts = sel.ambig; list = opts.map((c, k) => `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join(""); }
-        acts = btn(`data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}"`, this.T("undo"), "undo", ICON.undo) +
-          btn('data-act="list"', this.T("all_moves", { n: dec.options.length }), "", ICON.list);
+        acts = btn(`data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}"`, this.T("undo"), "undo", ICON.undo);   // the all-moves list button is hidden for now (the owner will decide later)
       } else if (human && dec.kind === "keep") {
         if (dec.options.some(o => Array.isArray(o.payload))) hint = this.T("pick_keep");
         acts = dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
@@ -411,7 +426,7 @@ class App {
   // waiting for an animation (move, dice or card), or locked by the scores view
   busy() {
     const now = performance.now();
-    return this.scoresMode || this.board.isAnimating() || this.board.diceRolling() || now < (this.cardUntil || 0);
+    return this.scoresMode || this.confirming || this.board.isAnimating() || this.board.diceRolling() || now < (this.cardUntil || 0);
   }
 
   // A triple-dice card is played: the card flies in over the board, the three dice glow for 2 s.
@@ -675,6 +690,10 @@ class App {
     let end = performance.now();
     if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
     this.checkNests(end);
+    if (g.over && !this.fireworksDone) {     // the game is over: fireworks once the last move has landed
+      this.fireworksDone = true;
+      setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
+    }
     this.nextAi = end + this.delay;
   }
 
@@ -802,6 +821,12 @@ class App {
 function wire(app) {
   document.addEventListener("click", e => {
     if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
+    if (e.target.closest("#confirm")) {
+      const a = e.target.closest("[data-act]")?.dataset.act;
+      if (a === "leave_yes") { app.askLeave(false); app.showSetup(); }
+      else if (a === "leave_no" || e.target.id === "confirm") app.askLeave(false);
+      return;
+    }
     if (app.viewOpen && !e.target.closest(".viewmenu")) app.openViewMenu(false);   // click elsewhere folds it
     const b = e.target.closest("[data-act],[data-opt],[data-pay],[data-view]");
     if (!b) return;
@@ -831,7 +856,7 @@ function wire(app) {
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "tunnels") { app.tunnelOpen = !app.tunnelOpen; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
-    else if (act === "menu") app.showSetup();
+    else if (act === "menu") app.askLeave(true);
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
     else if (act === "scores") app.toggleScores();

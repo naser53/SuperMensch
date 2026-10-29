@@ -362,8 +362,10 @@ export class Game {
 
   // §11 a captured soldier goes back to its yard. A general or marshal survives the hit:
   // it loses one rank (marshal -> general with GENERAL_POINTS, general -> soldier with 0)
-  // and is pushed back to the first free field behind it (towards its own gate; the hunter:
-  // against its running direction). With no free field before its gate it goes to its yard.
+  // and is pushed back at least PUSHBACK_MIN fields, to the first free field from there
+  // (towards its own gate, which is as far as it goes; the hunter: against its running
+  // direction). With no free field before its gate it goes to its yard and keeps its rank
+  // and points (a hunter leaves the board).
   _capture(st, ns, victim, a, entered, captures, free = false) {
     const occ = this.occupancy(ns), L = this.L;
     const freeAt = x => x !== a && !occ.has(x);
@@ -375,7 +377,7 @@ export class Game {
       ns.hit[vc][vi] = true;
       if (rank > 0) {
         let back = null;
-        for (let x = r - 1; x >= 0; x--) if (freeAt(this.absOf(vc, x))) { back = x; break; }
+        for (let x = Math.max(0, r - this.cfg.pushback_min); x >= 0; x--) if (freeAt(this.absOf(vc, x))) { back = x; break; }
         if (back !== null) {
           ns.pos[vc][vi] = back;
           ns.kills[vc][vi] = rank === 2 ? this.cfg.general_points : 0;
@@ -384,7 +386,8 @@ export class Game {
         }
       }
       ns.pos[vc][vi] = YARD;
-      ns.kills[vc][vi] = 0;
+      if (rank === 0) ns.kills[vc][vi] = 0;
+      else cap.yardRank = true;
       ns.tmark[vc][vi] = false;
       ns.tunnels = ns.tunnels.filter(t => !(t[1] === vc && t[2] === vi));
     } else {
@@ -392,7 +395,7 @@ export class Game {
       const cap = { victim, color: hh[0], rel: this.relOf(hh[0], hh[1]), abs: a, vkills: hh[3], gate_right: entered, free };
       captures.push(cap);
       if (rank > 0) {
-        for (let k = 1; k < L; k++) {
+        for (let k = this.cfg.pushback_min; k < L; k++) {
           const x = ((hh[1] - hh[2] * k) % L + L) % L;
           if (freeAt(x)) {
             ns.hunters[q] = [hh[0], x, hh[2], rank === 2 ? this.cfg.general_points : 0];
@@ -409,10 +412,10 @@ export class Game {
   movers(p, st) {
     const ms = [];
     for (const col of this.players[p].colors) {
-      let yardAdded = false;
+      const y = this.yardPick(st, col, true);
       st.pos[col].forEach((r, i) => {
         if (r === YARD) {
-          if (!yardAdded) { ms.push(["p", col, i]); yardAdded = true; }
+          if (i === y) ms.push(["p", col, i]);
         } else if (!this.finished(st, col, i) || this._swapper(st, col, i)) {
           ms.push(["p", col, i]);
         }
@@ -426,6 +429,17 @@ export class Game {
   // §11 nest swap: a soldier in the nest that has won rank points, while its color has a piece
   // in the yard, may use a 6 to swap with that piece: it comes out on its gate with its points
   // and the yard piece takes its place in the nest (no clean-piece bonus for either).
+  // The yard piece that enters (most points first) or swaps into the nest (fewest points first).
+  yardPick(st, col, most) {
+    let best = -1;
+    st.pos[col].forEach((r, i) => {
+      if (r !== YARD) return;
+      const k = st.kills[col][i], b = best < 0 ? null : st.kills[col][best];
+      if (best < 0 || (most ? k > b : k < b)) best = i;
+    });
+    return best;
+  }
+
   _swapper(st, col, i) {
     const k = st.kills[col][i];
     return !!this.cfg.nest_swap && st.pos[col][i] >= this.L && k > 0 && this.rank(k) === 0
@@ -464,7 +478,7 @@ export class Game {
         a = this.gate(col);
         const [v, bad] = victimAt(a);
         if (bad) return null;
-        const j = st.pos[col].indexOf(YARD);
+        const j = this.yardPick(st, col, false);
         ns = st.copy();
         ns.pos[col][i] = 0;
         ns.pos[col][j] = r;
@@ -756,6 +770,7 @@ export class Game {
       for (const c of s.captures)
         if (c.demoted) msgs.push(M("log_demoted", { v: this.moverName(c.victim, this.state), rank: this.rankName(c.vkills),
           to: M(c.demoted === 2 ? "general" : "soldier") }));
+        else if (c.yardRank) msgs.push(M("log_yard_rank", { v: this.moverName(c.victim, this.state), rank: this.rankName(c.vkills) }));
     return msgs;
   }
 
