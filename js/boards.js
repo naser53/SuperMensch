@@ -17,13 +17,14 @@ function cross() {
   const home = [range4(k => g(1 + k, 5)), range4(k => g(5, 1 + k)), range4(k => g(9 - k, 5)), range4(k => g(5, 9 - k))];
   const yard = [[[0, 0], [1, 0], [0, 1], [1, 1]], [[9, 0], [10, 0], [9, 1], [10, 1]],
     [[9, 9], [10, 9], [9, 10], [10, 10]], [[0, 9], [1, 9], [0, 10], [1, 10]]].map(y => y.map(p => g(...p)));
-  const label = [[1.5, 2.6], [8.5, 2.6], [8.5, 7.4], [1.5, 7.4]].map(p => g(...p));
+  const label = [[-2.5, -4.5], [4.5, -2.5], [2.5, 4.5], [-4.5, 2.5]];
   const outline = [[-5.6, -5.6], [5.6, -5.6], [5.6, 5.6], [-5.6, 5.6]];
-  // where the dice settle: a free row between each yard and its gate, as near the gate as there is
-  // room (at = its middle, dir = along the row), found by a search that keeps clear of every
-  // field, the yard pawns and the name
-  const dice = [[[-4.85, -2.2], [0.5, 0.866]], [[2.2, -4.85], [-0.866, 0.5]], [[4.85, 2.2], [0.5, 0.866]],
-    [[-2.2, 4.85], [-0.866, 0.5]]].map(([at, dir]) => ({ at, dir, size: 0.55 }));
+  // where the dice settle: a straight row in the free strip between each yard and the corridor
+  // out of its gate, parallel to the corridor (at = its middle, dir = along the row). Found by a
+  // search that keeps the row clear of every field and the yard pawns even at the largest die
+  // size (max = the most a die may grow on a small screen); the names moved out of the way.
+  const dice = [[[-4.04, -2.2], [1, 0]], [[2.2, -4.04], [0, 1]], [[4.04, 2.2], [-1, 0]], [[-2.2, 4.04], [0, -1]]]
+    .map(([at, dir]) => ({ at, dir, size: 0.55, max: 1.6 }));
   return { track, home, yard, label, outline, dice };
 }
 
@@ -55,14 +56,13 @@ function star() {
     const [x, y] = at(c, 6.9);
     return [[-0.55, -0.55], [0.55, -0.55], [-0.55, 0.55], [0.55, 0.55]].map(([ox, oy]) => [x + ox, y + oy]);
   });
-  const label = [0, 1, 2, 3, 4, 5].map(c => at(c, 5.15));
+  const label = [[-2.15, -4.58], [2.75, -4.18], [5.05, 0.25], [2.15, 4.58], [-2.75, 4.18], [-5.05, -0.25]];
   const outline = [0, 1, 2, 3, 4, 5].map(c => at(c, 8.7));
-  // where the dice settle: a free row between each yard and its gate, as near the gate as there is
-  // room (at = its middle, dir = along the row), found by a search that keeps clear of every
-  // field, the yard pawns and the name
-  const dice = [[[-4.55, -4.63], [0.866, 0.5]], [[1.85, -6.33], [0, 1]], [[6.4, -1.55], [-0.924, 0.383]],
-    [[4.55, 4.63], [0.866, 0.5]], [[-1.8, 6.33], [0, 1]], [[-6.4, 1.55], [-0.924, 0.383]]]
-    .map(([at, dir]) => ({ at, dir, size: 0.62 }));
+  // where the dice settle: as on the cross, a straight row between the yard and the corridor out
+  // of the gate, parallel to it (the strip is narrower here, so the dice grow less)
+  const dice = [[[-4.01, -4.54], [0.866, 0.5]], [[1.93, -6.18], [0, 1]], [[6.28, -1.46], [-0.866, 0.5]],
+    [[4.01, 4.54], [-0.866, -0.5]], [[-1.93, 6.18], [0, -1]], [[-6.28, 1.46], [0.866, -0.5]]]
+    .map(([at, dir]) => ({ at, dir, size: 0.62, max: 1.25 }));
   return { track, home, yard, label, outline, dice };
 }
 
