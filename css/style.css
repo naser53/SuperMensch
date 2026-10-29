@@ -101,6 +101,10 @@ button, select, input { font: inherit; color: inherit; }
   .rb-tools { gap: 4px; }
   .rb-speed input { width: 56px; }
   .btn.rb-roll { min-height: 50px; font-size: 16px; }
+  /* card, castle break and tunnels: the icon and the count only */
+  .rb-btn.pre span { display: none; }
+  .rb-btn.pre[data-n]::after { content: attr(data-n); font-weight: 700; }
+  .rb-btn.pre { padding: 6px 9px; gap: 3px; }
   .chip { font-size: 13px; padding: 3px 7px; }
   .chip .nm { max-width: 6em; }
 }
