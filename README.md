@@ -16,8 +16,11 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 * **Online:** GitHub Pages publishes the same page (one-time setup: repository
   **Settings → Pages → Source: GitHub Actions**).
 
-Drag to turn the board, mouse wheel to zoom, right-drag to move; *Top view* and *Reset view*
-are in the side panel. Click a piece to show only its moves; hover a move to see it on the board.
+Move by clicking: click a die and then a piece, or a piece first (its possible fields show
+yellow rings with the die value) and then a ring or a die. Use **Undo** to take back the first
+move of a throw. The **View** button at the top of the panel has view presets and a
+*Turn the board* mode for turning and zooming. **Info** shows the scoring tables and the move
+log; **Scores** shows each piece's points over the board.
 
 **Debug (set dice)** in the side panel is for testing the rules: every throw waits until you
 set the dice (click a die: +1, right-click: −1, or *Random*) and press *Continue*; computer
@@ -28,8 +31,8 @@ moves are shown first and wait for *Continue* too.
 Two-color dice play (free split, burnt die, full use of both dice, sum moves, six first),
 bonus throws for doubles, help for a stuck player (three dice, gift six), triple-dice cards,
 the hunter, walls and castles (with castle-break declarations), scoring and piece ranks
-(soldier, general, marshal), and tunnels (declared before the roll, paid with points, with
-the debt rule at the threshold).
+(soldier, general, marshal; a hit general or marshal drops one rank instead of dying), tunnels (declared before the roll, paid with points, with
+the debt rule at the threshold), and two dice levels (beginner, intermediate).
 
 Not yet in the game: the castle-breaker special piece and point loans.
 The fortress (four pieces in a row) is planned for the Pro version.
@@ -61,7 +64,8 @@ After a deliberate rule change, record the fixed games again with
 | `js/main.js` | Setup screen, side panel, game loop |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |
-| `docs/rules-fa.docx` | The rules document (Farsi) |
+| `docs/rules-fa.docx`, `docs/rules-fa.md` | The rules document (Farsi) |
+| `docs/handoff-en.md`, `docs/handoff-fa.md` | Project summary: rules, UI, effects, code, decisions, backlog |
 
 The full game rules (Farsi, with diagrams) are in [`docs/rules-fa.docx`](docs/rules-fa.docx).
 
