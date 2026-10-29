@@ -16,6 +16,8 @@ function save(d) {
 }
 
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+// how long a hint stays on the board: a base time plus a little per character, capped
+const TOAST_MS = 2600, TOAST_MS_PER_CHAR = 45, TOAST_MAX_MS = 8000;
 const dieHtml = (v, cls, attrs) =>
   `<div class="die ${cls}" ${attrs}>` +
   Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[v].includes(i) ? "on" : ""}"></i>`).join("") + "</div>";
@@ -23,8 +25,10 @@ const dieHtml = (v, cls, attrs) =>
 // ribbon icons (inline SVG, drawn in the button's text color)
 const svg = (body, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 const ICON = {
-  die: '<svg class="die-ico" viewBox="0 0 48 48" width="46" height="46" aria-hidden="true"><rect x="3" y="3" width="42" height="42" rx="9" fill="#fffdf6" stroke="currentColor" stroke-width="3"/>' +
-    [[14, 14], [34, 14], [24, 24], [14, 34], [34, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.2" fill="currentColor"/>`).join("") + "</svg>",
+  // a small 3D die that turns slowly, so no face reads as a value
+  die: '<span class="cube3d" aria-hidden="true"><span class="cube3d-in">' +
+    [1, 2, 3, 4, 5, 6].map(v => `<span class="cf cf${v}">${Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[v].includes(i) ? "on" : ""}"></i>`).join("")}</span>`).join("") +
+    "</span></span>",
   card: svg('<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="9.5" cy="8" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="14.5" cy="16" r="1" fill="currentColor"/>'),
   cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
   castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
@@ -59,6 +63,11 @@ class App {
     hint.className = "hint3d";
     $("#stage").appendChild(hint);
     this.hint = hint;
+    const toast = document.createElement("div");      // hints and warnings: shown on the board, then fade
+    toast.className = "toast";
+    $("#stage").appendChild(toast);
+    this.toast = toast;
+    this.toastHtml = "";
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
       if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
@@ -253,11 +262,12 @@ class App {
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;
     el.innerHTML = `<div class="rb-players">${this.playersHtml()}</div>
-      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div>${hint ? `<div class="rb-hint">${hint}</div>` : ""}</div>
+      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div></div>
       <div class="rb-actions">${acts}</div></div>
       <div class="rb-tools">${this.toolsHtml()}</div>`;
     drop.innerHTML = list;
     drop.hidden = !list;
+    this.showToast(hint, this.scoresMode);
     if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);
@@ -587,6 +597,25 @@ class App {
       <button class="btn wide${on ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(on ? "view_free_done" : "view_free")}</button>
       <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
       </div></div>`;
+  }
+
+  // The hint shows on the board when it changes and fades after a few seconds, so a long
+  // line never makes the ribbon grow. The scores legend stays while the scores are shown.
+  showToast(html, stay) {
+    const el = this.toast;
+    if (html === this.toastHtml && el.classList.contains("stay") === !!stay) return;
+    this.toastHtml = html;
+    clearTimeout(this.toastTimer);
+    el.classList.remove("show");
+    el.classList.toggle("stay", !!stay);
+    if (!html) return;
+    el.innerHTML = html;
+    void el.offsetWidth;
+    el.classList.add("show");
+    if (!stay) {
+      const ms = Math.min(TOAST_MAX_MS, TOAST_MS + TOAST_MS_PER_CHAR * el.textContent.length);
+      this.toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+    }
   }
 
   openViewMenu(open) {
