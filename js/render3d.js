@@ -1,6 +1,7 @@
 // 3D board with Three.js: wooden board, fields, pawns, tunnels, move preview.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { BOARDS } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 
@@ -11,6 +12,12 @@ const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
+const TABLE_Y = -0.62;
+// dice: the number on each face of the box, in three.js face order (+x, -x, +y, -y, +z, -z)
+const DIE_FACES = [2, 5, 1, 6, 3, 4];
+const DIE_NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+const DIE_MIN_PX = 28;        // a die is never drawn smaller than this on the screen (its touch area is larger)
 
 function canvasTex(w, h, draw, rotation = 0) {
   const c = document.createElement("canvas");
@@ -40,6 +47,7 @@ export class Board3D {
   constructor(container, opts = {}) {
     this.container = container;
     this.onPick = opts.onPick || (() => {});
+    this.onContext = opts.onContext || (() => {});
     this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
@@ -70,7 +78,7 @@ export class Board3D {
     const table = new THREE.Mesh(new THREE.CircleGeometry(60, 64),
       new THREE.MeshStandardMaterial({ color: "#d9cfbb", roughness: 1 }));
     table.rotation.x = -Math.PI / 2;
-    table.position.y = -0.62;
+    table.position.y = TABLE_Y;
     table.receiveShadow = true;
     this.scene.add(table);
 
@@ -79,7 +87,9 @@ export class Board3D {
     this.previewGroup = new THREE.Group();
     this.pieceGroup = new THREE.Group();
     this.targetGroup = new THREE.Group();
-    this.scene.add(this.targetGroup, this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup);
+    this.diceGroup = new THREE.Group();
+    this.scene.add(this.targetGroup, this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.diceGroup);
+    this.dice = [];
 
     this.pawnGeo = pawnGeometry();
     this.pieceMeshes = new Map();   // "col,i" -> group
@@ -96,6 +106,10 @@ export class Board3D {
     el.addEventListener("pointerup", e => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || e.button !== 0) return;
       if (!this.viewMode) this.onPick(this.pick(e), e);
+    });
+    el.addEventListener("contextmenu", e => {          // right-click on a die (debug dice: one less)
+      e.preventDefault();
+      if (!this.viewMode) this.onContext(this.pick(e), e);
     });
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -203,6 +217,8 @@ export class Board3D {
     this.resetShine();
     this.hunterMeshes.clear();
     if (this.hunterGhosts) this.hunterGhosts.clear();
+    this.diceGroup.clear();
+    this.dice = [];
     this.buildBoard();
     this.buildPieces();
     this.fitView();
@@ -259,7 +275,8 @@ export class Board3D {
     return m;
   }
 
-  flatText(text, pos, color, size = 0.6, bold = true) {
+  // Flat text on the board. upright: it turns with the camera, so it always reads the right way up.
+  flatText(text, pos, color, size = 0.6, bold = true, upright = false) {
     const font = `${bold ? 700 : 400} 64px Vazirmatn, sans-serif`;
     const probe = document.createElement("canvas").getContext("2d");
     probe.font = font;
@@ -274,13 +291,28 @@ export class Board3D {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(size * tw / 96, size),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     m.rotation.x = -Math.PI / 2;
-    m.position.copy(this.xz(pos, TOP + 0.01));
-    this.boardGroup.add(m);
-    return m;
+    if (!upright) {
+      m.position.copy(this.xz(pos, TOP + 0.01));
+      this.boardGroup.add(m);
+      return m;
+    }
+    const grp = new THREE.Group();
+    grp.position.copy(this.xz(pos, TOP + 0.01));
+    grp.add(m);
+    this.boardGroup.add(grp);
+    this.uprightLabels.push(grp);
+    return grp;
+  }
+
+  // the camera's turn around the board: 0 = from the front edge
+  cameraAzimuth() {
+    const c = this.camera.position, t = this.controls.target;
+    return Math.atan2(c.x - t.x, c.z - t.z);
   }
 
   buildBoard() {
     const d = this.data, g = this.game, n = this.n, cl = g.cfg.corridor_len;
+    this.uprightLabels = [];
     // wooden board
     let shape;
     if (n === 4) {
@@ -342,7 +374,7 @@ export class Board3D {
       for (const p of d.yard[c]) {
         this.field(p, LIGHT[c], { r: FIELD_R * 0.95, h: 0.03, side: LIGHT[c] });
       }
-      if (g.owner[c] !== null) this.flatText(this.playerName(g.owner[c]), d.label[c], COLORS[c], 0.62);
+      if (g.owner[c] !== null) this.flatText(this.playerName(g.owner[c]), d.label[c], COLORS[c], 0.62, true, true);
     }
   }
 
@@ -678,6 +710,15 @@ export class Board3D {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
+    // dice first; their touch areas overlap, so the die whose middle is nearest to the ray wins
+    let die = null, best = Infinity;
+    for (const h of this.raycaster.intersectObjects(this.diceGroup.children, true)) {
+      const k = h.object.userData.die;
+      if (k === undefined || !this.dice[k]) continue;
+      const d = this.raycaster.ray.distanceSqToPoint(this.dice[k].grp.position);
+      if (d < best) { best = d; die = k; }
+    }
+    if (die !== null) return { die };
     for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
       if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
     for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))
@@ -795,6 +836,220 @@ export class Board3D {
       sp.renderOrder = 12;
       grp.add(sp);
       this.scoreSprites.push(sp);
+    }
+  }
+
+  // ------------------------------------------------------------ dice on the board
+  // The dice are thrown in the middle of the board, tumble, then hop to the yard of the player
+  // whose turn it is (of that player's yards, the one nearest the camera) and are clicked there.
+  // The engine always decides the numbers; the animation only lands on them.
+  dieFaceTex(v) {
+    this.dieTex = this.dieTex || {};
+    return this.dieTex[v] || (this.dieTex[v] = canvasTex(128, 128, (g, w) => {
+      g.fillStyle = "#fffdf6"; g.fillRect(0, 0, w, w);
+      g.fillStyle = v === 1 ? "#c0302a" : "#2b2b2b";
+      for (const i of PIPS[v]) {
+        const x = 28 + 36 * (i % 3), y = 28 + 36 * Math.floor(i / 3);
+        g.beginPath(); g.arc(x, y, v === 1 ? 17 : 12.5, 0, Math.PI * 2); g.fill();
+      }
+    }));
+  }
+
+  // the turn that shows number v on top, turned by yaw around the vertical
+  dieQuat(v, yaw) {
+    const n = new THREE.Vector3(...DIE_NORMALS[DIE_FACES.indexOf(v)]);
+    const up = new THREE.Quaternion().setFromUnitVectors(n, new THREE.Vector3(0, 1, 0));
+    return new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw).multiply(up);
+  }
+
+  makeDie(v) {
+    const size = this.data.dice[0].size;
+    const grp = new THREE.Group();
+    const mats = DIE_FACES.map(f => new THREE.MeshStandardMaterial({ map: this.dieFaceTex(f), roughness: 0.45, transparent: true }));
+    const cube = new THREE.Mesh(this.dieGeo || (this.dieGeo = new RoundedBoxGeometry(1, 1, 1, 4, 0.14)), mats);
+    cube.scale.setScalar(size);
+    cube.castShadow = true;
+    // a larger invisible box: easy to hit with a finger
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(size * 1.7, size * 1.7, size * 1.7), new THREE.MeshBasicMaterial({ visible: false }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(size * 0.85, 0.05, 10, 40),
+      new THREE.MeshBasicMaterial({ color: HILITE, transparent: true }));
+    ring.rotation.x = Math.PI / 2;
+    ring.visible = false;
+    const burnt = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.burntTex || (this.burntTex = canvasTex(96, 96, g => {
+      g.strokeStyle = "#d62828"; g.lineWidth = 14; g.lineCap = "round";
+      g.beginPath(); g.moveTo(20, 20); g.lineTo(76, 76); g.moveTo(76, 20); g.lineTo(20, 76); g.stroke();
+    })), depthTest: false, transparent: true }));
+    burnt.scale.setScalar(size * 0.9);
+    burnt.renderOrder = 13;
+    burnt.visible = false;
+    grp.add(cube, hit, ring, burnt);
+    this.diceGroup.add(grp);
+    return grp.userData.die = { grp, cube, hit, ring, burnt, mats, value: v, state: "idle", opacity: 1, lift: 0, scale: 1,
+      yaw: (Math.random() - 0.5) * 0.7 };
+  }
+
+  setDieIndex(d, k) { d.cube.userData.die = d.hit.userData.die = k; }
+
+  // Where the dice of these colors sit now, and the row they lie along (pointing to the screen's right).
+  diceSpot(colors) {
+    const cam = this.camera.position;
+    let best = null;
+    for (const c of colors) {
+      const s = this.data.dice[c];
+      const d = Math.hypot(cam.x - s.at[0], cam.z - s.at[1]);
+      if (!best || d < best.d) best = { d, s };
+    }
+    const s = best.s, az = this.cameraAzimuth();
+    const right = [Math.cos(az), -Math.sin(az)];
+    const sign = s.dir[0] * right[0] + s.dir[1] * right[1] < 0 ? -1 : 1;
+    return { at: s.at, dir: [s.dir[0] * sign, s.dir[1] * sign] };
+  }
+
+  // how many pixels one unit is at point p
+  pxPerUnit(p) {
+    const h = this.renderer.domElement.clientHeight || 1;
+    const dist = this.camera.position.distanceTo(p);
+    return h / (2 * dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
+  }
+
+  // resting places of the current dice, in order
+  diceRest() {
+    const n = this.dice.length;
+    if (!n) return [];
+    const { at, dir } = this.diceSpot(this.diceColors);
+    const size = this.data.dice[0].size, y = this.surfaceY() + size / 2;
+    const ppu = this.pxPerUnit(this.xz(at, y));
+    const scale = Math.min(1.6, Math.max(1, DIE_MIN_PX / (size * ppu)));
+    const gap = size * 1.3 * scale;
+    return this.dice.map((_, k) => ({ pos: new THREE.Vector3(at[0] + dir[0] * gap * (k - (n - 1) / 2), y + size * (scale - 1) / 2,
+      at[1] + dir[1] * gap * (k - (n - 1) / 2)), scale }));
+  }
+
+  // Throw new dice for a player (colors = the player's colors); speed > 1 is slower.
+  // The throw starts with the next frame drawn (not while the page is busy building).
+  throwDice(values, colors, speed = 1) {
+    this.clearDice();
+    this.diceColors = colors;
+    const n = values.length;
+    const size = this.data.dice[0].size, az = this.cameraAzimuth();
+    const right = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az));
+    const t1 = 560 * speed, hold = 160 * speed, t2 = 380 * speed;
+    values.forEach((v, k) => {
+      const d = this.makeDie(v);
+      this.setDieIndex(d, k);
+      const land = right.clone().multiplyScalar(size * 1.5 * (k - (n - 1) / 2)).setY(this.surfaceY() + size / 2);
+      land.x += (Math.random() - 0.5) * 0.25; land.z += (Math.random() - 0.5) * 0.25;
+      const from = land.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, 2.6, (Math.random() - 0.5) * 1.2));
+      d.q1 = this.dieQuat(v, d.yaw - az);
+      d.spinAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      d.spin = (5 + Math.random() * 3) * Math.PI;
+      d.throw = { t0: null, delay: k * 40, t1, hold, t2, from, land };
+      d.grp.position.copy(from);
+      this.dice.push(d);
+    });
+  }
+
+  // still tumbling or on the way to the yard
+  diceRolling() { return this.dice.some(d => d.throw); }
+
+  // Show dice at the player's yard without a throw (debug: numbers being set by hand).
+  placeDice(values, colors) {
+    if (this.dice.length !== values.length || this.dice.some(d => d.throw)) {
+      this.clearDice();
+      this.diceColors = colors;
+      values.forEach((v, k) => { const d = this.makeDie(v); this.setDieIndex(d, k); this.dice.push(d); });
+      this.diceRest().forEach((r, k) => this.dice[k].grp.position.copy(r.pos));
+    }
+    this.diceColors = colors;
+    values.forEach((v, k) => {
+      const d = this.dice[k];
+      if (d.value !== v || !d.q1) { d.value = v; d.q1 = this.dieQuat(v, d.yaw - this.cameraAzimuth()); d.cube.quaternion.copy(d.q1); }
+    });
+  }
+
+  // Two of three dice are kept (indices into the current dice): the third fades, the two close up.
+  keepDice(idx) {
+    const keep = idx.map(k => this.dice[k]);
+    for (const d of this.dice) if (!keep.includes(d)) this.fadeDie(d);
+    this.dice = keep;
+    keep.forEach((d, k) => this.setDieIndex(d, k));
+  }
+
+  fadeDie(d) {
+    d.gone = performance.now();
+    d.cube.userData.die = d.hit.userData.die = undefined;
+  }
+
+  clearDice() {
+    for (const d of this.dice) this.fadeDie(d);
+    this.dice = [];
+  }
+
+  // per die: idle, pick (can be clicked), sel (chosen), off (not for this piece), used, burnt, edit (debug)
+  diceStates(states) { this.dice.forEach((d, k) => { d.state = states[k] || "idle"; }); }
+
+  glowDice(ms) { this.diceGlowUntil = performance.now() + ms; }
+
+  stepDice(now, k) {
+    const rest = this.diceRest();
+    const glow = now < (this.diceGlowUntil || 0);
+    this.dice.forEach((d, i) => {
+      const r = rest[i], st = d.state;
+      const lift = st === "sel" ? 0.3 : 0;
+      d.scale += (r.scale - d.scale) * k;
+      const th = d.throw;
+      if (th && th.t0 === null) th.t0 = now + th.delay;
+      if (th) {
+        const u1 = Math.max(0, (now - th.t0) / th.t1);
+        if (u1 < 1) {                                       // tumbling in the middle of the board
+          const e = 1 - (1 - u1) ** 2;
+          d.grp.position.lerpVectors(th.from, th.land, e);
+          d.grp.position.y = th.land.y + 2.6 * (1 - u1) ** 2 * Math.abs(Math.cos(u1 * Math.PI * 2.5));
+          d.cube.quaternion.setFromAxisAngle(d.spinAxis, d.spin * (1 - e)).multiply(d.q1);
+        } else {
+          d.cube.quaternion.copy(d.q1);
+          const u2 = (now - th.t0 - th.t1 - th.hold) / th.t2;
+          if (u2 < 0) d.grp.position.copy(th.land);
+          else if (u2 < 1) {                                // a hop to the player's yard
+            const e = u2 < 0.5 ? 2 * u2 * u2 : 1 - (-2 * u2 + 2) ** 2 / 2;
+            d.grp.position.lerpVectors(th.land, r.pos, e);
+            d.grp.position.y += Math.sin(Math.PI * u2) * 0.9;
+          } else {
+            d.throw = null;
+            d.grp.position.copy(r.pos);
+          }
+        }
+      } else {
+        const tg = r.pos.clone().setY(r.pos.y + lift);
+        d.grp.position.lerp(tg, Math.min(1, k * 1.4));
+      }
+      d.cube.scale.setScalar(this.data.dice[0].size * d.scale);
+      d.hit.scale.setScalar(d.scale);
+      const op = { off: 0.45, used: 0.28, burnt: 0.4 }[st] ?? 1;
+      d.opacity += (op - d.opacity) * Math.min(1, k * 1.4);
+      d.ring.visible = !th && (st === "sel" || st === "pick" || st === "edit");
+      d.ring.material.color.set(st === "edit" ? "#e0352b" : HILITE);
+      d.ring.material.opacity = st === "pick" ? 0.55 : 1;
+      d.ring.scale.setScalar(d.scale * (st === "sel" ? 1 + 0.08 * Math.sin(now / 160) : 1));
+      d.ring.position.y = -d.grp.position.y + this.surfaceY() + 0.03;
+      d.burnt.visible = st === "burnt" && !th;
+      d.burnt.position.y = this.data.dice[0].size * d.scale * 0.9;
+      const em = st === "sel" ? "#7a5c00" : (glow ? "#a07000" : "#000000");
+      for (const m of d.mats) {
+        m.opacity = d.opacity;
+        m.emissive.set(em);
+        m.emissiveIntensity = glow && st !== "sel" ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
+      }
+    });
+    // dice that are no longer in play fade away
+    for (const grp of this.diceGroup.children.slice()) {
+      const d = grp.userData.die;
+      if (!d || !d.gone) continue;
+      const u = (now - d.gone) / 320;
+      if (u >= 1) { this.diceGroup.remove(grp); for (const m of d.mats) m.dispose(); continue; }
+      for (const m of d.mats) m.opacity = d.opacity * (1 - u);
+      d.ring.visible = false;
+      d.burnt.material.opacity = 1 - u;
     }
   }
 
@@ -929,6 +1184,11 @@ export class Board3D {
       this.turnToAim(grp, k);
     }
     this.stepAnim();
+    if (this.uprightLabels) {
+      const az = this.cameraAzimuth();
+      for (const l of this.uprightLabels) l.rotation.y = az;
+    }
+    this.stepDice(now, k);
     this.stepShine(now);
     this.stepBoom(now);
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);

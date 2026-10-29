@@ -66,21 +66,13 @@ label.check.on { color: var(--accent); }
 .turnline { display: flex; gap: 10px; align-items: baseline; }
 .turnline b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; }
 
-.dice { display: flex; gap: 12px; margin: 10px 0 4px; min-height: 48px; }
+/* a flat die: only on the triple-dice card (the real dice are on the board) */
 .die {
   width: 46px; height: 46px; background: #fff; border: 2px solid var(--ink); border-radius: 9px;
   display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 6px; user-select: none;
 }
 .die i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); place-self: center; visibility: hidden; }
 .die i.on { visibility: visible; }
-.die.edit { border: 3px solid var(--accent); background: var(--soft); cursor: pointer; }
-.die.edit:hover { transform: translateY(-1px); }
-.die.pick { cursor: pointer; border-color: var(--accent); transition: transform .12s, box-shadow .12s; }
-.die.pick:hover { transform: translateY(-2px); box-shadow: 0 3px 0 rgba(0,0,0,.12); }
-.die.pick.sel { background: #ffe27a; border: 3px solid var(--accent); transform: translateY(-3px);
-  box-shadow: 0 0 0 3px rgba(255,196,0,.45); }
-.die.used { opacity: .3; }
-.die.off { opacity: .45; border-style: dashed; }
 .btns.small .btn { flex: none; padding: 5px 12px; font-size: 13px; }
 .opt.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
 .opt.primary:hover { background: var(--accent); filter: brightness(1.07); }
@@ -151,9 +143,6 @@ label.check.on { color: var(--accent); }
 .info-table td.pts { text-align: end; font-weight: 700; white-space: nowrap; }
 .info-table tr:nth-child(odd) td { background: #faf8f2; }
 
-.die.rolling { animation: tumble .13s linear infinite; }
-@keyframes tumble { 0% { transform: rotate(0) translateY(0); } 25% { transform: rotate(14deg) translateY(-3px); }
-  50% { transform: rotate(0) translateY(0); } 75% { transform: rotate(-14deg) translateY(-3px); } 100% { transform: rotate(0); } }
 .foot .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
 .scores-note { background: var(--soft); border-top: 1px solid var(--line); }
 
@@ -166,10 +155,6 @@ label.check.on { color: var(--accent); }
 .info-log div { padding: 1px 0; }
 
 /* triple-dice card */
-.die.card-hl { border-color: #d4a017; box-shadow: 0 0 0 3px rgba(255,196,0,.55), 0 0 16px 4px rgba(255,196,0,.6);
-  animation: cardglow .5s ease-in-out infinite alternate; }
-@keyframes cardglow { from { box-shadow: 0 0 0 3px rgba(255,196,0,.4), 0 0 8px 2px rgba(255,196,0,.45); }
-  to { box-shadow: 0 0 0 4px rgba(255,196,0,.8), 0 0 22px 7px rgba(255,196,0,.75); } }
 .card-fx { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 6; }
 .card-fx-card { background: linear-gradient(160deg, #fff8dc, #ffe27a); border: 3px solid #d4a017; border-radius: 16px;
   padding: 18px 26px 14px; box-shadow: 0 12px 40px rgba(0,0,0,.28); text-align: center;
@@ -209,5 +194,4 @@ label.check.on { color: var(--accent); }
   #setup .seat .name { width: 100%; }
   #setup .choice { padding: 9px 12px; }
   .pad { padding: 10px 12px; }
-  .die { width: 42px; height: 42px; }
 }

@@ -19,7 +19,10 @@ function cross() {
     [[9, 9], [10, 9], [9, 10], [10, 10]], [[0, 9], [1, 9], [0, 10], [1, 10]]].map(y => y.map(p => g(...p)));
   const label = [[1.5, 2.6], [8.5, 2.6], [8.5, 7.4], [1.5, 7.4]].map(p => g(...p));
   const outline = [[-5.6, -5.6], [5.6, -5.6], [5.6, 5.6], [-5.6, 5.6]];
-  return { track, home, yard, label, outline };
+  // where the dice settle: a free row beside each yard (at = its middle, dir = along the row),
+  // found by a search for the place nearest the yard that keeps clear of every field
+  const dice = [[-3.3, -4.5], [3.3, -4.5], [3.3, 4.5], [-3.3, 4.5]].map(at => ({ at, dir: [0, 1], size: 0.55 }));
+  return { track, home, yard, label, outline, dice };
 }
 
 // ---- 6 colors: six arms like the wooden 6-player board, 10 fields per corridor ----
@@ -52,7 +55,12 @@ function star() {
   });
   const label = [0, 1, 2, 3, 4, 5].map(c => at(c, 5.15));
   const outline = [0, 1, 2, 3, 4, 5].map(c => at(c, 8.7));
-  return { track, home, yard, label, outline };
+  // where the dice settle: a free row beside each yard (at = its middle, dir = along the row),
+  // found by a search for the place nearest the yard that keeps clear of every field
+  const dice = [[[-2.1, -6.38], [0.383, 0.924]], [[2.1, -6.38], [-0.383, 0.924]], [[6.6, -1.3], [-0.991, 0.131]],
+    [[2.1, 6.38], [0.383, 0.924]], [[-2.1, 6.38], [-0.383, 0.924]], [[-6.6, -1.3], [0.991, 0.131]]]
+    .map(([at, dir]) => ({ at, dir, size: 0.62 }));
+  return { track, home, yard, label, outline, dice };
 }
 
 export const BOARDS = { 4: cross(), 6: star() };
