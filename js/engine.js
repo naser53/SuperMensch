@@ -877,6 +877,7 @@ export class Game {
     const p = this.turn;
     this.bonus = [];
     this._attempt = 0;
+    this._declared = [];                 // tunnels declared this turn: can be taken back before the roll
     if (this.mode === "two" && this.stuck(p)) { this._stuckThrow(); return; }
     this._preRoll();
   }
@@ -893,6 +894,9 @@ export class Game {
       opts.push(new Option(M("tunnel_decl", { piece: this.moverName(["p", col, i]), a, b, n: T,
         cost: this.tunnelCost(a, b) }), ["tunnel", col, i, a, b]));
     }
+    for (const [col, i, a, b] of this._declared || [])
+      opts.push(new Option(M("tunnel_undo", { piece: this.moverName(["p", col, i]), a, b, cost: this.tunnelCost(a, b) }),
+        ["untunnel", col, i, a, b]));
     if (opts.length === 1) this._throw();
     else this.pending = new Decision("pre_roll", p, opts);
   }
@@ -1000,6 +1004,17 @@ export class Game {
         this.state.scores[p] -= cost;
         this.state.tunnels.push([p, col, i, a, b, null]);
         this.log.push(M("log_tunnel", { piece: this.moverName(["p", col, i]), a, b, cost }));
+        (this._declared = this._declared || []).push([col, i, a, b]);
+        this._preRoll();
+        return;
+      }
+      if (Array.isArray(pl) && pl[0] === "untunnel") {   // changed one's mind before the roll: cost back
+        const [, col, i, a, b] = pl, same = t => t[1] === col && t[2] === i && t[3] === a && t[4] === b;
+        const cost = this.tunnelCost(a, b);
+        this.state.scores[p] += cost;
+        this.state.tunnels = this.state.tunnels.filter(t => !(t[0] === p && same(t)));
+        this._declared = this._declared.filter(t => !(t[0] === col && t[1] === i && t[2] === a && t[3] === b));
+        this.log.push(M("log_tunnel_undo", { piece: this.moverName(["p", col, i]), a, b, cost }));
         this._preRoll();
         return;
       }

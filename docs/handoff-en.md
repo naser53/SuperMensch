@@ -181,7 +181,8 @@ use a card.
   3 corridors 30→7.
 * **Cost** 80 / 120 / 160 for 1 / 2 / 3 corridors. Fully paid, no failure.
 * **Declare** before the roll when the piece is at most 6 fields before the entrance
-  (`TUNNEL_DECLARE_RANGE`). No cancelling. The chosen tunnel is shown; other players' tunnels
+  (`TUNNEL_DECLARE_RANGE`). Until the dice are rolled that turn it can be taken back with Undo
+  (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. The chosen tunnel is shown; other players' tunnels
   appear paler.
 * **Entering:** the piece moves to the entrance and uses the rest of the die inside. A die that
   does not reach the entrance burns; the declaration stays for later turns.

@@ -261,12 +261,17 @@ class App {
       } else if (human && dec.kind === "pre_roll") {
         opts = dec.options;
         const tunnels = [];
+        let undo = null;
         dec.options.forEach((o, k) => {
           if (o.payload === "roll") pre.roll = `data-opt="${k}" title="${this.S(o.label)}"`;
           else if (o.payload === "triple") pre.card = `data-opt="${k}" title="${this.S(o.label)}"`;
           else if (o.payload === "break") pre.brk = `data-opt="${k}" title="${this.S(o.label)}"`;
+          else if (o.payload[0] === "untunnel") undo = k;     // the last declared tunnel
           else tunnels.push(k);
         });
+        // a tunnel declared this turn can be taken back until the dice are rolled
+        acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
+          this.T("undo"), "undo", ICON.undo);
         if (tunnels.length) {
           pre.tun = `data-act="tunnels"`;
           pre.tunN = tunnels.length;

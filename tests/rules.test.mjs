@@ -181,6 +181,25 @@ test("tunnel options and cost", () => {
   assert.deepEqual(g.tunnelOptions(0), []);
 });
 
+test("a tunnel declared this turn can be taken back before the roll, with its cost", () => {
+  const g = make();
+  put(g, 0, 0, 0);
+  g.state.scores[0] = 500;
+  g.turn = 0; g._startTurn();
+  assert.equal(g.pending.kind, "pre_roll");
+  const decl = g.pending.options.find(o => o.payload[0] === "tunnel");
+  g.choose(decl);
+  assert.equal(g.state.tunnels.length, 1);
+  assert.ok(g.state.scores[0] < 500);
+  const undo = g.pending.options.find(o => o.payload[0] === "untunnel");
+  assert.deepEqual(undo.payload.slice(1), decl.payload.slice(1));
+  g.choose(undo);
+  assert.equal(g.state.tunnels.length, 0);
+  assert.equal(g.state.scores[0], 500);
+  assert.ok(!g.pending.options.some(o => o.payload[0] === "untunnel"));
+  assert.ok(g.pending.options.some(o => String(o.payload) === String(decl.payload)));   // can be declared again
+});
+
 test("tunnel: enter, move inside, exit hits a wall piece", () => {
   const g = make();
   put(g, 0, 0, 2); put(g, 3, 0, 1);
