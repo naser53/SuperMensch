@@ -902,7 +902,7 @@ export class Board3D {
     const s = best.s, az = this.cameraAzimuth();
     const right = [Math.cos(az), -Math.sin(az)];
     const sign = s.dir[0] * right[0] + s.dir[1] * right[1] < 0 ? -1 : 1;
-    return { at: s.at, dir: [s.dir[0] * sign, s.dir[1] * sign], max: s.max };
+    return { at: s.at, dir: [s.dir[0] * sign, s.dir[1] * sign] };
   }
 
   // how many pixels one unit is at point p
@@ -916,11 +916,11 @@ export class Board3D {
   diceRest() {
     const n = this.dice.length;
     if (!n) return [];
-    const { at, dir, max } = this.diceSpot(this.diceColors);
+    const { at, dir } = this.diceSpot(this.diceColors);
     const size = this.data.dice[0].size, y = this.surfaceY() + size / 2;
     const ppu = this.pxPerUnit(this.xz(at, y));
-    const scale = Math.min(max, Math.max(1, DIE_MIN_PX / (size * ppu)));
-    const gap = size * 1.15 * scale;
+    const scale = Math.min(1.6, Math.max(1, DIE_MIN_PX / (size * ppu)));
+    const gap = size * 1.3 * scale;
     return this.dice.map((_, k) => ({ pos: new THREE.Vector3(at[0] + dir[0] * gap * (k - (n - 1) / 2), y + size * (scale - 1) / 2,
       at[1] + dir[1] * gap * (k - (n - 1) / 2)), scale }));
   }

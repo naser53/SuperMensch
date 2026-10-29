@@ -258,8 +258,6 @@ class App {
         list = opts.map(optHtml).join("");
         if (dec.kind === "play") acts = btn('data-act="clicks"', this.T("by_clicks"));
       }
-      // the roll button stays in its place, greyed out until it is time to roll
-      if (!acts.includes("rb-roll")) acts = `<button class="btn rb-roll" disabled>${ICON.die}<span>${this.T("roll_short")}</span></button>` + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;

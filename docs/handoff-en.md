@@ -212,8 +212,7 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
   Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens).
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
-  roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
-  place and is greyed out, standing still, until it is the human's time to roll), triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
+  roll (a small 3D die that turns slowly, so no face reads as a value), triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
   list), Undo and *List of all moves* while moving, *Second try* / *Take the gift six*,
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
@@ -227,12 +226,9 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
 * The dice are on the board (below). The move log is at the end of **Info** (scrollable).
 
 ### Dice on the board
-* A throw lands in the **middle of the board**, tumbles, then hops to a **straight row** in the free
-  strip **between the yard and the corridor out of the gate**, parallel to the corridor, of the
-  player whose turn it is (of a two-color player's yards, the one nearest the camera). The spots
-  are fixed per color in `js/boards.js` (`dice`), chosen so the row keeps clear of every field and
-  the yard pawns even at the largest die size (`max`: 1.6 on the cross, 1.25 on the narrower
-  six-arm strip). The player names moved out of that strip.
+* A throw lands in the **middle of the board**, tumbles, then hops to a free row **between the yard
+  and the gate** (away from the yard pawns and the name) of the player whose turn it is (of a two-color player's yards, the one nearest the camera). The
+  spots are fixed per color in `js/boards.js` (`dice`), chosen to keep clear of every field.
 * The dice are clicked **there**. A die is never drawn smaller than about 28 px on the screen and
   has a larger invisible touch area (1.7× the die).
 * States: usable dice have a pale yellow ring, the chosen die lifts and glows with a pulsing ring,
@@ -305,7 +301,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments) |
-| `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
+| `js/boards.js` | Board geometry (six arms, classic cross), dice spots between yard and gate |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
@@ -371,8 +367,8 @@ npm run build       # dist/supermensch.html
 * **Dice levels:** intermediate games were shorter in simulation (about 224 vs 325 rounds).
 * **Dice on the board:** the owner wants the panel to shrink so the board can grow; the dice went
   first, then the whole panel became a ribbon on top. The dice settle between the yard and the
-  corridor, not on the yard (it is full of pawns), in a straight row parallel to the corridor (a
-  slanted row let the third die land on the corridor), and touch
+  gate, not on the yard (it is full of pawns; the owner asked for them a third of the way to the
+  gate), and touch
   areas are larger than the dice so children can hit them on tablets.
 * **Computer cards:** the computer used its three triple-dice cards in the first rounds. It now
   measures how much a third die would help this turn (the best kept pair of three against two
