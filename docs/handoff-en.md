@@ -211,13 +211,18 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
   Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens).
-* Row 2: whose turn and the round, the hint in red, and the **actions** of the moment: a big
-  **die button** to roll, triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
+* Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
+  roll (a small 3D die that turns slowly, so no face reads as a value), triple-dice card, castle-break declaration, **Tunnels (n)** (opens the
   list), Undo and *List of all moves* while moving, *Second try* / *Take the gift six*,
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
   places) open in a card at the top left of the board (`#drop`).
-* The rows wrap on narrow screens (phones get more rows).
+* **Hints and warnings** (which die, which piece, keep two...) appear in a card at the bottom
+  middle of the board when they change and fade after a few seconds (longer for longer text), so
+  they never make the ribbon grow or scroll on a phone. The scores legend stays while the scores
+  are shown.
+* The rows wrap on narrow screens (phones get more rows). The View menu opens against the ribbon
+  and is never wider than the screen.
 * The dice are on the board (below). The move log is at the end of **Info** (scrollable).
 
 ### Dice on the board
@@ -295,7 +300,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | --- | --- |
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
-| `js/ai.js` | Simple computer player |
+| `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments) |
 | `js/boards.js` | Board geometry (six arms, classic cross), dice spots between yard and gate |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
@@ -365,6 +370,10 @@ npm run build       # dist/supermensch.html
   gate, not on the yard (it is full of pawns; the owner asked for them a third of the way to the
   gate), and touch
   areas are larger than the dice so children can hit them on tablets.
+* **Computer cards:** the computer used its three triple-dice cards in the first rounds. It now
+  measures how much a third die would help this turn (the best kept pair of three against two
+  dice, over all throws) and plays a card only when that is well above what it has seen so far.
+  The bar drops as its cards run low or its pawns get home.
 * **Upright names:** names turn smoothly with the camera instead of flipping by 180°.
 * **Ranked survival:** dying as a general or marshal felt unfair; one rank down and a push back
   keeps the piece in play while the attacker still gets the full points.
