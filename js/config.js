@@ -17,8 +17,8 @@ export class Config {
       threshold_bonus: 20,      // THRESHOLD_BONUS
       wall_break: 15,           // WALL_BREAK
       castle_break: 40,         // CASTLE_BREAK
-      color_bonus: 100,         // COLOR_BONUS: a nest is full (a color's last piece reaches it)
-      finish_bonus: [50, 25],   // FINISH_BONUS: first and second player to finish (others 0)
+      color_bonus: 60,          // COLOR_BONUS: a nest is full (a color's last piece reaches it)
+      finish_bonus: [100, 50],  // FINISH_BONUS: first and second player to finish (others 0)
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
       general_points: 15,       // GENERAL_POINTS: a piece's own capture points to become a general
@@ -45,8 +45,10 @@ export class Config {
   static forBoard(n, level = "beginner") {
     const dice = { six_chance: Config.LEVELS[level] ?? null };
     if (n === 4) {
+      // end bonuses in proportion to the smaller corridor points of this board
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
-                          tunnel_max_skip: 2, tunnel_last_corridor: 3, ...dice });
+                          tunnel_max_skip: 2, tunnel_last_corridor: 3,
+                          color_bonus: 25, finish_bonus: [40, 20], ...dice });
     }
     return new Config({ n_colors: 6, ...dice });
   }

@@ -258,6 +258,7 @@ class App {
     }
     h += this.footHtml();
     el.innerHTML = h;
+    if (performance.now() < (this.cardUntil || 0)) el.querySelectorAll(".dice .die").forEach(d => d.classList.add("card-hl"));
     if (g.lastDice !== this.diceRef) {      // a new throw: let the dice tumble
       const prev = this.diceRef || [], now = g.lastDice;
       const kept = now.length === 2 && prev.length === 3 &&
@@ -361,9 +362,23 @@ class App {
     return out;
   }
 
-  // waiting for an animation (move or dice), or locked by the scores view
+  // waiting for an animation (move, dice or card), or locked by the scores view
   busy() {
-    return this.scoresMode || this.board.isAnimating() || performance.now() < (this.rollUntil || 0);
+    const now = performance.now();
+    return this.scoresMode || this.board.isAnimating() || now < (this.rollUntil || 0) || now < (this.cardUntil || 0);
+  }
+
+  // A triple-dice card is played: the card flies in over the board, the three dice glow for 2 s.
+  cardEffect() {
+    this.cardUntil = performance.now() + 2000;
+    const fx = document.createElement("div");
+    fx.className = "card-fx";
+    const g = this.game, dice = g.pending && g.pending.kind === "dice" ? [] : g.lastDice;   // debug: dice not set yet
+    fx.innerHTML = `<div class="card-fx-card"><div class="card-fx-dice">${dice.map(v => dieHtml(v, "", "")).join("")}</div>
+      <div class="card-fx-text" dir="${this.rtl ? "rtl" : "ltr"}">${this.T("card_fx")}</div></div>`;
+    $("#stage").appendChild(fx);
+    setTimeout(() => fx.remove(), 2000);
+    setTimeout(() => this.render(), 2050);              // end of the dice glow
   }
 
   // Dice roll: the faces tumble for half a second, then show the real numbers.
@@ -506,8 +521,10 @@ class App {
   // ------------------------------------------------------------ actions
   choose(opt, entries = null) {
     const g = this.game, dec = g.pending;
+    const card = dec && dec.kind === "pre_roll" && opt.payload === "triple";
     if (!entries && dec && dec.kind === "play" && opt.payload && opt.payload.steps) entries = this.replay(opt.payload);
     g.choose(opt);
+    if (card) this.cardEffect();
     this.aiPlan = null;
     this.render();
     let end = performance.now();
