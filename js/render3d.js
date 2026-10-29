@@ -10,6 +10,9 @@ export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fbefd6", "#e9e6fb", "#d
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
+// rank colors and the pawn's progress line (from its foot almost to its head)
+const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
+const BAR_W = 0.085, BAR_H = 0.78, BAR_Y = 0.1, BAR_Z = 0.22;
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -412,15 +415,17 @@ export class Board3D {
         lab.position.y = 1.18;
         grp.add(lab);
         const gold = new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3 });
-        const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.035, 10, 40), gold);
+        const ring1 = new THREE.MeshStandardMaterial({ color: SILVER, metalness: 0.6, roughness: 0.3 });
+        const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.035, 10, 40), ring1);
         r1.rotation.x = Math.PI / 2; r1.position.y = 0.06; r1.visible = false;
         const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.03, 10, 40), gold);
         r2.rotation.x = Math.PI / 2; r2.position.y = 0.66; r2.visible = false;
-        const g1 = this.starSprite(1), g2 = this.starSprite(2);   // general: one star, marshal: two
-        g1.position.y = g2.position.y = 1.52;
-        g1.visible = g2.visible = false;
-        grp.add(r1, r2, g1, g2);
-        grp.userData = { piece: ["p", col, i], r1, r2, g1, g2, hop: 0 };
+        const star = this.starSprite(), halo = this.haloSprite();
+        star.position.y = halo.position.y = 1.52;
+        star.visible = halo.visible = false;
+        const bar = this.progressBar();
+        grp.add(r1, r2, star, halo, bar);
+        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -429,25 +434,58 @@ export class Board3D {
     }
   }
 
-  // Gold stars over a pawn's number: 1 = general, 2 = marshal.
-  starSprite(n) {
-    const tex = canvasTex(64 * n + 16, 72, (g, w, h) => {
-      for (let k = 0; k < n; k++) {
-        const cx = 40 + 64 * k, cy = 38, R = 30, r = 12.5;
-        g.beginPath();
-        for (let j = 0; j < 10; j++) {
-          const a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r : R;
-          g.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
-        }
-        g.closePath();
-        g.fillStyle = "#f2b705"; g.fill();
-        g.lineWidth = 5; g.strokeStyle = "#7a5200"; g.stroke();
+  // The star over a ranked pawn's number, drawn white and tinted: silver for a general, turning
+  // gold on the way to marshal; a marshal's is bright gold with a glow (haloSprite).
+  starSprite() {
+    const tex = canvasTex(80, 80, g => {
+      const cx = 40, cy = 42, R = 32, r = 13.5;
+      g.beginPath();
+      for (let j = 0; j < 10; j++) {
+        const a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r : R;
+        g.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
       }
+      g.closePath();
+      g.fillStyle = "#ffffff"; g.fill();
+      g.lineWidth = 5; g.strokeStyle = "#5a5a5a"; g.stroke();
     });
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-    s.scale.set(0.38 * (64 * n + 16) / 72, 0.38, 1);
+    s.scale.set(0.42, 0.42, 1);
     s.renderOrder = 11;
     return s;
+  }
+
+  haloSprite() {
+    const tex = canvasTex(96, 96, (g, w, h) => {
+      const grd = g.createRadialGradient(48, 48, 4, 48, 48, 48);
+      grd.addColorStop(0, "rgba(255,230,120,0.95)");
+      grd.addColorStop(1, "rgba(255,200,40,0)");
+      g.fillStyle = grd; g.fillRect(0, 0, w, h);
+    });
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, blending: THREE.AdditiveBlending }));
+    s.scale.set(0.95, 0.95, 1);
+    s.renderOrder = 10;
+    return s;
+  }
+
+  // A line up the pawn's body that grows with its own points: to general, then again to marshal.
+  // A white fill on a dark track, so it reads on every pawn color; gold between general and
+  // marshal. It turns with the camera (around the pawn's axis), sits on the side facing it and
+  // draws over the body.
+  progressBar() {
+    const grp = new THREE.Group();
+    const plane = (w, h) => { const geo = new THREE.PlaneGeometry(w, h); geo.translate(0, h / 2, 0); return geo; };
+    const track = new THREE.Mesh(plane(BAR_W + 0.04, BAR_H + 0.04),
+      new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.6, depthTest: false }));
+    track.position.set(0, BAR_Y - 0.02, BAR_Z);
+    track.renderOrder = 9;
+    const fill = new THREE.Mesh(plane(BAR_W, BAR_H), new THREE.MeshBasicMaterial({ color: "#ffffff", depthTest: false, toneMapped: false }));
+    fill.position.y = BAR_Y;
+    fill.position.z = BAR_Z + 0.001;
+    fill.renderOrder = 9.5;
+    grp.add(track, fill);
+    grp.userData = { fill };
+    grp.visible = false;
+    return grp;
   }
 
   // The hunter: a pawn of its color holding a bow; the arrow points the way it runs.
@@ -540,10 +578,19 @@ export class Board3D {
       grp.userData.target = this.piecePos(st, col, i);
       const kills = st.kills[col][i];
       const marshal = g.rank(kills) === 2, general = g.rank(kills) >= 1;
-      grp.userData.r1.visible = general;
-      grp.userData.r2.visible = marshal;
-      grp.userData.g1.visible = general && !marshal;
-      grp.userData.g2.visible = marshal;
+      const u = grp.userData, gp = g.cfg.general_points, mp = g.cfg.marshal_points;
+      const t = marshal ? 1 : general ? (kills - gp) / (mp - gp) : 0;     // silver -> gold
+      u.r1.visible = general;
+      u.r1.material.color.set(marshal ? GOLD : SILVER);
+      u.r2.visible = marshal;
+      u.star.visible = general;
+      u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
+      u.star.scale.setScalar(marshal ? 0.5 : 0.42);
+      u.halo.visible = marshal;
+      u.bar.visible = kills > 0;
+      const fill = u.bar.userData.fill;
+      fill.scale.y = Math.max(0.001, marshal ? 1 : general ? t : kills / gp);
+      fill.material.color.set(marshal ? GOLD_BRIGHT : general ? GOLD : "#ffffff");
       const sel = highlight && highlight[0] === "p" && highlight[1] === col && highlight[2] === i;
       grp.children[0].material.emissive?.set(sel ? "#664400" : "#000000");
       grp.scale.setScalar(sel ? 1.12 : 1);
@@ -1187,6 +1234,7 @@ export class Board3D {
     if (this.uprightLabels) {
       const az = this.cameraAzimuth();
       for (const l of this.uprightLabels) l.rotation.y = az;
+      for (const grp of this.pieceMeshes.values()) grp.userData.bar.rotation.y = az - grp.rotation.y;
     }
     this.stepDice(now, k);
     this.stepShine(now);

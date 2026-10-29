@@ -271,12 +271,13 @@ class App {
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;
     el.innerHTML = `<div class="rb-players">${this.playersHtml()}</div>
-      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div></div>
+      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div>${hint ? `<div class="rb-hint">${hint}</div>` : ""}</div>
       <div class="rb-actions">${acts}</div></div>
       <div class="rb-tools">${this.toolsHtml()}</div>`;
     drop.innerHTML = list;
     drop.hidden = !list;
     this.showToast(hint, this.scoresMode);
+    $("#stage").classList.toggle("has-drop", !!list);
     if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);

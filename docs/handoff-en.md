@@ -144,7 +144,7 @@ use a card.
   complete color.
 * **Ranks come from rank points**, the points a piece wins with its own captures since it last
   came in (rank multiplier included): **general** from `GENERAL_POINTS` = 15, **marshal** from
-  `MARSHAL_POINTS` = 25. Stars over the pawn show the rank (general one, marshal two).
+  `MARSHAL_POINTS` = 25. A star over the pawn shows the rank (general silver, marshal bright gold).
 * A general's captures score ×2, a marshal's ×3 (from the capture after promotion).
 * **Bounty:** capturing a general gives the capturer +10 and the owner −10; a marshal +15 / −15,
   on top of the normal points.
@@ -220,10 +220,11 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
   places) open in a card at the top left of the board (`#drop`).
-* **Hints and warnings** (which die, which piece, keep two...) appear in a card at the bottom
-  middle of the board when they change and fade after a few seconds (longer for longer text), so
-  they never make the ribbon grow or scroll on a phone. The scores legend stays while the scores
-  are shown.
+* **Hints and warnings** (which die, which piece, keep two...): on wide screens (over 900 px)
+  under the status line in the ribbon. On narrow screens they appear in a small card at the top
+  of the board, under the ribbon (at the bottom while a list card is open), when they change, and
+  fade after a few seconds (longer for longer text), so the ribbon never grows or scrolls on a
+  phone. The card lets clicks through. The scores legend stays while the scores are shown.
 * The rows wrap on narrow screens (phones get more rows). The View menu opens against the ribbon
   and is never wider than the screen.
 * The dice are on the board (below). The move log is at the end of **Info** (scrollable).
@@ -278,7 +279,11 @@ bounties, end bonuses, tunnel costs), a line with the dice level, and the move l
 numbers are wrapped in `<bdi dir="ltr">`.
 
 ### Pieces
-* Pawns in color with a number. Rank stars over the pawn: general ★, marshal ★★.
+* Pawns in color with a number. A **progress line** up the front of the pawn (it turns with the
+  camera) grows with the pawn's own points: white on a dark track up to general (15), then it
+  starts again in gold up to marshal (25), and stays full in bright gold for a marshal. Rank star
+  over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
+  gold with a glow. The base ring is silver for a general, gold (with a second ring) for a marshal.
 * The **hunter** is a pawn holding a bow; the arrow points in its running direction (forward or
   backward).
 
