@@ -9,6 +9,7 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    view_menu: "View",
     card_fx: "Triple-dice card!",
     dice_level: "Dice",
     level_beginner: "Beginner (fair dice)",
@@ -161,6 +162,7 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    view_menu: "نما",
     card_fx: "کارت سه‌تاس!",
     dice_level: "تاس",
     level_beginner: "مبتدی (تاس منصفانه)",
@@ -313,6 +315,7 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    view_menu: "Ansicht",
     card_fx: "Dreiwürfel-Karte!",
     dice_level: "Würfel",
     level_beginner: "Anfänger (faire Würfel)",

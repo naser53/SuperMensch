@@ -166,8 +166,8 @@ class App {
     el.dir = this.rtl ? "rtl" : "ltr";
     this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
-    let h = `<div class="pad row between"><label class="check${this.debug ? " on" : ""}">
-      <input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${this.T("debug")}</label>${this.langSelect()}</div>`;
+    let h = `<div class="pad row between top-row"><label class="check${this.debug ? " on" : ""}">
+      <input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${this.T("debug")}</label>${this.viewMenuHtml()}${this.langSelect()}</div>`;
     h += '<div class="players sep">';
     g.players.forEach((pl, i) => {
       const parts = [t(this.lang, "score", { n: g.state.scores[i] })];
@@ -501,17 +501,59 @@ class App {
     return `<div class="dice">${g.lastDice.map(v => dieHtml(v, "", "")).join("")}</div>`;
   }
 
-  footHtml() {
-    const speed = Math.round((2050 - this.delay) / 20);
-    return `<div class="foot sep"><div class="views">
-      <button class="btn" data-view="top" title="${this.T("view_top")}">${this.T("view_top")}</button>
-      <button class="btn" data-view="angled" title="${this.T("view_angled")}">${this.T("view_angled")}</button>
-      <button class="btn" data-view="low" title="${this.T("view_low")}">${this.T("view_low")}</button>
+  // The view menu: a button at the top of the panel; it opens a small panel of views
+  // and folds back into the button when a view is chosen.
+  viewMenuHtml() {
+    const on = this.board.viewMode;
+    const cam = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+    return `<div class="viewmenu"><button class="btn vm-btn${on ? " on" : ""}${this.viewOpen ? " open" : ""}" data-act="viewmenu"
+      aria-expanded="${this.viewOpen ? "true" : "false"}">${cam}<span>${this.T(on ? "view_free_done" : "view_menu")}</span></button>
+      <div class="viewpop${this.viewOpen && !this.viewOpening ? " open" : ""}" ${this.viewOpen ? "" : "hidden"}>
+      <div class="views">
+      <button class="btn" data-view="top">${this.T("view_top")}</button>
+      <button class="btn" data-view="angled">${this.T("view_angled")}</button>
+      <button class="btn" data-view="low">${this.T("view_low")}</button>
       <button class="btn" data-view="left" title="${this.T("view_left")}">&#8634;</button>
       <button class="btn" data-view="right" title="${this.T("view_right")}">&#8635;</button>
-      <button class="btn" data-view="mine">${this.T("view_mine")}</button>
-      <button class="btn${this.board.viewMode ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(this.board.viewMode ? "view_free_done" : "view_free")}</button></div>
+      <button class="btn" data-view="mine">${this.T("view_mine")}</button></div>
+      <button class="btn wide${on ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(on ? "view_free_done" : "view_free")}</button>
       <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
+      </div></div>`;
+  }
+
+  openViewMenu(open) {
+    const pop = document.querySelector("#panel .viewpop");
+    if (open) {
+      this.viewOpen = true;
+      this.viewOpening = true;
+      this.render();
+      setTimeout(() => {                                   // next tick: let the panel start folded, then grow
+        this.viewOpening = false;
+        const p = document.querySelector("#panel .viewpop");
+        const btn = document.querySelector("#panel .vm-btn");
+        if (p && btn) {                                    // grow out of the button, fold back into it
+          const r = btn.getBoundingClientRect(), q = p.getBoundingClientRect();
+          p.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
+        }
+        if (p) { void p.offsetWidth; p.classList.add("open"); }
+      }, 20);
+      return;
+    }
+    if (!this.viewOpen) return;
+    this.viewOpen = false;
+    const btn = document.querySelector("#panel .vm-btn");
+    if (pop && btn) {
+      const r = btn.getBoundingClientRect(), q = pop.getBoundingClientRect();
+      pop.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
+    }
+    if (pop) pop.classList.remove("open");                 // folds back into the button
+    if (btn) { btn.classList.remove("open"); btn.classList.add("pulse"); }
+    setTimeout(() => this.render(), 260);
+  }
+
+  footHtml() {
+    const speed = Math.round((2050 - this.delay) / 20);
+    return `<div class="foot sep">
       <div class="row" style="width:100%"><button class="btn" data-act="menu">${this.T("menu")}</button>
       <button class="btn" data-act="info">${this.T("info")}</button>
       <button class="btn${this.scoresMode ? " on" : ""}" data-act="scores">${this.T("scores")}</button>
@@ -655,6 +697,7 @@ class App {
 function wire(app) {
   document.addEventListener("click", e => {
     if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
+    if (app.viewOpen && !e.target.closest(".viewmenu")) app.openViewMenu(false);   // click elsewhere folds it
     const b = e.target.closest("[data-act],[data-opt],[data-die],[data-pdie],[data-pay],[data-view]");
     if (!b) return;
     if (b.closest("#setup")) {
@@ -671,7 +714,7 @@ function wire(app) {
     }
     if (app.scoresMode && !["scores", "info", "info_close", "menu"].includes(b.dataset.act) && b.dataset.view === undefined) return;
     if (b.dataset.pdie !== undefined) { app.clickDie(+b.dataset.pdie, e); return; }
-    if (b.dataset.view !== undefined) { app.view(b.dataset.view); return; }
+    if (b.dataset.view !== undefined) { app.view(b.dataset.view); app.openViewMenu(false); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
       return;
@@ -690,6 +733,7 @@ function wire(app) {
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.showSetup();
+    else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
     else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
@@ -717,6 +761,7 @@ function wire(app) {
       app.follow = e.target.checked;
       app.persist();
       if (app.follow && app.game && !app.game.players[app.game.turn].isAi) app.view("mine");
+      app.openViewMenu(false);
     }
     else if (act === "speed") { app.delay = 2050 - 20 * +e.target.value; app.persist(); }
   });

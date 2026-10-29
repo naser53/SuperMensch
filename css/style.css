@@ -181,6 +181,25 @@ label.check.on { color: var(--accent); }
   28% { transform: rotate(0) scale(1); } 80% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: translateY(-30px) scale(.9); } }
 
+/* view menu at the top of the panel */
+.top-row { position: relative; gap: 8px; }
+.viewmenu { position: static; margin-inline-start: auto; }
+.vm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; }
+.vm-btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
+.vm-btn.open { border-color: var(--accent); }
+.vm-btn.pulse { animation: vmpulse .45s ease-out; }
+@keyframes vmpulse { 0% { box-shadow: 0 0 0 0 rgba(255,196,0,.8); } 100% { box-shadow: 0 0 0 10px rgba(255,196,0,0); } }
+.viewpop { position: absolute; top: calc(100% - 4px); left: 12px; right: 12px; z-index: 15;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 10px;
+  transform-origin: var(--vm-origin, 50%) 0; transform: scale(.12); opacity: 0;
+  transition: transform .24s cubic-bezier(.2,.8,.3,1.2), opacity .2s ease; }
+.viewpop.open { transform: scale(1); opacity: 1; }
+.viewpop .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.viewpop .btn { padding: 6px 8px; font-size: 13px; }
+.viewpop .btn.wide { width: 100%; }
+.viewpop .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
+
 @media (max-width: 520px) {
   body { font-size: 14px; }
   #setup .card { padding: 20px 16px 32px; }
