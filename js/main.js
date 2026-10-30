@@ -113,7 +113,32 @@ class App {
       const half = s.colors / 2;
       return s.pairing === "opposite" ? [i, i + half] : [2 * i, 2 * i + 1];
     }
-    return [i];
+    return [this.fixPicks()[i]];
+  }
+
+  // One color per player: each seat picks its own color. Keeps the picks of the seats in play
+  // valid and different; a seat without a valid pick gets the lowest free color.
+  fixPicks() {
+    const s = this.setup;
+    const p = Array.isArray(s.picks) ? s.picks.slice() : [];
+    const used = new Set();
+    for (let i = 0; i < s.n; i++) {
+      const c = p[i];
+      if (Number.isInteger(c) && c >= 0 && c < s.colors && !used.has(c)) used.add(c);
+      else p[i] = undefined;
+    }
+    for (let i = 0; i < s.n; i++)
+      if (p[i] === undefined) { let c = 0; while (used.has(c)) c++; p[i] = c; used.add(c); }
+    s.picks = p;
+    return p;
+  }
+
+  // a tap on a color: take it; if another seat has it, the two seats swap colors
+  pickColor(i, c) {
+    const p = this.fixPicks();
+    const j = p.findIndex((x, k) => k < this.setup.n && x === c);
+    if (j >= 0 && j !== i) p[j] = p[i];
+    p[i] = c;
   }
 
   // Leaving a running game for the menu asks first; a finished game just goes.
@@ -160,6 +185,8 @@ class App {
         choice(this.T("adjacent"), "pairing", "adjacent", s.pairing === "adjacent") + "</div>";
     }
     h += `<h2>${this.T("seats")}</h2>`;
+    if (s.mode === "one") h += `<div class="muted small pick-hint">${this.T("pick_color")}</div>`;
+    const picks = s.mode === "one" ? this.fixPicks() : null;
     for (let i = 0; i < s.n; i++) {
       const cols = this.seatColors(i);
       const who = t(this.lang, s.seats[i] === "human" ? "human" : "computer");
@@ -167,7 +194,14 @@ class App {
       const nm = (s.names && s.names[i]) || "";
       const ph = t(this.lang, s.seats[i] === "ai" ? "player_ai" : "player_human", { n: i + 1 });
       h += `<div class="seat">${choice(esc(shape(tr(this.lang, M("seat", { n: i + 1, who, colors: names })))), "seat", i, false)}` +
-        cols.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
+        (picks
+          ? `<span class="picks">` + Array.from({ length: s.colors }, (_, c) => {
+              const mine = picks[i] === c, other = !mine && picks.slice(0, s.n).includes(c);
+              const nm = esc(COLOR_NAMES[this.lang][c]);
+              return `<button class="dot pick${mine ? " sel" : ""}${other ? " taken" : ""}" data-act="pick" data-val="${i}:${c}"` +
+                ` style="background:${COLORS[c]}" title="${nm}" aria-label="${nm}" aria-pressed="${mine}"></button>`;
+            }).join("") + "</span>"
+          : cols.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")) +
         `<input class="name" type="text" maxlength="16" data-name="${i}" value="${esc(nm)}" placeholder="${esc(ph)}" aria-label="${this.T("name")}" autocomplete="off"></div>`;
     }
     h += `<button class="btn primary start" data-act="start">${this.T("start")}</button></div>`;
@@ -186,6 +220,7 @@ class App {
     else if (act === "pairing") s.pairing = val;
     else if (act === "level") s.level = val;
     else if (act === "seat") s.seats[+val] = s.seats[+val] === "human" ? "ai" : "human";
+    else if (act === "pick") { const [i, c] = String(val).split(":").map(Number); this.pickColor(i, c); }
     else if (act === "start") { this.startGame(); return; }
     this.persist();
     this.render();
@@ -199,7 +234,7 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.game = new Game(players, s.mode, Config.forBoard(s.colors, s.level || "beginner"), null, this.debug);
+    this.game = new Game(players, s.mode, Config.forBoard(s.colors, s.level || "beginner", s.mode), null, this.debug);
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
     this.aiPlan = null;
@@ -832,7 +867,7 @@ class App {
       <p class="muted small">${this.T("info_lead")}</p>
       ${table("info_dice", [row(this.T(c.six_chance == null ? "level_beginner" : "level_intermediate"),
         c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
-      ${table("info_hits", corr)}${table("info_breaks", brk)}${table("info_ranks", ranks)}
+      ${table("info_hits", corr)}${table("info_breaks", brk)}${c.ranks ? table("info_ranks", ranks) : ""}
       ${table("info_end", end)}${table("info_tunnels", tun)}
       <p class="muted small">${this.T("info_note")}</p>
       <h3>${this.T("log")}</h3><div class="info-log">${g.log.slice().reverse().map(m => `<div>${this.S(m)}</div>`).join("")}</div></div>`;

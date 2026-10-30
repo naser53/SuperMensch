@@ -743,6 +743,7 @@ export class Game {
   // in (general from GENERAL_POINTS, marshal from MARSHAL_POINTS); a captured piece starts again.
   rank(pts) {
     const c = this.cfg;
+    if (!c.ranks) return 0;
     return pts >= c.marshal_points ? 2 : pts >= c.general_points ? 1 : 0;
   }
 

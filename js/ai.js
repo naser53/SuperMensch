@@ -40,7 +40,7 @@ export class SimpleAI {
           }
         if (r === TUN) { v += 10 + g.effectiveRel(st, col, i) + 2; return; }   // safe inside a tunnel
         v += 10 + r;
-        if (r < L && this.w.points) v += this.w.points * st.kills[col][i];
+        if (r < L && this.w.points && g.cfg.ranks) v += this.w.points * st.kills[col][i];
         if (r >= L) {
           v += 25;
           if (g.finished(st, col, i)) v += 15;

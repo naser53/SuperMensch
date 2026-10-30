@@ -7,7 +7,7 @@ import { SimpleAI } from "../js/ai.js";
 export function playOne(seed, mode = "two", n = 3, colors = 6, maxDecisions = 20000) {
   const ps = Array.from({ length: n }, (_, i) =>
     Player(`P${i + 1}`, mode === "two" ? [i, i + colors / 2] : [i], true));
-  const g = new Game(ps, mode, Config.forBoard(colors), seed);
+  const g = new Game(ps, mode, Config.forBoard(colors, "beginner", mode), seed);
   const ais = ps.map((_, i) => new SimpleAI(seed * 10 + i));
   for (let k = 0; !g.over && g.pending && k < maxDecisions; k++) g.choose(ais[g.turn].choose(g));
   return g;

@@ -26,7 +26,7 @@ function fnv(s, h = 2166136261) {
 export function playFixed(seed, mode, n, colors, maxDec = 2500) {
   const rng = mulberry32(seed * 7919 + 1);
   const ps = Array.from({ length: n }, (_, i) => Player(`P${i + 1}`, mode === "two" ? [i, i + colors / 2] : [i], true));
-  const g = new Game(ps, mode, Config.forBoard(colors), seed, true);
+  const g = new Game(ps, mode, Config.forBoard(colors, "beginner", mode), seed, true);
   let h = 2166136261, k = 0;
   while (!g.over && g.pending && k < maxDec) {
     const dec = g.pending;

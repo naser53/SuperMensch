@@ -21,6 +21,7 @@ export class Config {
       finish_bonus: [100, 50],  // FINISH_BONUS: first and second player to finish (others 0)
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
+      ranks: true,              // RANKS: generals and marshals (off in the classic 4-color one-color game)
       general_points: 15,       // GENERAL_POINTS: a piece's own capture points to become a general
       marshal_points: 25,       // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
@@ -45,13 +46,16 @@ export class Config {
   }
 
   // Defaults for the 6-color (six arms) or 4-color (classic cross) board.
-  static forBoard(n, level = "beginner") {
+  // The classic game (4 colors, one color per player) has no generals or marshals, and so no
+  // nest swap either (it only exists to carry rank points back into play).
+  static forBoard(n, level = "beginner", mode = "two") {
     const dice = { six_chance: Config.LEVELS[level] ?? null };
     if (n === 4) {
+      const classic = mode === "one" ? { ranks: false, nest_swap: false } : {};
       // end bonuses in proportion to the smaller corridor points of this board
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
                           tunnel_max_skip: 2, tunnel_last_corridor: 3,
-                          color_bonus: 25, finish_bonus: [40, 20], ...dice });
+                          color_bonus: 25, finish_bonus: [40, 20], ...classic, ...dice });
     }
     return new Config({ n_colors: 6, ...dice });
   }

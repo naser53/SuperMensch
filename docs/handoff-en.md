@@ -6,7 +6,7 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-29, commit after `5bd6051`.
+State as of 2026-10-30.
 
 ---
 
@@ -102,6 +102,11 @@ A player is **stuck** when no piece is "alive" (none can move; hunters do not co
 ### 3.6 One-color game
 One die per turn; two-color-only rules do not apply. Every 6 throws again. Gift six after N
 throws without a 6.
+* **Color choice:** each seat picks its own color on the setup screen (tap a color dot; a color
+  another seat holds swaps the two seats). Stored in `setup.picks` (`App.fixPicks`, `App.pickColor`).
+* **Classic game** (4-color board, one color per player): no generals or marshals
+  (`RANKS` = false), and so no nest swap (`NEST_SWAP` = false); every piece stays a soldier.
+  Set by `Config.forBoard(4, level, "one")`. Everything else, scores included, is unchanged.
 
 ### 3.7 Triple-dice card
 `TRIPLE_DICE_CARDS` = 3 per player per game. Declare before the roll; throw three, keep two, no
@@ -218,7 +223,8 @@ Same dice for everybody at the table, chosen on the setup screen:
 ### Setup screen
 Language, board (6 or 4 colors), game type (two colors / one color per player), number of
 players, where a player's two colors sit (opposite / next to each other), seats (click to switch
-human/computer), **player names** typed in, dice level. *Start game*.
+human/computer), **player names** typed in, dice level. *Start game*. In the one-color game each
+seat also shows the board's color dots to pick its color.
 
 ### Ribbon (top of the screen)
 The old side panel is gone; the board takes the whole screen under a ribbon.

@@ -561,3 +561,21 @@ test("stuck, second try with no 6 and no pair: the turn passes by itself", () =>
   assert.equal(h.turn, 0);
   assert.equal(h.pending.kind, "keep");
 });
+
+test("classic game (4 colors, one color each): no generals or marshals, no nest swap", () => {
+  const c = Config.forBoard(4, "beginner", "one");
+  assert.equal(c.ranks, false);
+  assert.equal(c.nest_swap, false);
+  const g = new Game([Player("A", [0]), Player("B", [2])], "one", c, 1);
+  assert.equal(g.rank(100), 0);
+  assert.equal(g.bounty(100), 0);
+  assert.equal(g.rankName(100).key, "soldier");
+  // the other boards and modes keep their ranks
+  assert.equal(Config.forBoard(4, "beginner", "two").ranks, true);
+  assert.equal(Config.forBoard(6, "beginner", "one").ranks, true);
+  for (let s = 0; s < 3; s++) {
+    const done = playOne(s, "one", 4, 4);
+    assert.ok(done.over);
+    assert.ok(done.state.kills.flat().every(k => done.rank(k) === 0));
+  }
+});
