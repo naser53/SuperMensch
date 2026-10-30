@@ -4,6 +4,7 @@ import { Game, Option, Player } from "./engine.js";
 import { SimpleAI } from "./ai.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS } from "./render3d.js";
+import { runCommand } from "./debugcmd.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -68,6 +69,13 @@ class App {
     $("#stage").appendChild(toast);
     this.toast = toast;
     this.toastHtml = "";
+    const cmd = document.createElement("form");         // debug console: score / move / dice
+    cmd.className = "cmdbox";
+    cmd.hidden = true;
+    cmd.innerHTML = '<input type="text" spellcheck="false" autocomplete="off" dir="ltr"><div class="cmd-out"></div>';
+    cmd.addEventListener("submit", e => { e.preventDefault(); this.command(cmd.querySelector("input")); });
+    $("#stage").appendChild(cmd);
+    this.cmdBox = cmd;
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
       if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
@@ -299,6 +307,8 @@ class App {
     drop.innerHTML = list;
     drop.hidden = !list;
     this.showToast(hint, this.scoresMode);
+    this.cmdBox.hidden = !this.debug;
+    this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
     if (g.over) {
       this.board.sync(g.state);
@@ -702,6 +712,19 @@ class App {
       setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
     }
     this.nextAi = end + this.delay;
+  }
+
+  // A debug command was typed (js/debugcmd.js); the answer shows under the box.
+  command(input) {
+    const g = this.game;
+    if (!g || !input.value.trim()) return;
+    const r = runCommand(g, input.value, o => this.choose(o));
+    this.cmdBox.querySelector(".cmd-out").textContent = t(this.lang, r.key, r.params);
+    this.cmdBox.querySelector(".cmd-out").classList.toggle("bad", !/^cmd_(score|moved|dice|dice_next)$/.test(r.key));
+    if (!/usage|not_|no_|bad|taken|count/.test(r.key)) input.value = "";
+    this.aiPlan = null;
+    if (this.sel && g.pending !== this.sel.dec) this.resetSelection(g.pending);
+    this.render();
   }
 
   setDebug(on) {

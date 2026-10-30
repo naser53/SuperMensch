@@ -274,6 +274,12 @@ Two orders work, and you can switch at any time:
   second; greyed otherwise.
 * **Debug:** every throw waits for you to set the dice on the board (click a die +1, right-click −1,
   or *Random*), then *Continue*; the dice are then thrown with those numbers. Computer moves are shown first and wait for *Continue*.
+* **Debug console** (a text box at the bottom left in debug mode, `js/debugcmd.js`; commands defined by
+  the owner): `score 1 50` / `score 1 -50` adds or takes points from player 1; `move 1 s2R 33` puts
+  player 1's Red pawn 2 on field 33 (color letters R B G Y P T; fields 1..L on the track, L+1..L+4
+  in the nest, `y` = yard; a taken field is refused; the current decision is offered again);
+  `dice 6 3 4` sets the dice: thrown at once before the roll (three dice use a card), set at once
+  while the dice are being set, otherwise kept for the next throw with that many dice (`Game.queuedDice`).
 * Every legal option is reachable by clicks (verified on 10,000 decisions).
 
 ### View
@@ -331,6 +337,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | --- | --- |
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
+| `js/debugcmd.js` | Debug console commands: score, move, dice |
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |

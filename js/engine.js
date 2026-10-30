@@ -868,6 +868,8 @@ export class Game {
 
   // Roll n dice and continue with them; in manual (debug) mode ask for the values.
   _withDice(n, cont) {
+    const q = this.queuedDice;                // set with the debug command "dice"
+    if (q && q.length === n) { this.queuedDice = null; cont(q.slice()); return; }
     if (!this.manual) { cont(this.roll(n)); return; }
     this._diceCont = cont;
     this.pending = new Decision("dice", this.turn, [], new Array(n).fill(1), M("note_dice", { n }));

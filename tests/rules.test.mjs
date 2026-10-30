@@ -510,3 +510,36 @@ test("nest swap: with a 6 a soldier in the nest with points comes out with them,
   for (let i = 1; i < 4; i++) put(g, 0, i, g.L - 1 + i - 1);   // no piece left in the yard
   assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));
 });
+
+// ---------------------------------------------------------------- debug console
+test("debug commands: score, move (with color letter), dice now and for the next throw", async () => {
+  const { runCommand } = await import("../js/debugcmd.js");
+  const g = make();
+  put(g, 0, 0, 5);
+  g._startTurn();                                       // player A (Red, Yellow) before the roll
+  assert.equal(runCommand(g, "score 1 50").key, "cmd_score");
+  assert.equal(g.state.scores[0], 50);
+  runCommand(g, "score 1 -20");
+  assert.equal(g.state.scores[0], 30);
+  assert.equal(runCommand(g, "move 1 s2R 33").key, "cmd_moved");
+  assert.equal(g.absOf(0, g.state.pos[0][1]), 32);
+  assert.equal(runCommand(g, "move 1 s1B 10").key, "cmd_not_yours");   // Blue is player B's
+  assert.equal(runCommand(g, "move 1 s1R 33").key, "cmd_taken");
+  assert.equal(runCommand(g, `move 1 s3R ${g.L + 2}`).key, "cmd_moved");
+  assert.equal(g.state.pos[0][2], g.L + 1);                             // nest field 2
+  assert.equal(runCommand(g, "move 1 s3R y").key, "cmd_moved");
+  assert.equal(g.state.pos[0][2], YARD);
+  assert.equal(runCommand(g, "jump").key, "cmd_usage");
+  // dice before the roll: thrown at once
+  assert.equal(g.pending.kind, "pre_roll");
+  runCommand(g, "dice 6 3", o => g.choose(o));
+  assert.deepEqual(g.lastDice, [6, 3]);
+  // while moving: kept for the next throw
+  assert.equal(runCommand(g, "dice 4 4").key, "cmd_dice_next");
+  assert.deepEqual(g.queuedDice, [4, 4]);
+  assert.deepEqual(g.roll(2).length, 2);
+  let got = null;
+  g._withDice(2, d => { got = d; });
+  assert.deepEqual(got, [4, 4]);
+  assert.equal(g.queuedDice, null);
+});
