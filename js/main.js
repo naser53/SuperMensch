@@ -717,8 +717,8 @@ class App {
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
     if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
-      this.hold = { ...g.noMove, until: performance.now() + 2300 };
-      setTimeout(() => this.render(), 2320);
+      this.hold = { ...g.noMove, until: performance.now() + 4000 };   // shortened to 1 s once the dice settle (tick)
+      setTimeout(() => this.render(), 4020);
     }
     if (card) this.cardEffect();
     this.aiPlan = null;
@@ -857,7 +857,15 @@ class App {
 
   tick() {
     const g = this.game;
-    if (this.rolling && !this.board.diceRolling()) { this.rolling = false; this.settledAt = performance.now(); if (g) this.render(); }   // the dice have settled
+    if (this.rolling && !this.board.diceRolling()) {   // the dice have settled
+      this.rolling = false;
+      this.settledAt = performance.now();
+      if (this.hold && this.hold.until > this.settledAt + 1000) {   // burnt dice stay crossed out for 1 s
+        this.hold.until = this.settledAt + 1000;
+        setTimeout(() => this.render(), 1020);
+      }
+      if (g) this.render();
+    }
     if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
     if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
