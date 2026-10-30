@@ -115,7 +115,8 @@ throws without a 6.
   (`TUNNELS` / `tunnels_on`); no walls or castles (`WALLS` off: pieces in a row protect nothing and
   block nothing; `CASTLES` off too, and on its own it would split a run of 3+ into walls of two) and so no castle-break declarations (`BREAK_DECL` /
   `break_decl_on`). All are config flags set by `Config.forBoard(n, level, "one")`. The game where
-  a player has several colors keeps all of them. The hunter and scores are unchanged.
+  a player has several colors keeps all of them. Scores stay. The hunter, cards and the three-dice
+  stuck help are two-color only anyway: a stuck player throws one die, with the gift six (owner confirmed).
 
 ### 3.7 Triple-dice card
 `TRIPLE_DICE_CARDS` = 3 per player per game. Declare before the roll; throw three, keep two, no
