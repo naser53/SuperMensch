@@ -296,7 +296,7 @@ export class Game {
   tunnelOptions(p, st = null) {
     st = st || this.state;
     const c = this.cfg;
-    if (st.scores[p] < 0 || st.tunnels.filter(t => t[0] === p).length >= c.max_active_tunnels) return [];
+    if (!c.tunnels_on || st.scores[p] < 0 || st.tunnels.filter(t => t[0] === p).length >= c.max_active_tunnels) return [];
     const busy = new Set(st.tunnels.map(t => `${t[1]},${t[3]},${t[4]}`));
     const out = [];
     for (const col of this.players[p].colors) {

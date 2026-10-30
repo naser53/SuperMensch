@@ -33,6 +33,7 @@ export class Config {
       nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps
                                 // with a yard piece and enters with its points
 
+      tunnels_on: false,              // TUNNELS: tunnels are left out of version 1 (owner); the rules stay
       tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP
       tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5

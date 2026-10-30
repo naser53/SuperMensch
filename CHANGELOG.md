@@ -4,6 +4,15 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v1.0.1 (2026-10-30)
+
+Version 1 without tunnels (owner's decision): no tunnel can be declared, and the Tunnels button
+and the tunnel table in Info are hidden (`TUNNELS` / `tunnels_on` is off; the rules and code
+stay for a later version). Everything else is as in v1.0.0.
+
+**Planned for later versions:** tunnels, the castle-breaker piece, point loans between players;
+Pro version (fortress of 4, fortress-breaker, accounts, tournaments) and the online version.
+
 ## v1.0.0 (2026-10-30)
 
 The first complete version, closed by the owner.

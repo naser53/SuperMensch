@@ -173,6 +173,8 @@ test("tunnel geometry", () => {
 test("tunnel options and cost", () => {
   const g = make();
   put(g, 0, 0, 0);
+  assert.deepEqual(g.tunnelOptions(0), []);              // version 1 has no tunnels (TUNNELS off)
+  g.cfg.tunnels_on = true;
   const has = (col, i, a, b) => g.tunnelOptions(0).some(o => o.join() === [col, i, a, b].join());
   assert.ok(has(0, 0, 1, 2) && has(0, 0, 1, 4));
   put(g, 0, 0, 5);
@@ -183,6 +185,7 @@ test("tunnel options and cost", () => {
 
 test("a tunnel declared this turn can be taken back before the roll, with its cost", () => {
   const g = make();
+  g.cfg.tunnels_on = true;
   put(g, 0, 0, 0);
   g.state.scores[0] = 500;
   g.turn = 0; g._startTurn();

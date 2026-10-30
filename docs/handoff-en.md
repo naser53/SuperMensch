@@ -6,8 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.0** (tag `v1.0.0`), closed by the owner. The castle-breaker
-piece and point loans go into later versions.
+State as of 2026-10-30: **version 1.0.1** (tag `v1.0.1`), closed by the owner. Tunnels, the
+castle-breaker piece and point loans go into later versions.
 
 ---
 
@@ -187,6 +187,8 @@ use a card.
   more turns; pending bonus dice are dropped.
 
 ### 3.11 Tunnels
+**Not in version 1** (owner): `TUNNELS` (`tunnels_on`) is false, so no tunnel can be declared and the
+Tunnels button and info table are hidden. The rules and code below stay for a later version.
 * Each color has its own tunnels, from the middle (field 5) of one corridor to the middle of a
   later one. Up to `TUNNEL_MAX_SKIP` corridors (6-color: 3, up to corridor 4, or 5 by setting;
   4-color: 2, pairs 1→2, 1→3, 2→3). Never to the final corridor.
