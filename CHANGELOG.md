@@ -1,0 +1,35 @@
+# Changelog
+
+Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js/version.js`
+(a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
+attached. The `latest` release is always the newest build of `main`.
+
+## v1.0.0 (2026-10-30)
+
+The first complete version, closed by the owner.
+
+**Boards and modes:** 6-color six-arm board (60 fields) and 4-color cross (40 fields); two
+colors per player (two dice) or one color per player (one die); people at the same screen and
+computer players; English, Farsi (right to left) and German; beginner and intermediate dice.
+
+**Rules:** two-color dice play (free split, burnt die, full use, sum moves, six first); bonus
+throws for doubles; help for a stuck player (three dice, a second try that passes the turn by
+itself when nothing can be kept, gift six); triple-dice cards; the hunter; walls and castles
+with castle-break declarations; scoring and ranks (soldier, general, marshal) with ranked
+pieces surviving a hit (one rank down, pushed back at least 7 fields, or to the yard with rank
+and points); nest swap; tunnels (declared before the roll, can be taken back until the roll,
+paid with points, debt rule at the threshold).
+
+**Interface:** 3D board with dice on the board, a ribbon with the actions of the moment, view
+presets and turning the board by dragging beside it, start view on the player's own side,
+progress line and rank stars on pawns, scores view, info with scoring tables and the move log,
+confirmation before leaving a game, fireworks at the end, debug mode with a command console
+(`score`, `move`, `dice`).
+
+**Computer player:** values reach and a second color in play, saves triple-dice cards for good
+moments (and plays them behind an opponent's castle), uses the nest swap.
+
+**Planned for later versions** (designed in `docs/rules-fa.md`, not in v1):
+* Castle-breaker piece (§3.13 of the handoff).
+* Point loans between players (§14 of the rules).
+* Pro version: fortress of 4, fortress-breaker, accounts, tournaments; the online version.

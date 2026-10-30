@@ -6,7 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30.
+State as of 2026-10-30: **version 1.0.0** (tag `v1.0.0`), closed by the owner. The castle-breaker
+piece and point loans go into later versions.
 
 ---
 
@@ -30,6 +31,10 @@ State as of 2026-10-30.
 * **JavaScript only.** The project once had a Python version; it was removed and the history
   rewritten so it never existed. Do not add Python.
 * Commit and push after each finished feature; CI must pass.
+* **Versions:** `package.json` / `package-lock.json` and `js/version.js` (a test keeps them
+  equal; the setup screen shows it), a section per version in `CHANGELOG.md`, and a tag
+  `v<version>` on `main`. Pushing the tag makes CI publish a release with that name, the built
+  page and the changelog section. `latest` stays the newest build of `main`.
 * After a **deliberate** rule change, re-record the fixed games:
   `node tests/golden.mjs --record`. Never re-record to hide an unintended change.
 * Every game number lives in `js/config.js`. Do not hard-code numbers elsewhere.

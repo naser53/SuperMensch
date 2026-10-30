@@ -11,8 +11,9 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 
 ## Play
 
-* **One file:** download `supermensch.html` from the **Releases** page (`latest`) and open it
-  in Chrome, Edge, Firefox or Safari. Code and font are inside that one file.
+* **One file:** download `supermensch.html` from the **Releases** page and open it in Chrome,
+  Edge, Firefox or Safari. **v1.0.0** is the first finished version; `latest` is the newest build
+  of `main`. What each version holds: [`CHANGELOG.md`](CHANGELOG.md). Code and font are inside that one file.
 * **Online:** GitHub Pages publishes the same page (one-time setup: repository
   **Settings → Pages → Source: GitHub Actions**).
 
@@ -50,6 +51,10 @@ While working on the code, serve the folder (`npx serve .` or any static server)
 `index.html`; it loads the modules from `js/` directly. Every push runs the tests, builds the
 page and publishes it to the `latest` release.
 
+**Versions:** raise the version in `package.json` (and `package-lock.json`) and `js/version.js`,
+add a section to `CHANGELOG.md`, push to `main`, then tag that commit `v<version>` and push the
+tag. CI builds the tagged commit and publishes a release with that name and the changelog section.
+
 After a deliberate rule change, record the fixed games again with
 `node tests/golden.mjs --record`.
 
@@ -62,6 +67,8 @@ After a deliberate rule change, record the fixed games again with
 | `js/strings.js`, `js/i18n.js` | Texts and translation |
 | `js/render3d.js` | 3D board with Three.js |
 | `js/main.js` | Setup screen, ribbon, game loop |
+| `js/debugcmd.js` | Debug console commands |
+| `js/version.js` | The game version |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |
 | `docs/rules-fa.docx`, `docs/rules-fa.md` | The rules document (Farsi) |

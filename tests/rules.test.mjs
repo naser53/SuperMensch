@@ -579,3 +579,8 @@ test("classic game (4 colors, one color each): no generals or marshals, no nest 
     assert.ok(done.state.kills.flat().every(k => done.rank(k) === 0));
   }
 });
+
+test("the game version matches package.json", async () => {
+  const { VERSION } = await import("../js/version.js");
+  assert.equal(VERSION, JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+});

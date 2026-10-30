@@ -5,6 +5,7 @@ import { SimpleAI } from "./ai.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
+import { VERSION } from "./version.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -168,7 +169,7 @@ class App {
       `<button class="choice${sel ? " sel" : ""}" data-act="${act}" data-val="${val}">${label}</button>`;
     const nRange = s.mode === "two" ? s.colors / 2 : s.colors;
     let h = `<div class="card"><div class="top"><div><h1>${this.T("title")}</h1>
-      <div class="muted">${this.T("subtitle")}</div></div>${this.langSelect()}</div>`;
+      <div class="muted">${this.T("subtitle")} · v${VERSION}</div></div>${this.langSelect()}</div>`;
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
       choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
