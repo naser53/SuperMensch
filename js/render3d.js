@@ -137,6 +137,8 @@ export class Board3D {
 
   resize() {
     const w = Math.max(10, this.container.clientWidth), h = Math.max(10, this.container.clientHeight);
+    if (w === this.size?.[0] && h === this.size?.[1]) return;
+    this.size = [w, h];
     this.renderer.setSize(w, h, false);
     this.renderer.domElement.style.width = w + "px";
     this.renderer.domElement.style.height = h + "px";
@@ -146,6 +148,7 @@ export class Board3D {
       const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
       this.placeCamera(sph.theta, sph.phi, this.viewDistance(sph.phi, sph.theta));
     }
+    this.renderer.render(this.scene, this.camera);   // a resized canvas is blank until drawn: draw now, before the page shows it
   }
 
   // Turning, moving and zooming the board with the mouse or fingers only works in view mode,
