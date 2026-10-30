@@ -6,8 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.3** (tag `v1.0.3`), closed by the owner. The one-color game is
-the traditional game (no ranks, tunnels or castles); the game with several colors per player has
+State as of 2026-10-30: **version 1.0.4** (tag `v1.0.4`), closed by the owner. The one-color game is
+the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
 
 ---
@@ -112,10 +112,10 @@ throws without a 6.
   another seat holds swaps the two seats). Stored in `setup.picks` (`App.fixPicks`, `App.pickColor`).
 * **One-color game = the traditional game** (one color per player, both boards; owner's
   decision): no generals or marshals (`RANKS`), so no nest swap (`NEST_SWAP`); no tunnels
-  (`TUNNELS` / `tunnels_on`); no castles (`CASTLES`: a run of 3+ is split into walls of two and a
-  lone piece, so nothing blocks) and so no castle-break declarations (`BREAK_DECL` /
+  (`TUNNELS` / `tunnels_on`); no walls or castles (`WALLS` off: pieces in a row protect nothing and
+  block nothing; `CASTLES` off too, and on its own it would split a run of 3+ into walls of two) and so no castle-break declarations (`BREAK_DECL` /
   `break_decl_on`). All are config flags set by `Config.forBoard(n, level, "one")`. The game where
-  a player has several colors keeps all of them. Walls, the hunter, cards and scores are unchanged.
+  a player has several colors keeps all of them. The hunter and scores are unchanged.
 
 ### 3.7 Triple-dice card
 `TRIPLE_DICE_CARDS` = 3 per player per game. Declare before the roll; throw three, keep two, no

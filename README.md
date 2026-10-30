@@ -12,7 +12,7 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 ## Play
 
 * **One file:** download `supermensch.html` from the **Releases** page and open it in Chrome,
-  Edge, Firefox or Safari. **v1.0.3** is the first finished version; `latest` is the newest build
+  Edge, Firefox or Safari. **v1.0.4** is the first finished version; `latest` is the newest build
   of `main`. What each version holds: [`CHANGELOG.md`](CHANGELOG.md). Code and font are inside that one file.
 * **Online:** GitHub Pages publishes the same page (one-time setup: repository
   **Settings → Pages → Source: GitHub Actions**).
@@ -35,8 +35,8 @@ the hunter, walls and castles (with castle-break declarations), scoring and piec
 (soldier, general, marshal; a hit general or marshal drops one rank instead of dying), tunnels
 (declared before the roll, paid with points, with the debt rule at the threshold), and two dice levels (beginner, intermediate).
 
-The one-color game is the traditional game: no ranks, no tunnels and no castles (so no
-castle-break declarations). The game with several colors per player has all of them.
+The one-color game is the traditional game: no ranks, no tunnels, no walls and no castles
+(so no castle-break declarations). The game with several colors per player has all of them.
 
 Not in version 1 (planned for later versions): the castle-breaker special piece and point loans.
 The fortress (four pieces in a row) is planned for the Pro version.

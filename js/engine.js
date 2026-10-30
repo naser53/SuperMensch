@@ -249,6 +249,7 @@ export class Game {
   // Returns Map abs -> [sid, color, cells] for runs of length >= 2.
   structures(st) {
     const out = new Map(), L = this.L;
+    if (!this.cfg.walls) return out;                  // WALLS off (the one-color game): no structures
     let sid = 0;
     for (let col = 0; col < this.cfg.n_colors; col++) {
       const cells = st.pos[col].filter(r => r >= 0 && r < L).map(r => this.absOf(col, r)).sort((a, b) => a - b);

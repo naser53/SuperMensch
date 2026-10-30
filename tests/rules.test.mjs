@@ -574,7 +574,7 @@ test("one-color game: no generals or marshals, no nest swap, no tunnels, no cast
   // both boards in the one-color game; the game with several colors per player keeps everything
   for (const n of [4, 6]) {
     const one = Config.forBoard(n, "beginner", "one"), two = Config.forBoard(n, "beginner", "two");
-    for (const k of ["ranks", "nest_swap", "tunnels_on", "castles", "break_decl_on"]) {
+    for (const k of ["ranks", "nest_swap", "tunnels_on", "walls", "castles", "break_decl_on"]) {
       assert.equal(one[k], false, `${n} one ${k}`);
       assert.equal(two[k], true, `${n} two ${k}`);
     }
@@ -610,4 +610,13 @@ test("CASTLES off: three in a row is a wall of two and a lone piece, nothing blo
   const sizes = [20, 21, 22].map(r => st.get(g.absOf(1, r))?.[2].length ?? 1);
   assert.deepEqual(sizes, [2, 2, 1]);
   assert.equal(g.opponentCastles(0).size, 0);
+});
+
+test("WALLS off (one-color game): two in a row protect nothing", () => {
+  const g = make();
+  g.cfg.walls = false;
+  put(g, 1, 0, 20); put(g, 1, 1, 21);
+  assert.equal(g.structures(g.state).size, 0);
+  put(g, 0, 0, g.relOf(0, g.absOf(1, 20)) - 3);
+  assert.ok(g.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));   // a single die hits it
 });

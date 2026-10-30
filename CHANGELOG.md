@@ -4,6 +4,12 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v1.0.4 (2026-10-30)
+
+The one-color game has no walls either (owner): pieces in a row protect nothing and block
+nothing (new `WALLS` flag, off in the one-color game; the break table in Info is hidden there).
+The game with several colors per player is unchanged.
+
 ## v1.0.3 (2026-10-30)
 
 Corrects v1.0.1 and v1.0.2, which turned tunnels and castle-break declarations off everywhere.

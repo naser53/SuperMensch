@@ -869,7 +869,7 @@ class App {
       <p class="muted small">${this.T("info_lead")}</p>
       ${table("info_dice", [row(this.T(c.six_chance == null ? "level_beginner" : "level_intermediate"),
         c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
-      ${table("info_hits", corr)}${table("info_breaks", brk)}${c.ranks ? table("info_ranks", ranks) : ""}
+      ${table("info_hits", corr)}${c.walls ? table("info_breaks", brk) : ""}${c.ranks ? table("info_ranks", ranks) : ""}
       ${table("info_end", end)}${c.tunnels_on ? table("info_tunnels", tun) : ""}
       <p class="muted small">${this.T("info_note")}</p>
       <h3>${this.T("log")}</h3><div class="info-log">${g.log.slice().reverse().map(m => `<div>${this.S(m)}</div>`).join("")}</div></div>`;

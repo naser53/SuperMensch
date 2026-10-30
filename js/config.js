@@ -33,6 +33,7 @@ export class Config {
       nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps
                                 // with a yard piece and enters with its points
 
+      walls: true,                    // WALLS: two or more in a row protect each other (walls, castles); off: none
       castles: true,                  // CASTLES: 3+ in a row is a castle; off: runs are split into walls of 2
       break_decl_on: true,            // BREAK_DECL: castle-break declarations (two-color game only)
       tunnels_on: true,               // TUNNELS; the rules stay
@@ -49,13 +50,13 @@ export class Config {
   }
 
   // Defaults for the 6-color (six arms) or 4-color (classic cross) board.
-  // The one-color game (one color per player) is the traditional game: no tunnels, no castles
-  // (so no castle-break declarations), no generals or marshals and so no nest swap (it only
+  // The one-color game (one color per player) is the traditional game: no tunnels, no walls or
+  // castles (so no castle-break declarations), no generals or marshals and so no nest swap (it only
   // carries rank points back into play). The game where a player has several colors keeps them all.
   static forBoard(n, level = "beginner", mode = "two") {
     const dice = { six_chance: Config.LEVELS[level] ?? null };
     const classic = mode === "one"
-      ? { ranks: false, nest_swap: false, tunnels_on: false, castles: false, break_decl_on: false } : {};
+      ? { ranks: false, nest_swap: false, tunnels_on: false, walls: false, castles: false, break_decl_on: false } : {};
     if (n === 4) {
       // end bonuses in proportion to the smaller corridor points of this board
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
