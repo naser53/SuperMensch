@@ -4,6 +4,17 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v1.0.2 (2026-10-30)
+
+Version 1 as the traditional game: no castle-break declarations either (owner's decision).
+Castles cannot be broken in v1; the castle-break button and the castle bonus row in Info are
+hidden (`BREAK_DECL` / `break_decl_on` is off; the code stays for a later version). Walls still
+break as before. No tunnels (since v1.0.1).
+
+**Planned for later versions:** castle-break declarations, tunnels, the castle-breaker piece,
+point loans between players; Pro version (fortress of 4, fortress-breaker, accounts,
+tournaments) and the online version.
+
 ## v1.0.1 (2026-10-30)
 
 Version 1 without tunnels (owner's decision): no tunnel can be declared, and the Tunnels button

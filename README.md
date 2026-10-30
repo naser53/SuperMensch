@@ -12,7 +12,7 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 ## Play
 
 * **One file:** download `supermensch.html` from the **Releases** page and open it in Chrome,
-  Edge, Firefox or Safari. **v1.0.1** is the first finished version; `latest` is the newest build
+  Edge, Firefox or Safari. **v1.0.2** is the first finished version; `latest` is the newest build
   of `main`. What each version holds: [`CHANGELOG.md`](CHANGELOG.md). Code and font are inside that one file.
 * **Online:** GitHub Pages publishes the same page (one-time setup: repository
   **Settings → Pages → Source: GitHub Actions**).
@@ -31,11 +31,11 @@ moves are shown first and wait for *Continue* too.
 
 Two-color dice play (free split, burnt die, full use of both dice, sum moves, six first),
 bonus throws for doubles, help for a stuck player (three dice, gift six), triple-dice cards,
-the hunter, walls and castles (with castle-break declarations), scoring and piece ranks
+the hunter, walls and castles, scoring and piece ranks
 (soldier, general, marshal; a hit general or marshal drops one rank instead of dying), and two dice levels (beginner, intermediate).
 
-Not in version 1 (planned for later versions): tunnels, the castle-breaker special piece and
-point loans.
+Not in version 1 (planned for later versions): tunnels, castle-break declarations (castles
+cannot be broken in v1), the castle-breaker special piece and point loans.
 The fortress (four pieces in a row) is planned for the Pro version.
 
 ## Development

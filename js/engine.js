@@ -890,7 +890,7 @@ export class Game {
     const opts = [new Option(M("roll"), "roll")];
     if (this.mode === "two") {
       if (this.cards[p] > 0) opts.push(new Option(M("card", { n: this.cards[p] }), "triple"));
-      if (this.opponentCastles(p).size) opts.push(new Option(M("break_decl"), "break"));
+      if (this.cfg.break_decl_on && this.opponentCastles(p).size) opts.push(new Option(M("break_decl"), "break"));
     }
     for (const [col, i, a, b] of this.tunnelOptions(p)) {
       const [, , T] = this.tunnelGeom(a, b);

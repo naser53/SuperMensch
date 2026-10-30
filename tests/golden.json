@@ -89,19 +89,19 @@
   "mode": "two",
   "n": 3,
   "colors": 6,
-  "decisions": 1158,
+  "decisions": 1092,
   "places": [
+   0,
    1,
-   2,
-   0
+   2
   ],
   "scores": [
-   431,
-   792,
-   540
+   463,
+   420,
+   267
   ],
-  "rounds": 147,
-  "hash": 1447880750
+  "rounds": 132,
+  "hash": 2276648109
  },
  {
   "seed": 34,
@@ -139,7 +139,7 @@
    396
   ],
   "rounds": 159,
-  "hash": 2916543975
+  "hash": 2445861
  },
  {
   "seed": 96,
@@ -550,17 +550,17 @@
   "mode": "two",
   "n": 2,
   "colors": 4,
-  "decisions": 371,
+  "decisions": 352,
   "places": [
-   0,
-   1
+   1,
+   0
   ],
   "scores": [
-   194,
-   35
+   80,
+   161
   ],
-  "rounds": 66,
-  "hash": 1846823925
+  "rounds": 63,
+  "hash": 1220179331
  },
  {
   "seed": 126,

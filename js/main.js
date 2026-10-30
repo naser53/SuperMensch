@@ -330,7 +330,7 @@ class App {
       const two = g.mode === "two";
       acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
         (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
-        (two ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
+        (two && g.cfg.break_decl_on ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
         (g.cfg.tunnels_on ? btn(`${pre.tun || "disabled"} data-n="${pre.tunN || 0}"`, this.T("tunnel_menu", { n: pre.tunN || 0 }),
           `pre${pre.tun && this.tunnelOpen ? " on" : ""}`, ICON.tunnel) : "") + acts;
     }
@@ -847,7 +847,8 @@ class App {
     }
     corr.push(row(this.T("info_gate"), P("+", c.gate_bonus)));
     corr.push(row(this.T("info_threshold"), P("+", c.threshold_bonus)));
-    const brk = [row(this.T("info_wall"), P("+", c.wall_break)), row(this.T("info_castle"), P("+", c.castle_break))];
+    const brk = [row(this.T("info_wall"), P("+", c.wall_break))];
+    if (c.break_decl_on) brk.push(row(this.T("info_castle"), P("+", c.castle_break)));   // castles only break by declaration
     const ranks = [
       row(this.T("info_general", { n: N(c.general_points) }), P("×", c.general_mult)),
       row(this.T("info_marshal", { n: N(c.marshal_points) }), P("×", c.marshal_mult)),

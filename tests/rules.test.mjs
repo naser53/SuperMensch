@@ -587,3 +587,14 @@ test("the game version matches package.json", async () => {
   const { VERSION } = await import("../js/version.js");
   assert.equal(VERSION, JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
 });
+
+test("version 1: no castle-break declaration before the roll (BREAK_DECL off)", () => {
+  const g = make();
+  put(g, 0, 0, 5); put(g, 1, 0, 20); put(g, 1, 1, 21); put(g, 1, 2, 22);   // a blue castle ahead
+  g._startTurn();
+  assert.ok(g.opponentCastles(0).size > 0);
+  assert.ok(!g.pending.options.some(o => o.payload === "break"));
+  g.cfg.break_decl_on = true;
+  g._startTurn();
+  assert.ok(g.pending.options.some(o => o.payload === "break"));
+});

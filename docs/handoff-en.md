@@ -6,8 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.1** (tag `v1.0.1`), closed by the owner. Tunnels, the
-castle-breaker piece and point loans go into later versions.
+State as of 2026-10-30: **version 1.0.2** (tag `v1.0.2`), closed by the owner. Tunnels, castle-break
+declarations, the castle-breaker piece and point loans go into later versions.
 
 ---
 
@@ -134,7 +134,9 @@ use a card.
 * **Breaking:** all pieces of the structure must be captured at once, each by its own die and its
   own piece; none of the single moves is legal alone. Breakers may be any color of the player.
 * **Wall break:** only with the two dice of the same throw (no sum move).
-* **Castle-break declaration:** before the roll; three dice; unlimited; does not use a card. A
+* **Castle-break declaration** (**not in version 1**, owner: `BREAK_DECL` / `break_decl_on` is
+  false, the button and the castle bonus row in Info are hidden, so castles cannot be broken in v1;
+  the code stays for a later version): before the roll; three dice; unlimited; does not use a card. A
   failure loses the turn but the triple bonus is still given. A long castle (4+) breaks by
   capturing any three of its pieces at once; the rest stay as whatever they now form.
 * Opponents cannot jump over a castle; its owner can.
