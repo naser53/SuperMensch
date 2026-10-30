@@ -443,7 +443,7 @@ class App {
   // waiting for an animation (move, dice or card), or locked by the scores view
   busy() {
     const now = performance.now();
-    return this.scoresMode || this.confirming || this.board.isAnimating() || this.board.diceRolling() || now < (this.cardUntil || 0);
+    return this.scoresMode || this.confirming || (this.hold && now < this.hold.until) || this.board.isAnimating() || this.board.diceRolling() || now < (this.cardUntil || 0);
   }
 
   // A triple-dice card is played: the card flies in over the board, the three dice glow for 2 s.
@@ -465,6 +465,18 @@ class App {
   // passed. Two of three dice kept: the third fades.
   syncDice(dec, human) {
     const g = this.game, b = this.board, now = performance.now();
+    const hold = this.hold && now < this.hold.until ? this.hold : null;
+    if (hold) {                                   // burnt dice of the player before (see choose)
+      if (this.diceRef !== hold.dice) {
+        b.throwDice(hold.dice, g.players[hold.player].colors, 1);
+        this.rolling = true;
+        this.diceRef = hold.dice;
+        this.diceOwner = hold.player;
+        this.diceCleared = false;
+      }
+      b.diceStates(hold.dice.map(() => "burnt"));
+      return;
+    }
     let cur;
     if (dec && ["play", "keep", "dice"].includes(dec.kind)) cur = dec.dice;
     else if (g.lastDice !== this.seenLast) cur = g.lastDice;   // a throw with no move: every die burns
@@ -700,7 +712,14 @@ class App {
       this.keptFrom = dec.dice;
       this.keptIdx = this.keptDice(dec.dice, opt.payload[1]);
     }
+    g.noMove = null;
     g.choose(opt);
+    // a throw with no move followed at once by the next player's throw (a stuck player throws
+    // straight away): show the burnt dice first, then the next throw
+    if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
+      this.hold = { ...g.noMove, until: performance.now() + 2300 };
+      setTimeout(() => this.render(), 2320);
+    }
     if (card) this.cardEffect();
     this.aiPlan = null;
     this.render();

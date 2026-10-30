@@ -91,7 +91,10 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
 ### 3.5 Help for a stuck player
 A player is **stuck** when no piece is "alive" (none can move; hunters do not count).
 * **Three dice:** throw three, keep two. An optional **second try** discards the first entirely.
-  Kept dice play like a normal pair (a pair earns its bonus).
+  Kept dice play like a normal pair (a pair earns its bonus). On the second try of a stuck player,
+  with no 6 and no pair (nothing to keep could move), the dice show crossed out and the turn passes
+  by itself (owner's request); the app holds the burnt dice (`Game.noMove`, `App.hold`) before
+  the next player's throw.
 * **Gift six:** after `GIFT_SIX_N` = 6 stuck throws without a 6, a single 6 is given; bring a
   piece in, then the turn passes. Every 6 resets the counter. Each non-6 pair bonus die counts as
   a throw. If the count reaches N on the first try, the second try is played first.

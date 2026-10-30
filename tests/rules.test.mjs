@@ -543,3 +543,21 @@ test("debug commands: score, move (with color letter), dice now and for the next
   assert.deepEqual(got, [4, 4]);
   assert.equal(g.queuedDice, null);
 });
+
+test("stuck, second try with no 6 and no pair: the turn passes by itself", () => {
+  const mk = () => new Game([Player("A", [0, 3]), Player("B", [1, 4]), Player("C", [2, 5])], "two", null, 1, true);
+  const g = mk();
+  g.choose(new Option(null, ["dice", [1, 2, 3]]));
+  assert.equal(g.pending.kind, "keep");                   // first try: keep or try again
+  g.choose(g.pending.options.find(o => o.payload === "retry"));
+  g.choose(new Option(null, ["dice", [2, 4, 5]]));
+  assert.equal(g.turn, 1);                                // nothing to keep: next player
+  assert.deepEqual(g.lastDice, [2, 4, 5]);
+  // a pair still waits for the choice (it brings a bonus throw)
+  const h = mk();
+  h.choose(new Option(null, ["dice", [1, 2, 3]]));
+  h.choose(h.pending.options.find(o => o.payload === "retry"));
+  h.choose(new Option(null, ["dice", [2, 2, 5]]));
+  assert.equal(h.turn, 0);
+  assert.equal(h.pending.kind, "keep");
+});

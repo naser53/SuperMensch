@@ -937,6 +937,14 @@ export class Game {
     const hit = this._countSix(p, dice);
     if (hit && this._attempt >= 2) { this._gift(); return; }
     let opts = this._keepOptions(dice);
+    // the second try with nothing to keep (no pair, no pair that can move: no 6): the turn passes by itself
+    if (this._attempt >= 2 && !hit && new Set(dice).size === 3 && opts.every(o => !this.playsFor(p, o.payload[1]).length)) {
+      this._throwKind = ["kept", opts[0].payload[1].slice(), dice];
+      this.log.push(M("log_nomove"));
+      this.noMove = { player: p, dice: this.lastDice.slice() };   // the app shows these dice burnt
+      this._afterPlay();
+      return;
+    }
     if (this._attempt === 1) opts.push(new Option(M("retry"), "retry"));
     if (hit) opts = [new Option(M("retry"), "retry"), new Option(M("take_gift"), "gift")];
     this.pending = new Decision("keep", p, opts, dice, M("note_keep"));
@@ -970,6 +978,7 @@ export class Game {
     if (plays === null) plays = this.playsFor(p, dice);
     if (!plays.length) {
       this.log.push(M("log_nomove"));
+      this.noMove = { player: p, dice: this.lastDice.slice() };   // the app shows these dice burnt
       this._afterPlay();
       return;
     }
