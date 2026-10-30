@@ -33,8 +33,8 @@ piece and point loans go into later versions.
 * Commit and push after each finished feature; CI must pass.
 * **Versions:** `package.json` / `package-lock.json` and `js/version.js` (a test keeps them
   equal; the setup screen shows it), a section per version in `CHANGELOG.md`, and a tag
-  `v<version>` on `main`. Pushing the tag makes CI publish a release with that name, the built
-  page and the changelog section. `latest` stays the newest build of `main`.
+  `v<version>` on `main`. CI makes the tag itself: on a push to `main` with a version that has no
+  release yet, it tags the commit and publishes the release (built page, changelog section). `latest` stays the newest build of `main`.
 * After a **deliberate** rule change, re-record the fixed games:
   `node tests/golden.mjs --record`. Never re-record to hide an unintended change.
 * Every game number lives in `js/config.js`. Do not hard-code numbers elsewhere.

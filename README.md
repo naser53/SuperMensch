@@ -52,8 +52,8 @@ While working on the code, serve the folder (`npx serve .` or any static server)
 page and publishes it to the `latest` release.
 
 **Versions:** raise the version in `package.json` (and `package-lock.json`) and `js/version.js`,
-add a section to `CHANGELOG.md`, push to `main`, then tag that commit `v<version>` and push the
-tag. CI builds the tagged commit and publishes a release with that name and the changelog section.
+add a section to `CHANGELOG.md` and push to `main`. When CI sees a version with no release yet,
+it tags that commit `v<version>` and publishes a release with the built page and the changelog section.
 
 After a deliberate rule change, record the fixed games again with
 `node tests/golden.mjs --record`.
