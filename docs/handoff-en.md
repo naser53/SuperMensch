@@ -6,8 +6,9 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.2** (tag `v1.0.2`), closed by the owner. Tunnels, castle-break
-declarations, the castle-breaker piece and point loans go into later versions.
+State as of 2026-10-30: **version 1.0.3** (tag `v1.0.3`), closed by the owner. The one-color game is
+the traditional game (no ranks, tunnels or castles); the game with several colors per player has
+everything. The castle-breaker piece and point loans go into later versions.
 
 ---
 
@@ -109,9 +110,12 @@ One die per turn; two-color-only rules do not apply. Every 6 throws again. Gift 
 throws without a 6.
 * **Color choice:** each seat picks its own color on the setup screen (tap a color dot; a color
   another seat holds swaps the two seats). Stored in `setup.picks` (`App.fixPicks`, `App.pickColor`).
-* **Classic game** (4-color board, one color per player): no generals or marshals
-  (`RANKS` = false), and so no nest swap (`NEST_SWAP` = false); every piece stays a soldier.
-  Set by `Config.forBoard(4, level, "one")`. Everything else, scores included, is unchanged.
+* **One-color game = the traditional game** (one color per player, both boards; owner's
+  decision): no generals or marshals (`RANKS`), so no nest swap (`NEST_SWAP`); no tunnels
+  (`TUNNELS` / `tunnels_on`); no castles (`CASTLES`: a run of 3+ is split into walls of two and a
+  lone piece, so nothing blocks) and so no castle-break declarations (`BREAK_DECL` /
+  `break_decl_on`). All are config flags set by `Config.forBoard(n, level, "one")`. The game where
+  a player has several colors keeps all of them. Walls, the hunter, cards and scores are unchanged.
 
 ### 3.7 Triple-dice card
 `TRIPLE_DICE_CARDS` = 3 per player per game. Declare before the roll; throw three, keep two, no
@@ -134,9 +138,7 @@ use a card.
 * **Breaking:** all pieces of the structure must be captured at once, each by its own die and its
   own piece; none of the single moves is legal alone. Breakers may be any color of the player.
 * **Wall break:** only with the two dice of the same throw (no sum move).
-* **Castle-break declaration** (**not in version 1**, owner: `BREAK_DECL` / `break_decl_on` is
-  false, the button and the castle bonus row in Info are hidden, so castles cannot be broken in v1;
-  the code stays for a later version): before the roll; three dice; unlimited; does not use a card. A
+* **Castle-break declaration** (two-color game only; the one-color game has no castles): before the roll; three dice; unlimited; does not use a card. A
   failure loses the turn but the triple bonus is still given. A long castle (4+) breaks by
   capturing any three of its pieces at once; the rest stay as whatever they now form.
 * Opponents cannot jump over a castle; its owner can.
@@ -189,8 +191,8 @@ use a card.
   more turns; pending bonus dice are dropped.
 
 ### 3.11 Tunnels
-**Not in version 1** (owner): `TUNNELS` (`tunnels_on`) is false, so no tunnel can be declared and the
-Tunnels button and info table are hidden. The rules and code below stay for a later version.
+Only in the game with several colors per player (`TUNNELS` / `tunnels_on` is off in the one-color
+game: no declarations, no Tunnels button, no info table).
 * Each color has its own tunnels, from the middle (field 5) of one corridor to the middle of a
   later one. Up to `TUNNEL_MAX_SKIP` corridors (6-color: 3, up to corridor 4, or 5 by setting;
   4-color: 2, pairs 1→2, 1→3, 2→3). Never to the final corridor.

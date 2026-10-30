@@ -173,8 +173,6 @@ test("tunnel geometry", () => {
 test("tunnel options and cost", () => {
   const g = make();
   put(g, 0, 0, 0);
-  assert.deepEqual(g.tunnelOptions(0), []);              // version 1 has no tunnels (TUNNELS off)
-  g.cfg.tunnels_on = true;
   const has = (col, i, a, b) => g.tunnelOptions(0).some(o => o.join() === [col, i, a, b].join());
   assert.ok(has(0, 0, 1, 2) && has(0, 0, 1, 4));
   put(g, 0, 0, 5);
@@ -565,7 +563,7 @@ test("stuck, second try with no 6 and no pair: the turn passes by itself", () =>
   assert.equal(h.pending.kind, "keep");
 });
 
-test("classic game (4 colors, one color each): no generals or marshals, no nest swap", () => {
+test("one-color game: no generals or marshals, no nest swap, no tunnels, no castles", () => {
   const c = Config.forBoard(4, "beginner", "one");
   assert.equal(c.ranks, false);
   assert.equal(c.nest_swap, false);
@@ -573,9 +571,14 @@ test("classic game (4 colors, one color each): no generals or marshals, no nest 
   assert.equal(g.rank(100), 0);
   assert.equal(g.bounty(100), 0);
   assert.equal(g.rankName(100).key, "soldier");
-  // the other boards and modes keep their ranks
-  assert.equal(Config.forBoard(4, "beginner", "two").ranks, true);
-  assert.equal(Config.forBoard(6, "beginner", "one").ranks, true);
+  // both boards in the one-color game; the game with several colors per player keeps everything
+  for (const n of [4, 6]) {
+    const one = Config.forBoard(n, "beginner", "one"), two = Config.forBoard(n, "beginner", "two");
+    for (const k of ["ranks", "nest_swap", "tunnels_on", "castles", "break_decl_on"]) {
+      assert.equal(one[k], false, `${n} one ${k}`);
+      assert.equal(two[k], true, `${n} two ${k}`);
+    }
+  }
   for (let s = 0; s < 3; s++) {
     const done = playOne(s, "one", 4, 4);
     assert.ok(done.over);
@@ -588,13 +591,23 @@ test("the game version matches package.json", async () => {
   assert.equal(VERSION, JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
 });
 
-test("version 1: no castle-break declaration before the roll (BREAK_DECL off)", () => {
+test("castle-break declaration before the roll; BREAK_DECL off removes it", () => {
   const g = make();
   put(g, 0, 0, 5); put(g, 1, 0, 20); put(g, 1, 1, 21); put(g, 1, 2, 22);   // a blue castle ahead
   g._startTurn();
   assert.ok(g.opponentCastles(0).size > 0);
-  assert.ok(!g.pending.options.some(o => o.payload === "break"));
-  g.cfg.break_decl_on = true;
-  g._startTurn();
   assert.ok(g.pending.options.some(o => o.payload === "break"));
+  g.cfg.break_decl_on = false;
+  g._startTurn();
+  assert.ok(!g.pending.options.some(o => o.payload === "break"));
+});
+
+test("CASTLES off: three in a row is a wall of two and a lone piece, nothing blocks", () => {
+  const g = make();
+  g.cfg.castles = false;
+  put(g, 1, 0, 20); put(g, 1, 1, 21); put(g, 1, 2, 22);
+  const st = g.structures(g.state);
+  const sizes = [20, 21, 22].map(r => st.get(g.absOf(1, r))?.[2].length ?? 1);
+  assert.deepEqual(sizes, [2, 2, 1]);
+  assert.equal(g.opponentCastles(0).size, 0);
 });

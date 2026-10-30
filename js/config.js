@@ -21,7 +21,7 @@ export class Config {
       finish_bonus: [100, 50],  // FINISH_BONUS: first and second player to finish (others 0)
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
-      ranks: true,              // RANKS: generals and marshals (off in the classic 4-color one-color game)
+      ranks: true,              // RANKS: generals and marshals (off by default in the one-color game)
       general_points: 15,       // GENERAL_POINTS: a piece's own capture points to become a general
       marshal_points: 25,       // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
@@ -33,8 +33,9 @@ export class Config {
       nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps
                                 // with a yard piece and enters with its points
 
-      break_decl_on: false,           // BREAK_DECL: castle-break declarations are left out of version 1 (owner)
-      tunnels_on: false,              // TUNNELS: tunnels are left out of version 1 (owner); the rules stay
+      castles: true,                  // CASTLES: 3+ in a row is a castle; off: runs are split into walls of 2
+      break_decl_on: true,            // BREAK_DECL: castle-break declarations (two-color game only)
+      tunnels_on: true,               // TUNNELS; the rules stay
       tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP
       tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5
@@ -48,18 +49,20 @@ export class Config {
   }
 
   // Defaults for the 6-color (six arms) or 4-color (classic cross) board.
-  // The classic game (4 colors, one color per player) has no generals or marshals, and so no
-  // nest swap either (it only exists to carry rank points back into play).
+  // The one-color game (one color per player) is the traditional game: no tunnels, no castles
+  // (so no castle-break declarations), no generals or marshals and so no nest swap (it only
+  // carries rank points back into play). The game where a player has several colors keeps them all.
   static forBoard(n, level = "beginner", mode = "two") {
     const dice = { six_chance: Config.LEVELS[level] ?? null };
+    const classic = mode === "one"
+      ? { ranks: false, nest_swap: false, tunnels_on: false, castles: false, break_decl_on: false } : {};
     if (n === 4) {
-      const classic = mode === "one" ? { ranks: false, nest_swap: false } : {};
       // end bonuses in proportion to the smaller corridor points of this board
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
                           tunnel_max_skip: 2, tunnel_last_corridor: 3,
                           color_bonus: 25, finish_bonus: [40, 20], ...classic, ...dice });
     }
-    return new Config({ n_colors: 6, ...dice });
+    return new Config({ n_colors: 6, ...classic, ...dice });
   }
 
   // dice levels for everybody at the table (same dice for people and computers)

@@ -4,6 +4,21 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v1.0.3 (2026-10-30)
+
+Corrects v1.0.1 and v1.0.2, which turned tunnels and castle-break declarations off everywhere.
+The owner's intent: the **one-color game** (one color per player, both boards) is the
+traditional game, and the **game with several colors per player** keeps everything.
+* One-color game, by default: no generals or marshals (and so no nest swap), no tunnels, no
+  castles (a run of three or more is walls of two and a lone piece, so nothing blocks), and so
+  no castle-break declarations. Config flags: `RANKS`, `NEST_SWAP`, `TUNNELS` (`tunnels_on`),
+  `CASTLES` (`castles`), `BREAK_DECL` (`break_decl_on`), set by `Config.forBoard(n, level, mode)`.
+* Several colors per player: ranks, nest swap, tunnels, castles and castle-break declarations,
+  as in v1.0.0.
+
+**Planned for later versions:** the castle-breaker piece, point loans between players; Pro
+version (fortress of 4, fortress-breaker, accounts, tournaments) and the online version.
+
 ## v1.0.2 (2026-10-30)
 
 Version 1 as the traditional game: no castle-break declarations either (owner's decision).

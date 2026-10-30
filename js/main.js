@@ -314,7 +314,7 @@ class App {
           else tunnels.push(k);
         });
         // a tunnel declared this turn can be taken back until the dice are rolled
-        acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
+        if (g.cfg.tunnels_on) acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
           this.T("undo"), "undo", ICON.undo);
         if (tunnels.length) {
           pre.tun = `data-act="tunnels"`;
@@ -848,7 +848,7 @@ class App {
     corr.push(row(this.T("info_gate"), P("+", c.gate_bonus)));
     corr.push(row(this.T("info_threshold"), P("+", c.threshold_bonus)));
     const brk = [row(this.T("info_wall"), P("+", c.wall_break))];
-    if (c.break_decl_on) brk.push(row(this.T("info_castle"), P("+", c.castle_break)));   // castles only break by declaration
+    if (c.castles && c.break_decl_on) brk.push(row(this.T("info_castle"), P("+", c.castle_break)));   // castles only break by declaration
     const ranks = [
       row(this.T("info_general", { n: N(c.general_points) }), P("×", c.general_mult)),
       row(this.T("info_marshal", { n: N(c.marshal_points) }), P("×", c.marshal_mult)),

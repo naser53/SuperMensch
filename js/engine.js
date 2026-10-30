@@ -261,8 +261,11 @@ export class Game {
         let b = mod(a + 1, L);
         while (cs.has(b) && b !== a) { run.push(b); b = mod(b + 1, L); }
         run.forEach(x => seen.add(x));
-        if (run.length >= 2) {
-          for (const x of run) out.set(x, [sid, col, run]);
+        // no castles (CASTLES off): a long run is a chain of walls of two (and a lone piece)
+        const parts = this.cfg.castles ? [run] : run.reduce((acc, x, k) => (k % 2 ? acc[acc.length - 1].push(x) : acc.push([x]), acc), []);
+        for (const part of parts) {
+          if (part.length < 2) continue;
+          for (const x of part) out.set(x, [sid, col, part]);
           sid++;
         }
       }
