@@ -10,7 +10,9 @@ The first complete version, closed by the owner.
 
 **Boards and modes:** 6-color six-arm board (60 fields) and 4-color cross (40 fields); two
 colors per player (two dice) or one color per player (one die); people at the same screen and
-computer players; English, Farsi (right to left) and German; beginner and intermediate dice.
+computer players; in the one-color game each seat picks its color, and the classic
+4-color one-color game has no ranks and no nest swap; English, Farsi (right to left) and German;
+beginner and intermediate dice.
 
 **Rules:** two-color dice play (free split, burnt die, full use, sum moves, six first); bonus
 throws for doubles; help for a stuck player (three dice, a second try that passes the turn by
