@@ -69,6 +69,7 @@
     <h2>Admin</h2>
     <div class="row">Admin key <input id="adminKey" type="password" size="18"><button id="adminBtn">Open</button> <span id="adminErr" class="err"></span></div>
     <div id="admin"></div>
+    <div id="adminGames"></div>
   </section>
 </main>
 <script type="module">
@@ -198,6 +199,22 @@ function draw() {
 $("#leaveBtn").onclick = () => { if (ws) ws.close(); ws = null; game = null;
   $("#game").hidden = true; $("#lobby").hidden = false; showCreate(); loadGames(); };
 
+// every game, with a button to delete it (test rooms)
+async function adminGames(key, list) {
+  const gs = list || await api("admin/games", { method: "POST", body: "{}", headers: { "x-admin-key": key } });
+  $("#adminGames").innerHTML = `<h2>All games</h2>` + (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
+    <code>${g.id}</code> <span class="muted">${g.status} · ${new Date(g.updated).toLocaleString()}</span>
+    <button data-del="${g.id}">Delete</button></div>`).join("") : `<div class="muted">No games.</div>`);
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }   // a second press deletes
+    try {
+      const left = await api("admin/delete", { method: "POST", headers: { "x-admin-key": key }, body: JSON.stringify({ id: b.dataset.del }) });
+      await adminGames(key, left);
+      loadGames();
+    } catch (e) { $("#adminErr").textContent = e.message; }
+  });
+}
+
 $("#adminKey").value = store.get("adminKey") || "";
 $("#adminBtn").onclick = async () => {
   $("#adminErr").textContent = "";
@@ -210,6 +227,7 @@ $("#adminBtn").onclick = async () => {
   $("#admin").innerHTML = users.map(u => `<div class="row"><code>user ${u.id}</code>
     <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button>
     <label><input type="checkbox" data-role="${u.id}" ${u.canCreate ? "checked" : ""}> can make games</label></div>`).join("");
+  await adminGames(key);
   document.querySelectorAll("[data-role]").forEach(c => c.onchange = async () => {
     try {
       await api("admin/role", { method: "POST", headers: { "x-admin-key": key },

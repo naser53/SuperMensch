@@ -33,6 +33,11 @@ async function api(req, env, url) {
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
     if (parts[1] === "role" && body) return json(await lobby.setRole(body.id, !!body.canCreate));
+    if (parts[1] === "games") return json(await lobby.allGames());
+    if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
+      await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
+      return json(await lobby.removeGame(body.id));
+    }
   }
   if (parts[0] === "games" && parts.length === 1) {
     if (req.method === "GET") return json(await lobby.openGames());
@@ -118,6 +123,15 @@ export class Lobby extends DurableObject {
     });
   }
 
+  allGames() {
+    return this.sql.exec(`SELECT id, name, created, updated, status FROM games ORDER BY updated DESC`).toArray();
+  }
+
+  removeGame(id) {
+    this.sql.exec(`DELETE FROM games WHERE id = ?`, id);
+    return this.allGames();
+  }
+
   history() {
     return this.sql.exec(`SELECT id, name, created, updated, result FROM games WHERE status = 'over'
       ORDER BY updated DESC LIMIT 200`).toArray().map(r => ({ ...r, result: JSON.parse(r.result) }));
@@ -135,9 +149,21 @@ export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this._tables();
+    this.room = null;
+  }
+
+  _tables() {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, ev TEXT NOT NULL)`);
+  }
+
+  // the admin deletes the game: close the devices' connections and forget everything
+  async remove() {
+    for (const ws of this.ctx.getWebSockets()) { try { ws.close(4000, "game deleted"); } catch { /* closed */ } }
+    await this.ctx.storage.deleteAll();
     this.room = null;
+    this._tables();
   }
 
   _meta(k) {
@@ -234,6 +260,7 @@ export class GameRoom extends DurableObject {
   }
 
   async _report() {
+    if (!this._meta("id")) return;
     const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
     const over = this.room.table.game.over;
     await lobby.touch(this._meta("id"), over, over ? this.room.result() : null);
