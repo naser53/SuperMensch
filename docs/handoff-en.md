@@ -316,7 +316,9 @@ Two orders work, and you can switch at any time:
   player (follow).
 * Board rotation and zoom work fully in **Turn the board** mode, so clicking a piece never turns
   the board by accident. Pieces and dice cannot be clicked in that mode. Outside it, a drag that
-  starts beside the board (on the table) turns it too (`offBoard`; the cursor shows a hand there).
+  starts on a free spot (anything but a die, a piece or a target field, `freeSpot`) turns the
+  board too, and the mouse wheel always zooms; only moving (right-drag) needs the mode. A plain
+  click on a field still counts (hunter gate). The cursor shows a hand on free spots.
 * A new game starts with the camera behind the (first) human player's yards, so their pieces are in
   front (`fitView(colors)`, `sideAz`); the square board seen over a corner gets a little more distance.
 * The **player names** printed on the board turn with the camera, so they always read the right
