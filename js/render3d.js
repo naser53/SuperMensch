@@ -113,18 +113,23 @@ export class Board3D {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || e.button !== 0) return;
       if (!this.viewMode) this.onPick(this.pick(e), e);
     });
-    // A drag that starts off the board (on the table around it) turns the board even outside
-    // view mode; the capture listener runs before OrbitControls sees the press.
+    // Outside view mode a drag that starts on a free spot (not on a die, a piece or a target
+    // field) turns the board, and the wheel always zooms. A plain click still picks, so a field
+    // (the hunter's gate) stays clickable. The capture listeners run before OrbitControls.
     container.addEventListener("pointerdown", e => {
       if (e.target !== el || !e.isPrimary || this.viewMode) return;
-      this.controls.enabled = !!this.game && this.offBoard(e);
+      this.controls.enabled = !!this.game && this.freeSpot(e);
     }, true);
+    container.addEventListener("wheel", e => {
+      if (e.target === el && !this.viewMode && this.game) this.controls.enabled = true;
+    }, { capture: true, passive: true });
     const reset = () => setTimeout(() => { if (!this.viewMode) this.controls.enabled = false; });
+    el.addEventListener("wheel", e => { if (!e.buttons) reset(); }, { passive: true });
     window.addEventListener("pointerup", reset);
     window.addEventListener("pointercancel", reset);
     el.addEventListener("pointermove", e => {
       if (this.viewMode || e.buttons || e.pointerType !== "mouse" || !this.game) return;
-      el.style.cursor = this.offBoard(e) ? "grab" : "default";
+      el.style.cursor = this.freeSpot(e) ? "grab" : "default";
     });
     el.addEventListener("contextmenu", e => {          // right-click on a die (debug dice: one less)
       e.preventDefault();
@@ -151,11 +156,13 @@ export class Board3D {
     this.renderer.render(this.scene, this.camera);   // a resized canvas is blank until drawn: draw now, before the page shows it
   }
 
-  // Turning, moving and zooming the board with the mouse or fingers only works in view mode,
-  // so clicks on pieces never turn the board by accident. Preset views work in both modes.
+  // In view mode the mouse or fingers turn, move and zoom the board from anywhere, and pieces
+  // and dice cannot be clicked. Outside it only free spots turn the board (no moving), so a
+  // click on a piece never turns it by accident. Preset views work in both modes.
   setViewMode(on) {
     this.viewMode = on;
     this.controls.enabled = on;
+    this.controls.enablePan = on;
     this.renderer.domElement.style.cursor = on ? "grab" : "default";
     this.container.classList.toggle("viewmode", on);
   }
@@ -783,11 +790,10 @@ export class Board3D {
     }
   }
 
-  // nothing under the pointer but the table
-  offBoard(e) {
+  // nothing under the pointer that a click acts on: no die, no piece, no target field
+  freeSpot(e) {
     const p = this.pick(e);
-    if (p.die !== undefined || p.piece || p.target !== undefined || p.field !== undefined) return false;
-    return this.raycaster.intersectObjects(this.boardGroup.children, true).length === 0;
+    return p.die === undefined && !p.piece && p.target === undefined;
   }
 
   pick(e) {
