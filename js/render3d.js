@@ -692,11 +692,12 @@ export class Board3D {
     const g = this.game;
     for (const t of st.tunnels) this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3);
     const same = (a, b) => a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4];
-    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.5);
-    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7);
+    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.6, null, 1, c);
+    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7, extra);
   }
 
-  tunnelMesh(col, a, b, opacity, color = null, thick = 1) {
+  // pick: the tunnel's payload; a tap on its tube or its exit ring then declares it
+  tunnelMesh(col, a, b, opacity, color = null, thick = 1, pick = null) {
     const cells = this.tunnelCells(col, a, b);
     const y = this.surfaceY() + 0.12;
     const curve = new THREE.CatmullRomCurve3(cells.map(p => this.xz(p, y)));
@@ -704,6 +705,14 @@ export class Board3D {
     const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07 * thick, 10, false),
       new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity, roughness: 0.4 }));
     this.tunnelGroup.add(tube);
+    if (pick) {        // wide invisible touch areas: along the tube, and a disc on the exit
+      const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+      const t2 = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.25, 6, false), hitMat);
+      const ex = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.1, 24), hitMat);
+      ex.position.copy(this.xz(cells[cells.length - 1], y));
+      t2.userData.tunnel = ex.userData.tunnel = pick;
+      this.tunnelGroup.add(t2, ex);
+    }
     cells.slice(1, -1).forEach(p => {
       const d = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 0.62, FIELD_R * 0.62, 0.05, 32),
         new THREE.MeshStandardMaterial({ color: "#ffffff", transparent: true, opacity: Math.min(1, opacity + 0.1) }));
@@ -809,6 +818,9 @@ export class Board3D {
       if (d < best) { best = d; die = k; }
     }
     if (die !== null) return { die };
+    // a tunnel drawn for declaring; the exit disc wins where tunnels from one entrance overlap
+    const th = this.raycaster.intersectObjects(this.tunnelGroup.children, false).filter(h => h.object.userData.tunnel);
+    if (th.length) return { tunnel: (th.find(h => h.object.geometry.type === "CylinderGeometry") || th[0]).object.userData.tunnel };
     for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
       if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
     for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))

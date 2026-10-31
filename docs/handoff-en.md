@@ -206,11 +206,13 @@ game: no declarations, no Tunnels button, no info table).
   (`TUNNEL_DECLARE_RANGE`). Until the dice are rolled that turn it can be taken back with Undo
   (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. The chosen tunnel is shown; other players' tunnels
   appear paler.
-* **Tunnels list:** each line has a dot in its piece's color, and while the list is open every
-  tunnel that can be declared is drawn on the board, faint, in its piece's color; the one under the
-  mouse is drawn full and thicker. A color with nothing to declare gets a dashed line with the
-  reason (`Game.tunnelBlockers`: no piece on the track, no piece in range, the active-tunnel limit,
-  or a negative score). The Tunnels button can be opened even at (0), to read why.
+* **Tunnels buttons:** one per color of the player, its icon in that color, with that color's count.
+  It opens that color's list (each line with a color dot) and draws its tunnels on the board, faint, in
+  the color; the one under the mouse is drawn full and thicker. A tap on a drawn tunnel (its tube, or
+  the exit disc where tunnels from one entrance overlap) declares it, for phones without hover. A
+  color with nothing to declare gets a dashed line with the reason (`Game.tunnelBlockers`: no piece
+  on the track, no piece in range, the active-tunnel limit, or a negative score); the button opens
+  even at (0), to read why.
 * **Entering:** the piece moves to the entrance and uses the rest of the die inside. A die that
   does not reach the entrance burns; the declaration stays for later turns.
 * **Inside:** one die at a time, no sum moves, no captures inside.

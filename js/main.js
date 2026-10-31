@@ -327,7 +327,7 @@ class App {
     this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
     const human = dec && !p.isAi && !g.over;
-    if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = false; }
+    if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = null; }
     let status, hint = "", acts = "", list = "", opts = [], shown = g.state;
     const pre = {};                     // the roll-time buttons: roll, card, castle break, tunnels
     const btn = (attrs, label, cls = "", icon = "") =>
@@ -380,20 +380,21 @@ class App {
         // a tunnel declared this turn can be taken back until the dice are rolled
         if (g.cfg.tunnels_on) acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
           this.T("undo"), "undo", ICON.undo);
-        // the Tunnels list opens even with nothing to declare, to say why; each color's tunnels are
-        // listed (and drawn on the board) in that color
+        // one Tunnels button per color (its icon in that color); it opens even with nothing to
+        // declare, to say why. The open color's tunnels are listed and drawn on the board, where a
+        // tap on a tunnel declares it (phones have no hover).
         if (g.cfg.tunnels_on) {
-          pre.tun = `data-act="tunnels"`;
-          pre.tunN = tunnels.length;
-          if (this.tunnelOpen) {
+          pre.tun = {};
+          for (const k of tunnels) { const c = dec.options[k].payload[1]; pre.tun[c] = (pre.tun[c] || 0) + 1; }
+          const c = this.tunnelOpen;
+          if (c !== null && c !== undefined) {
             const why = g.tunnelBlockers(g.turn);
-            const dot = c => `<span class="dot" style="background:${COLORS[c]}"></span>`;
-            const off = (c, key) => `<div class="opt off">${c === null ? "" : dot(c)}<div>${c === null ? "" :
-              `<b>${esc(COLOR_NAMES[this.lang][c])}:</b> `}${this.T(key, { n: g.cfg.tunnel_declare_range, m: g.cfg.max_active_tunnels })}</div></div>`;
-            if (why.all) list = off(null, why.all);
-            else list = p.colors.map(c => why.colors[c] ? off(c, why.colors[c]) :
+            const dot = `<span class="dot" style="background:${COLORS[c]}"></span>`;
+            const off = key => `<div class="opt off">${dot}<div><b>${esc(COLOR_NAMES[this.lang][c])}:</b> ${this.T(key, { n: g.cfg.tunnel_declare_range, m: g.cfg.max_active_tunnels })}</div></div>`;
+            const why1 = why.all || why.colors[c];
+            list = why1 ? off(why1) : `<div class="muted small">${this.T("tun_tap")}</div>` +
               tunnels.filter(k => dec.options[k].payload[1] === c).map(k =>
-                `<button class="opt tun" data-opt="${k}">${dot(c)}<div>${this.S(dec.options[k].label)}</div></button>`).join("")).join("");
+                `<button class="opt tun" data-opt="${k}">${dot}<div>${this.S(dec.options[k].label)}</div></button>`).join("");
           }
         }
       } else if (human) {
@@ -406,8 +407,11 @@ class App {
       acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
         (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
         (two && g.cfg.break_decl_on ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
-        (g.cfg.tunnels_on ? btn(`${pre.tun || "disabled"} data-n="${pre.tunN || 0}"`, this.T("tunnel_menu", { n: pre.tunN || 0 }),
-          `pre${pre.tun && this.tunnelOpen ? " on" : ""}`, ICON.tunnel) : "") + acts;
+        (g.cfg.tunnels_on ? p.colors.map(c => {
+          const n = pre.tun ? pre.tun[c] || 0 : 0;
+          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]}" title="${esc(COLOR_NAMES[this.lang][c])}"`,
+            this.T("tunnel_menu", { n }), `pre tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
+        }).join("") : "") + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;
@@ -422,8 +426,8 @@ class App {
     this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
     // with the Tunnels list open, every tunnel that can be declared is drawn in its piece's color
-    this.board.tunnelCands = human && dec.kind === "pre_roll" && this.tunnelOpen
-      ? dec.options.map(o => o.payload).filter(pl => Array.isArray(pl) && pl[0] === "tunnel") : [];
+    this.board.tunnelCands = human && dec.kind === "pre_roll" && this.tunnelOpen !== null && this.tunnelOpen !== undefined
+      ? dec.options.map(o => o.payload).filter(pl => Array.isArray(pl) && pl[0] === "tunnel" && pl[1] === this.tunnelOpen) : [];
     if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);
@@ -886,6 +890,11 @@ class App {
     const g = this.game, sel = this.sel;
     if (this.busy()) return;
     if (g && hit && hit.die !== undefined) { this.dieClick(hit, ev); return; }
+    if (g && hit && hit.tunnel && g.pending && g.pending.kind === "pre_roll" && !g.players[g.turn].isAi) {   // a tap on a drawn tunnel declares it
+      const o = g.pending.options.find(o => Array.isArray(o.payload) && o.payload.join() === hit.tunnel.join());
+      if (o) this.choose(o);
+      return;
+    }
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
     if (hit.target !== undefined && sel.piece) {     // a highlighted field of the selected piece
@@ -1159,7 +1168,7 @@ function wire(app) {
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
     else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
     else if (act === "list") { app.sel.list = true; app.render(); }
-    else if (act === "tunnels") { app.tunnelOpen = !app.tunnelOpen; app.render(); }
+    else if (act === "tunnels") { const c = +b.dataset.val; app.tunnelOpen = app.tunnelOpen === c ? null : c; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.askLeave(true);
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
