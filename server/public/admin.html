@@ -112,12 +112,48 @@ async function loadRooms(list) {
   const gs = list || await api("admin/games", {});
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.status} · ${new Date(g.updated).toLocaleString()}</span>
-    <button data-del="${g.id}">Delete</button></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
+    <button data-edit="${g.id}">Edit players</button> <button data-del="${g.id}">Delete</button></div>
+    <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }
     try { await loadRooms(await api("admin/delete", { id: b.dataset.del })); }
     catch (e) { show("#delMsg", e.message, true); }
   });
+}
+
+// change who plays in a room (a test aid): replace, add or remove players. The same number
+// of players keeps the game going; another number starts it again.
+function editRoom(g) {
+  const box = $("#edit-" + g.id), su = g.setup, max = su.mode === "two" ? su.colors / 2 : su.colors;
+  let seats = su.players.map(p => (p.isAi ? "ai" : String(p.user)));
+  const opts = sel => users.map(u => `<option value="${u.id}" ${String(u.id) === sel ? "selected" : ""}>${esc(u.name)}</option>`).join("") +
+    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Computer</option>`;
+  const draw = () => {
+    const full = seats.length >= max;
+    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">${seats.length} of ${max} places${full ? " (full: change a player, or remove one first)" : ""}</div>` +
+      seats.map((v, i) => `<div class="row">Seat ${i + 1} <select data-es="${i}">${opts(v)}</select>
+        ${seats.length > 2 ? `<button data-rm="${i}">Remove</button>` : ""}</div>`).join("") +
+      `<div class="row"><button data-add ${full ? "disabled" : ""}>Add player</button>
+        <button class="primary" data-save>Save</button> <button data-cancel>Cancel</button></div>
+      <div class="muted">${seats.length === su.players.length ? "Same number of players: the game goes on." : "Another number of players: the game starts again."}
+        Players in this room go back to the first page and pick their names again.</div><div data-msg></div></section>`;
+    box.querySelectorAll("[data-es]").forEach(x => x.onchange = () => { seats[+x.dataset.es] = x.value; });
+    box.querySelectorAll("[data-rm]").forEach(x => x.onclick = () => { seats.splice(+x.dataset.rm, 1); draw(); });
+    box.querySelector("[data-add]").onclick = () => {
+      const free = users.find(u => !seats.includes(String(u.id)));
+      seats.push(free ? String(free.id) : "ai"); draw();
+    };
+    box.querySelector("[data-cancel]").onclick = () => { box.innerHTML = ""; };
+    box.querySelector("[data-save]").onclick = async () => {
+      try {
+        const list = await api("admin/edit", { id: g.id, seats: seats.map(v => (v === "ai" ? { ai: true } : { user: +v })) });
+        await loadRooms(list);
+        show("#delMsg", `Players of "${g.name}" saved.`);
+      } catch (e) { box.querySelector("[data-msg]").className = "err"; box.querySelector("[data-msg]").textContent = e.message; }
+    };
+  };
+  draw();
 }
 
 async function open() {

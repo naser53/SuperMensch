@@ -2,6 +2,7 @@
 // and a room (one online game) that throws the dice and answers for the computer players.
 
 import { SimpleAI } from "../js/ai.js";
+import { Config } from "../js/config.js";
 import { tr } from "../js/i18n.js";
 import { Table, fingerprint } from "../js/table.js";
 
@@ -49,11 +50,23 @@ export function cleanName(s) {
 
 // Check a setup sent by a device; returns a clean copy or throws.
 // seats: [{ user: id } | { ai: true }], each with its colors.
+// The colors of seat i: two colors each (the seat's own and the one opposite) or one.
+export function seatColors(mode, colors, i) { return mode === "two" ? [i, i + colors / 2] : [i]; }
+
+// The admin changes who plays in a room (a test aid). Board, game type and dice stay. The same
+// number of seats keeps the game going (only who sits there changes); another number starts
+// the game again. seats: [{ user } | { ai: true }]
+export function editSetup(old, seats, users) {
+  const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level,
+    seats: (seats || []).map((s, i) => ({ ...(s.ai ? { ai: true } : { user: s.user }), colors: seatColors(old.mode, old.colors, i) })) }, users);
+  return { setup, keep: setup.players.length === old.players.length };
+}
+
 export function checkSetup(su, users) {
   if (!su || typeof su !== "object") throw new Error("no setup");
   const mode = su.mode === "one" ? "one" : su.mode === "two" ? "two" : null;
   const colors = su.colors === 4 || su.colors === 6 ? su.colors : null;
-  const level = ["beginner", "advanced"].includes(su.level) ? su.level : "beginner";
+  const level = Object.keys(Config.LEVELS).includes(su.level) ? su.level : "beginner";
   if (!mode || !colors) throw new Error("bad mode or board");
   const seats = Array.isArray(su.seats) ? su.seats : [];
   const max = mode === "two" ? colors / 2 : colors;

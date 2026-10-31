@@ -52,7 +52,8 @@ class App {
     this.lang = LANGS.includes(st.lang) ? st.lang : "en";
     this.setup = Object.assign({ colors: 6, mode: "two", n: 3, pairing: "opposite",
       seats: ["human", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
-    this.delay = st.delay || 650;
+    this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
+    this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
     this.follow = !!st.follow;
     this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
     this.rooms = null;                 // null: loading · "error": no server · [rooms]
@@ -93,7 +94,7 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay, follow: this.follow, offline: this.offline }); }
+  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, follow: this.follow, offline: this.offline }); }
 
   // the open rooms of the server, with their players and the seats in play right now
   async loadRooms() {
@@ -444,13 +445,13 @@ class App {
 
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
-    const speed = Math.round((2050 - this.delay) / 20);
     return this.viewMenuHtml() +
       `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
       (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
       this.langSelect() +
-      `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<input type="range" min="0" max="100" value="${speed}" data-act="speed" aria-label="${this.T("speed")}"></label>` +
+      `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<select data-act="speed" aria-label="${this.T("speed")}">` +
+        Object.keys(Config.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
       `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
   }
 
@@ -509,7 +510,7 @@ class App {
     this.board.animateSteps(entry, this.hop());
   }
 
-  hop() { return Math.max(50, Math.min(200, this.delay * 0.22)); }
+  hop() { return this.delay * Config.HOP_SHARE; }
 
   // a nest that has just been filled shines (after the piece has landed)
   checkNests(when = performance.now()) {
@@ -970,8 +971,14 @@ class App {
     o.ws = ws;
     ws.onopen = () => this.hello();
     ws.onmessage = e => this.onServer(JSON.parse(e.data));
-    ws.onclose = () => {
+    ws.onclose = e => {
       if (o.ws !== ws) return;
+      if (e.code === 4000 || e.code === 4001) {                  // the admin deleted the room or changed its players
+        o.ws = null;
+        this.showToast(this.T(e.code === 4000 ? "online_deleted" : "online_changed"), true);
+        setTimeout(() => { location.href = location.pathname; }, 3000);
+        return;
+      }
       this.showToast(this.T("online_lost"), true);
       setTimeout(() => { if (o.ws === ws) this.connect(); }, 2000);
     };
@@ -1155,7 +1162,11 @@ function wire(app) {
       if (app.follow && app.game && !app.game.players[app.game.turn].isAi) app.view("mine");
       app.openViewMenu(false);
     }
-    else if (act === "speed") { app.delay = 2050 - 20 * +e.target.value; app.persist(); }
+    else if (act === "speed" && Config.ANIM_SPEEDS[e.target.value]) {
+      app.speed = e.target.value;
+      app.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[app.speed];
+      app.persist();
+    }
   });
   const hover = e => {
     const b = e.target.closest("[data-opt]");

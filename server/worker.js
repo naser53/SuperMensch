@@ -6,7 +6,7 @@
 // players; only the admin key (secret ADMIN_KEY) renames users and makes and deletes rooms.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, editSetup, isGameId, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -38,6 +38,13 @@ async function api(req, env, url) {
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
     if (parts[1] === "games") return json(await lobby.allGames());
+    if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
+      const old = await lobby.setupOf(body.id);
+      if (!old) return fail("no such game", 404);
+      const { setup, keep } = editSetup(old, body.seats, await lobby.users());
+      await env.ROOM.get(env.ROOM.idFromName(body.id)).edit(setup, keep);
+      return json(await lobby.setSetup(body.id, setup));
+    }
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
       return json(await lobby.removeGame(body.id));
@@ -126,7 +133,18 @@ export class Lobby extends DurableObject {
   }
 
   allGames() {
-    return this.sql.exec(`SELECT id, name, created, updated, status FROM games ORDER BY updated DESC`).toArray();
+    return this.sql.exec(`SELECT id, name, created, updated, status, setup FROM games ORDER BY updated DESC`).toArray()
+      .map(g => ({ ...g, setup: JSON.parse(g.setup) }));
+  }
+
+  setupOf(id) {
+    const r = this.sql.exec(`SELECT setup FROM games WHERE id = ?`, id).toArray();
+    return r.length ? JSON.parse(r[0].setup) : null;
+  }
+
+  setSetup(id, setup) {
+    this.sql.exec(`UPDATE games SET setup = ?, status = 'open', result = NULL, updated = ? WHERE id = ?`, JSON.stringify(setup), Date.now(), id);
+    return this.allGames();
   }
 
   removeGame(id) {
@@ -160,6 +178,20 @@ export class GameRoom extends DurableObject {
   _tables() {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, ev TEXT NOT NULL)`);
+  }
+
+  // the admin changes who plays: the same number of seats keeps the moves, another starts again.
+  // The devices are sent back to the first page (code 4001), where they pick their names again.
+  async edit(setup, keep) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const events = keep ? room.events.slice() : [];
+    if (!keep) this.sql.exec(`DELETE FROM events`);
+    this.sql.exec(`UPDATE meta SET v = ? WHERE k = 'setup'`, JSON.stringify(setup));
+    this.room = new Room(setup, events);
+    this._save(keep ? events.length : 0);
+    for (const ws of this.ctx.getWebSockets()) { try { ws.close(4001, "players changed"); } catch { /* closed */ } }
+    await this._report();
   }
 
   // the admin deletes the game: close the devices' connections and forget everything

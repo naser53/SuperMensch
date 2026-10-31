@@ -92,7 +92,7 @@ button, select, input { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .cube3d-in { animation: none; transform: rotateX(-24deg) rotateY(-34deg); } }
 @keyframes rollhint { 0%, 100% { box-shadow: 0 0 0 0 rgba(184,59,55,.45); } 50% { box-shadow: 0 0 0 7px rgba(184,59,55,0); } }
 .rb-speed { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
-.rb-speed input { width: 80px; accent-color: var(--accent); }
+.rb-speed select { padding: 6px 4px; min-height: 38px; }
 /* lists that do not fit in the ribbon: a card at the top of the board */
 #drop { position: absolute; top: 8px; inset-inline-start: 10px; z-index: 7; width: min(460px, calc(100% - 20px));
   max-height: 55%; overflow-y: auto; background: rgba(255,255,255,.96); border: 1px solid var(--line); border-radius: 12px;
@@ -106,7 +106,6 @@ button, select, input { font: inherit; color: inherit; }
 @media (max-width: 640px) {
   #ribbon { gap: 6px 8px; padding: 6px 8px; }
   .rb-tools { gap: 4px; }
-  .rb-speed input { width: 56px; }
   .btn.rb-roll { min-height: 50px; font-size: 16px; }
   /* card, castle break and tunnels: the icon and the count only */
   .rb-btn.pre span { display: none; }

@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanName, isGameId, newGameId } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanName, editSetup, isGameId, newGameId } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 
@@ -23,6 +23,22 @@ test("a seat stays with the connected device until it leaves; the same browser t
   assert.deepEqual(claimSeats([1, 3, 3, 9], humans, [], "x"), { seats: [3], taken: [] });          // computer and unknown seats
   // after Exit (or a closed connection) the device is gone from the list: the seat is free
   assert.deepEqual(claimSeats([0], humans, [{ token: "phoneB", seats: [] }], "phoneB"), { seats: [0], taken: [] });
+});
+
+test("the admin changes who plays: same number keeps the game, another restarts it", () => {
+  const old = checkSetup({ mode: "two", colors: 6, level: "intermediate", seats: twoSeats(1, "ai") }, users);
+  assert.equal(old.level, "intermediate");
+  const swap = editSetup(old, [{ user: 1 }, { user: 3 }], users);
+  assert.ok(swap.keep);
+  assert.deepEqual(swap.setup.players.map(p => p.name), ["user1", "user3"]);
+  const more = editSetup(old, [{ user: 1 }, { ai: true }, { user: 4 }], users);
+  assert.ok(!more.keep);
+  assert.deepEqual(more.setup.players.map(p => p.colors), [[0, 3], [1, 4], [2, 5]]);
+  assert.throws(() => editSetup(old, [{ user: 1 }, { user: 2 }, { user: 3 }, { user: 4 }], users));   // board full
+  // a room keeps its moves when only the players change
+  const room = new Room(old, [], mulberry32(2));
+  const again = new Room(swap.setup, room.events.slice());
+  assert.ok(again.events.length >= room.events.length);
 });
 
 test("names are trimmed and limited", () => {
