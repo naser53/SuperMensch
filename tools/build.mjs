@@ -1,6 +1,6 @@
 // Builds dist/supermensch.html: one self-contained file (scripts, styles and the
 // Vazirmatn font inlined) that runs offline straight from the disk, and
-// dist/index.html, the same file for GitHub Pages.
+// dist/index.html, the same file for GitHub Pages, and server/public/play.html for the online server.
 import { build } from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
@@ -26,4 +26,5 @@ html = html.replace(/<!-- Development page[\s\S]*?<\/script>\n/, "")
 fs.mkdirSync(r("dist"), { recursive: true });
 fs.writeFileSync(r("dist/supermensch.html"), html);
 fs.writeFileSync(r("dist/index.html"), html);
+fs.writeFileSync(r("server/public/play.html"), html);      // the online game page (v2 server)
 console.log("dist/supermensch.html", (html.length / 1024).toFixed(0), "KB");

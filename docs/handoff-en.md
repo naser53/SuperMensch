@@ -488,8 +488,9 @@ earlier sketch (browser dice, PINs).
   sends the new events to every device, which replays them (`Table`), so everybody sees the
   opponents' throws live. Several seats can sit at one device; a seat goes to the device that
   asked for it last.
-* Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (this branch) ·
-  M2 the 3D game on the server · M3 seats on one device, reconnect · M4 scores and history pages ·
+* Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
+  M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
+  as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
   M5 lobby in the panel, release v2.0.0.
 * Code: `server/worker.js` (routes, both Durable Objects, WebSocket protocol in its comments),
   `server/core.js` (no Cloudflare parts, tested in `tests/server.test.mjs`), `server/public/`

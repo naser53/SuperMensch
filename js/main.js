@@ -1,7 +1,7 @@
 // SuperMensch browser version: setup screen, side panel and game loop.
 import { Option, Player } from "./engine.js";
 import { SimpleAI } from "./ai.js";
-import { Table } from "./table.js";
+import { Table, fingerprint } from "./table.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
@@ -157,6 +157,7 @@ class App {
   }
 
   showSetup() {
+    if (this.online) { location.href = "./"; return; }        // an online game goes back to the lobby
     this.game = null;
     $("#setup").hidden = false;
     this.render();
@@ -280,7 +281,7 @@ class App {
       list = `<ol class="ranking">` + g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") + "</ol>";
       acts = btn('data-act="menu"', this.T("new_game"), "primary");
     } else {
-      const who = t(this.lang, p.isAi ? "thinking" : "your_turn");
+      const who = t(this.lang, this.online && this.online.remote.has(g.turn) ? "online_other" : p.isAi ? "thinking" : "your_turn");
       status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
       if (dec && dec.note && !(human && dec.kind === "keep")) hint = this.S(dec.note);
       if (dec && dec.kind === "dice") {
@@ -390,7 +391,7 @@ class App {
     return this.viewMenuHtml() +
       `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
-      `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>` +
+      (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
       this.langSelect() +
       `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<input type="range" min="0" max="100" value="${speed}" data-act="speed" aria-label="${this.T("speed")}"></label>` +
       `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
@@ -742,6 +743,7 @@ class App {
   // ------------------------------------------------------------ actions
   choose(opt, entries = null) {
     const g = this.game, dec = g.pending;
+    if (this.online && !this.online.applying) { this.sendMove(opt, entries); return; }
     const card = dec && dec.kind === "pre_roll" && opt.payload === "triple";
     if (!entries && dec && dec.kind === "play" && opt.payload && opt.payload.steps) entries = this.replay(opt.payload);
     if (dec && dec.kind === "play") { this.usedFrom = dec.dice; this.usedIdx = this.usedDice(dec.dice, opt.payload); }
@@ -893,6 +895,109 @@ class App {
     } else this.board.setView({ tilt: name });
   }
 
+  // ------------------------------------------------------------ online game (v2)
+  // The server throws the dice and checks the moves. This device sends the moves of its own
+  // seats and plays every event the server sends, one by one, with the usual animations.
+  // Seats played elsewhere (and the computer, which the server plays) count as computer
+  // players here, so the panel offers nothing for them.
+  startOnline(id, seats) {
+    this.online = { id, seats, remote: new Set(), queue: [], sent: null, applying: false, fp: null, ws: null };
+    $("#setup").hidden = true;
+    this.connect();
+  }
+
+  connect() {
+    const o = this.online;
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/games/${encodeURIComponent(o.id)}/ws`);
+    o.ws = ws;
+    ws.onopen = () => ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer", seats: o.seats }));
+    ws.onmessage = e => this.onServer(JSON.parse(e.data));
+    ws.onclose = () => {
+      if (o.ws !== ws) return;
+      this.showToast(this.T("online_lost"), true);
+      setTimeout(() => { if (o.ws === ws) this.connect(); }, 2000);
+    };
+  }
+
+  onServer(m) {
+    const o = this.online;
+    if (m.t === "state") {
+      if (!this.table) { this.openOnline(m); return; }
+      const have = this.table.events.length + o.queue.length;
+      if (m.events.length < have) { location.reload(); return; }     // should not happen: start again from the server
+      o.queue.push(...m.events.slice(have));
+      o.fp = m.fp;
+    } else if (m.t === "events") {
+      const have = this.table.events.length + o.queue.length;
+      if (m.from !== have) { o.ws.send(JSON.stringify({ t: "hello", seats: o.seats })); return; }   // missed some: ask again
+      o.queue.push(...m.events);
+      o.fp = m.fp;
+    } else if (m.t === "refused") {
+      o.sent = null;
+      this.showToast(esc(m.reason), true);
+      if (m.reason === "stale") o.ws.send(JSON.stringify({ t: "hello", seats: o.seats }));
+      this.render();
+    }
+  }
+
+  // the first state: replay the game so far without animations
+  openOnline(m) {
+    const o = this.online;
+    const players = m.setup.players.map((p, i) => ({ ...p, isAi: p.isAi || !o.seats.includes(i) }));
+    m.setup.players.forEach((p, i) => { if (!p.isAi && !o.seats.includes(i)) o.remote.add(i); });
+    this.table = new Table({ ...m.setup, players }, { autoDice: false });
+    for (const ev of m.events) this.table.apply(ev);
+    o.fp = m.fp;
+    this.game = this.table.game;
+    this.ais = {};
+    this.aiPlan = null;
+    this.sel = null;
+    this.doneNests = new Set();
+    this.fireworksDone = this.game.over;
+    this.diceRef = null;
+    this.seenLast = null;
+    this.prevTurn = undefined;
+    $("#setup").hidden = true;
+    this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
+    const me = this.game.players[o.seats[0]];
+    if (me) this.board.fitView(me.colors);
+    this.nextAi = performance.now() + this.delay;
+    this.render();
+  }
+
+  // a move of this device: send it, and show it when the server sends it back to everybody
+  sendMove(opt, entries) {
+    const o = this.online, g = this.game;
+    if (o.sent || o.queue.length || !g.pending || !o.seats.includes(g.pending.player)) return;
+    let ev;
+    try { ev = this.table.eventFor(opt); } catch { return; }
+    if (ev.dice) return;
+    o.sent = { seq: this.table.events.length, pick: ev.pick, entries };
+    o.ws.send(JSON.stringify({ t: "move", seq: o.sent.seq, ev }));
+  }
+
+  // play the next event from the server once the board is free; others' moves keep the usual pace
+  nextEvent() {
+    const o = this.online, g = this.game;
+    if (!g || !o.queue.length || this.busy()) return;
+    const ev = o.queue[0], dec = g.pending;
+    const mine = dec && o.seats.includes(dec.player);
+    if (!ev.dice && !mine && performance.now() < this.nextAi) return;
+    o.queue.shift();
+    let opt, entries = null;
+    if (ev.dice) opt = new Option(null, ["dice", ev.dice]);
+    else {
+      opt = dec.options[ev.pick];
+      if (o.sent && o.sent.seq === this.table.events.length && o.sent.pick === ev.pick) entries = o.sent.entries;
+    }
+    if (!ev.dice) o.sent = null;
+    o.applying = true;
+    try { this.choose(opt, entries); }
+    catch { location.reload(); return; }                          // out of step with the server: start again
+    finally { o.applying = false; }
+    if (!o.queue.length && o.fp && fingerprint(g) !== o.fp) location.reload();
+  }
+
   tick() {
     const g = this.game;
     if (this.rolling && !this.board.diceRolling()) {   // the dice have settled
@@ -904,6 +1009,7 @@ class App {
       }
       if (g) this.render();
     }
+    if (this.online) { this.nextEvent(); return; }
     if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
     if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
@@ -997,5 +1103,7 @@ async function main() {
   window.superMensch = app;            // handy for testing from the console
   wire(app);
   app.setLang(app.lang);
+  const q = new URLSearchParams(location.search);       // an online game: play?game=K7QX-42&seats=0,2
+  if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
