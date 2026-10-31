@@ -50,7 +50,11 @@ button, select, input { font: inherit; color: inherit; }
 .rb-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* the hint: in the ribbon on wide screens, a short-lived card on the board on narrow ones */
 .rb-hint { color: var(--accent); font-size: 13.5px; line-height: 1.25; }
-@media (max-width: 900px) { .rb-hint { display: none; } }
+@media (max-width: 900px) {
+  .rb-hint { display: none; }
+  /* one line only: a longer "whose turn" text must not change the ribbon height (the board would blink) */
+  .rb-status { white-space: nowrap; text-overflow: ellipsis; }
+}
 .rb-turn { font-size: 15.5px; }
 .rb-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .rb-tools { order: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-inline-start: auto; }

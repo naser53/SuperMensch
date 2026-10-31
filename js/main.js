@@ -827,6 +827,7 @@ class App {
       setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
     }
     this.nextAi = end + this.delay;
+    this.moveEnd = entries && entries.length ? end + this.delay : end;   // online: the next throw waits for this
   }
 
   // A debug command was typed (js/debugcmd.js); the answer shows under the box.
@@ -1056,6 +1057,7 @@ class App {
     const ev = o.queue[0], dec = g.pending;
     const mine = dec && o.seats.includes(dec.player);
     if (!ev.dice && !mine && performance.now() < this.nextAi) return;
+    if (ev.dice && performance.now() < (this.moveEnd || 0)) return;    // let the last move land before the next throw
     o.queue.shift();
     let opt, entries = null;
     if (ev.dice) opt = new Option(null, ["dice", ev.dice]);
