@@ -678,19 +678,23 @@ export class Board3D {
   }
 
   // §13: tunnels are see-through tubes; the current player's in full, the others' fainter.
+  // tunnelCands (set by the app while the Tunnels list is open): the tunnels that can be declared,
+  // faint in their piece's color; the one under the mouse (extra) in full, in its color, thicker.
   drawTunnels(st, extra = null) {
     this.tunnelGroup.clear();
     const g = this.game;
     for (const t of st.tunnels) this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3);
-    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, HILITE);
+    const same = (a, b) => a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4];
+    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.5);
+    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7);
   }
 
-  tunnelMesh(col, a, b, opacity, color = null) {
+  tunnelMesh(col, a, b, opacity, color = null, thick = 1) {
     const cells = this.tunnelCells(col, a, b);
     const y = this.surfaceY() + 0.12;
     const curve = new THREE.CatmullRomCurve3(cells.map(p => this.xz(p, y)));
     const c = color || COLORS[col];
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07, 10, false),
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07 * thick, 10, false),
       new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity, roughness: 0.4 }));
     this.tunnelGroup.add(tube);
     cells.slice(1, -1).forEach(p => {
