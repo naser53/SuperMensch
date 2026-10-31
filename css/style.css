@@ -155,6 +155,9 @@ label.check.on { color: var(--accent); }
 .opt div + div { margin-top: 2px; }
 /* the Tunnels list: a color dot per line; a color with no tunnel says why */
 .rb-btn.tunc svg { color: var(--tc); }
+/* Undo: the icon alone (its label stays in the title), to keep the button narrow */
+.rb-btn.undo span { display: none; }
+.rb-btn.undo { padding-inline: 10px; }
 .opt.tun, .opt.off { display: flex; align-items: center; gap: 8px; }
 .opt.tun .dot, .opt.off .dot { width: 14px; height: 14px; }
 .opt.off { cursor: default; color: var(--muted); background: transparent; border-style: dashed; }

@@ -378,7 +378,7 @@ class App {
           else tunnels.push(k);
         });
         // a tunnel declared this turn can be taken back until the dice are rolled
-        if (g.cfg.tunnels_on) acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
+        if (g.cfg.tunnels_on) acts = btn(undo === null ? `disabled title="${this.T("undo")}"` : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
           this.T("undo"), "undo", ICON.undo);
         // one Tunnels button per color (its icon in that color); it opens even with nothing to
         // declare, to say why. The open color's tunnels are listed and drawn on the board, where a
