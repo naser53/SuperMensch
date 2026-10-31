@@ -4,6 +4,23 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v2.0.0 (2026-10-31)
+
+The online family version (owner). The offline game in `supermensch.html` plays as before.
+* **Online server** on Cloudflare (free plan): https://supermensch-dev.ndaneshi.workers.dev.
+  The server throws the dice and checks every move; every device sees the others' throws live
+  (WebSocket push, no polling). Computer seats are played by the server.
+* **Users:** ten users (user1 to user10), no passwords; the admin renames them.
+* **Rooms:** each game has a GameID and a GameName. Only the admin, or a user the admin made a
+  room maker, creates rooms; the admin can delete rooms.
+* **3D board online:** `/play?game=ID&seats=…` plays the room on the 3D board; several seats can
+  sit at one device.
+* Under the hood: every game is a list of events (`js/table.js`), replayed the same way on the
+  server and on every device.
+
+**Planned next:** smooth reconnect and seat picking (M3), scores and history pages (M4), the
+lobby inside the panel (M5).
+
 ## v1.0.4 (2026-10-30)
 
 The one-color game has no walls either (owner): pieces in a row protect nothing and block

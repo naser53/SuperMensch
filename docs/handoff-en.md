@@ -6,7 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.4** (tag `v1.0.4`), closed by the owner. The one-color game is
+State as of 2026-10-31: **version 2.0.0** (tag `v2.0.0`): the online family version (section 12) on top of
+version 1.0.4, which the owner closed. The one-color game is
 the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
 
@@ -359,6 +360,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
 | `js/debugcmd.js` | Debug console commands: score, move, dice |
+| `js/table.js` | `Table`: a game plus its event list (`{dice}`, `{pick}`); `Table.replay`, `fingerprint` (v2 online groundwork) |
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
@@ -366,6 +368,9 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
 | `tests/rules.test.mjs` | 37 rule tests (`node:test`) |
+| `tests/table.test.mjs` | Table tests: events rebuild the same game |
+| `server/` | v2 online server (section 12) |
+| `tests/server.test.mjs` | Server logic tests |
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
 | `tools/build.mjs` | Builds `dist/supermensch.html` |
@@ -375,7 +380,9 @@ numbers are wrapped in `<bdi dir="ltr">`.
 
 ### Engine model
 * A state machine. `Game.pending` is the current Decision; its kinds are `pre_roll`, `keep`,
-  `play`, `dice`. `Game.choose(option)` applies a choice. `Game.manual` turns on debug dice.
+  `play`, `dice`. `Game.choose(option)` applies a choice. `Game.manual` makes every throw a `dice` decision.
+  The app plays through a `Table` (`js/table.js`), whose engine is always manual: the table
+  throws the dice itself (`autoDice`), except in debug mode, and logs every answer as an event.
   `Game.sequences()` lists every legal click order. The engine is deterministic: the same dice
   and choices always give the same state (the basis for the online plan).
 * State: `pos`, `kills` (rank points), `hunters` (`[color, abs, dir, rankPts]`), `scores`,
@@ -400,7 +407,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 ## 7. Build, test, release
 ```
 npm ci
-npm test            # 37 rule tests + fixed-game check
+npm test            # 37 rule tests + fixed-game check + table and server tests
 npm run simulate    # computer-vs-computer games
 npm run build       # dist/supermensch.html
 ```
@@ -467,23 +474,32 @@ npm run build       # dist/supermensch.html
 3. Point loans.
 4. Advanced dice level.
 5. Smarter computer player (breaks, tunnel budget, ranked targets).
-6. Online version (below). Not started; the owner said "not now".
+6. Online version (section 12), in progress on the `v2` branch.
 
-## 12. Online plan (not started)
-For about 10 trusted people (family; kids on Android tablets), free plans only.
-* Game page on GitHub Pages; server on **Cloudflare Workers + Durable Objects** (one object per
-  room, WebSocket, built-in SQLite). The rules engine runs in each browser; the server only holds
-  rooms, relays moves (dice values + choices) and keeps the move list, so a refresh replays it.
-  The player whose turn it is throws the dice (same path as debug dice). Later, for the public:
-  server-side dice and move checking with the same engine.
-* Accounts: a fixed list of about 10 users made by an admin (e.g. `Baran95`), pick a name from
-  an icon list plus a 4-digit PIN **at every login, no auto-login**, nothing remembered on the
-  tablet, idle logout (about 15 min), a logout button, no password saving in the browser,
-  hashed PINs, temporary lock after wrong PINs, HTTPS only, a simple admin page.
-* Tablets: "Add to Home screen" in Chrome, runs like an app.
-* Updates: CI publishes page and server; the build stamps the commit id; the app checks for a
-  new version every few minutes and on focus; reload silently outside a game, otherwise "new
-  version after this game"; the server refuses old versions in rooms; a started game finishes
-  on its version.
-* Open questions: idle timeout, icon list vs typed name, lock rules, computer players online,
-  stats and rankings, computer taking over for an absent player.
+## 12. Online version (v2, in progress on the `v2` branch)
+Agreed plan (2026-10-31): the claude.ai doc "طرح نسخه ۲ سوپرمنش: آنلاین خانوادگی". It replaces the
+earlier sketch (browser dice, PINs).
+* Family use, free plan, light security: no passwords; 10 users `user1`..`user10` made at the
+  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin, or a
+  user the admin gave the room-maker role (`can_create`, a tick on the admin list), makes games.
+  The admin list also shows every game with a Delete button (two presses; closes its connections).
+* **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
+  `GameRoom` per game. Each game has a GameID (`K7QX-42`, made by the server) and a GameName
+  (typed by its creator); the lobby lists open games (idle 24 h → off the list, kept in history).
+* **The server throws the dice** (crypto) and checks every move with the same engine (`Room` in
+  `server/core.js`); computer seats are played by the server. Devices send `{pick}`, the server
+  sends the new events to every device, which replays them (`Table`), so everybody sees the
+  opponents' throws live. Several seats can sit at one device; a seat goes to the device that
+  asked for it last.
+* Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
+  M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
+  as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
+  M5 lobby in the panel. Released early as v2.0.0 (owner) after M2 plus room makers and admin delete;
+  M3 to M5 come as v2.x.
+* Code: `server/worker.js` (routes, both Durable Objects, WebSocket protocol in its comments),
+  `server/core.js` (no Cloudflare parts, tested in `tests/server.test.mjs`), `server/public/`
+  (pages), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
+  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
+* Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
+* Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
+  (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.

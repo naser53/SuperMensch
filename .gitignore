@@ -2,3 +2,6 @@ node_modules/
 dist/
 *.png
 !fonts/*.png
+.dev.vars
+.wrangler/
+server/public/play.html

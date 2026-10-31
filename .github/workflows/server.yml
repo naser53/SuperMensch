@@ -1,0 +1,37 @@
+name: Online server
+
+# Deploys the v2 online server (wrangler.toml) to Cloudflare from the v2 branch.
+# Repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and ADMIN_KEY (the key
+# for renaming users on the page; any password the owner chooses).
+
+on:
+  push:
+    branches: [v2]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Build the game page
+        run: npm run build
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Admin key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then echo "::warning::ADMIN_KEY is not set: renaming users stays off"; exit 0; fi
+          printf '%s' "$ADMIN_KEY" | npx wrangler secret put ADMIN_KEY
