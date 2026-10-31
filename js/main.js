@@ -150,14 +150,20 @@ class App {
     if (!open) { if (el) el.hidden = true; return; }
     if (!el) { el = document.createElement("div"); el.id = "confirm"; document.body.appendChild(el); }
     el.dir = this.rtl ? "rtl" : "ltr";
-    el.innerHTML = `<div class="confirm-card"><p>${this.T("leave_q")}</p><div class="acts">
+    el.innerHTML = `<div class="confirm-card"><p>${this.T(this.online ? "leave_q_online" : "leave_q")}</p><div class="acts">
       <button class="btn" data-act="leave_no">${this.T("leave_no")}</button>
       <button class="btn primary" data-act="leave_yes">${this.T("leave_yes")}</button></div></div>`;
     el.hidden = false;
   }
 
   showSetup() {
-    if (this.online) { location.href = "./"; return; }        // an online game goes back to the lobby
+    if (this.online) {                                          // Exit: free this device's seats, back to the lobby
+      const ws = this.online.ws;
+      this.online.ws = null;
+      try { ws.send(JSON.stringify({ t: "leave" })); } catch { /* not connected */ }
+      setTimeout(() => { location.href = "./"; }, 150);
+      return;
+    }
     this.game = null;
     $("#setup").hidden = false;
     this.render();
@@ -910,7 +916,7 @@ class App {
     const o = this.online;
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/games/${encodeURIComponent(o.id)}/ws`);
     o.ws = ws;
-    ws.onopen = () => ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer", seats: o.seats }));
+    ws.onopen = () => this.hello();
     ws.onmessage = e => this.onServer(JSON.parse(e.data));
     ws.onclose = () => {
       if (o.ws !== ws) return;
@@ -919,8 +925,24 @@ class App {
     };
   }
 
+  // which seats this device plays; the token lets this browser take its seats back after a break
+  hello() {
+    const o = this.online;
+    o.ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer",
+      token: deviceToken(), seats: o.seats }));
+  }
+
   onServer(m) {
     const o = this.online;
+    if (m.t === "state" && m.taken && m.taken.length) {     // a name is in play on another device that has not left
+      const ws = o.ws;
+      o.ws = null;
+      ws.close();
+      const names = m.taken.map(i => m.setup.players[i].name).join(", ");
+      this.showToast(this.T("online_taken", { p: names }), true);
+      setTimeout(() => { location.href = "./"; }, 4000);
+      return;
+    }
     if (m.t === "state") {
       if (!this.table) { this.openOnline(m); return; }
       const have = this.table.events.length + o.queue.length;
@@ -929,13 +951,13 @@ class App {
       o.fp = m.fp;
     } else if (m.t === "events") {
       const have = this.table.events.length + o.queue.length;
-      if (m.from !== have) { o.ws.send(JSON.stringify({ t: "hello", seats: o.seats })); return; }   // missed some: ask again
+      if (m.from !== have) { this.hello(); return; }   // missed some: ask again
       o.queue.push(...m.events);
       o.fp = m.fp;
     } else if (m.t === "refused") {
       o.sent = null;
       this.showToast(esc(m.reason), true);
-      if (m.reason === "stale") o.ws.send(JSON.stringify({ t: "hello", seats: o.seats }));
+      if (m.reason === "stale") this.hello();
       this.render();
     }
   }
@@ -1107,3 +1129,12 @@ async function main() {
   if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
+
+// a random id for this browser, kept between visits (online seats come back to it)
+function deviceToken() {
+  try {
+    let k = localStorage.getItem("supermensch-device");
+    if (!k) { k = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("supermensch-device", k); }
+    return k;
+  } catch { return null; }
+}

@@ -6,7 +6,7 @@
 // role; games are made by the admin or by a user with that role.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, mayCreate, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -139,9 +139,11 @@ export class Lobby extends DurableObject {
 }
 
 // WebSocket messages (JSON):
-//   device -> room  { t: "hello", device, seats: [0, 2] }   which seats this device plays
+//   device -> room  { t: "hello", device, token, seats: [0, 2] }   which seats this device plays
+//                   { t: "leave" }                           Exit: free this device's seats
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
-//   room -> device  { t: "state", id, name, setup, events, seats, fp, view }
+//   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
+//                   (mine: the seats this device got; taken: wanted seats another device holds)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
@@ -231,16 +233,24 @@ export class GameRoom extends DurableObject {
     const room = this._load();
     if (msg.t === "hello") {
       const humans = room.setup.players.map((p, i) => (p.isAi ? -1 : i)).filter(i => i >= 0);
-      const seats = (Array.isArray(msg.seats) ? msg.seats : []).filter(s => humans.includes(s));
-      // a seat goes to the device that asked last (a child moves to another tablet)
-      for (const other of this.ctx.getWebSockets()) {
-        if (other === ws) continue;
-        const a = other.deserializeAttachment() || {};
-        if ((a.seats || []).some(s => seats.includes(s))) other.serializeAttachment({ ...a, seats: a.seats.filter(s => !seats.includes(s)) });
-      }
-      ws.serializeAttachment({ device: String(msg.device || "?").slice(0, 40), seats });
-      this._send(ws, { t: "state", ...this.snapshot() });
+      const old = ws.deserializeAttachment() || {};
+      const token = msg.token ? String(msg.token).slice(0, 64) : old.token || null;
+      const device = msg.device ? String(msg.device).slice(0, 40) : old.device || "?";
+      const others = this.ctx.getWebSockets().filter(o => o !== ws).map(o => ({ ws: o, ...(o.deserializeAttachment() || {}) }));
+      // a seat stays with a connected device until it leaves; the same browser takes it back
+      const { seats, taken } = claimSeats(Array.isArray(msg.seats) ? msg.seats : [], humans, others, token);
+      for (const o of others)
+        if (token && o.token === token && (o.seats || []).some(s => seats.includes(s)))
+          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)) });
+      ws.serializeAttachment({ device, token, seats });
+      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken });
       this._all({ t: "seats", seats: this._seats() });
+      return;
+    }
+    if (msg.t === "leave") {
+      ws.serializeAttachment({ device: "?", seats: [] });
+      this._all({ t: "seats", seats: this._seats() });
+      try { ws.close(1000, "left"); } catch { /* closed */ }
       return;
     }
     if (msg.t === "move") {

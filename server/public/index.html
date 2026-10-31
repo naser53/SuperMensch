@@ -145,7 +145,7 @@ function join(id) {
   ws.onopen = () => {
     const me = +$("#me").value;
     // first visit: the seats of the chosen user; later the seats ticked on this page
-    ws.send(JSON.stringify({ t: "hello", device: users.find(u => u.id === me)?.name || "?", seats: [] }));
+    ws.send(JSON.stringify({ t: "hello", device: users.find(u => u.id === me)?.name || "?", token: deviceToken(), seats: [] }));
     ws.pendingMe = me;
   };
   ws.onmessage = e => onMsg(JSON.parse(e.data));
@@ -154,12 +154,21 @@ function join(id) {
   $("#game").hidden = false;
 }
 
-function claim(seats) { ws.send(JSON.stringify({ t: "hello", device: users.find(u => u.id === +$("#me").value)?.name || "?", seats })); }
+function claim(seats) { ws.send(JSON.stringify({ t: "hello", device: users.find(u => u.id === +$("#me").value)?.name || "?", token: deviceToken(), seats })); }
+
+// the same random id the 3D game uses: a seat held here can be taken back by this browser only
+function deviceToken() {
+  try {
+    let k = localStorage.getItem("supermensch-device");
+    if (!k) { k = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("supermensch-device", k); }
+    return k;
+  } catch { return null; }
+}
 
 function onMsg(m) {
   if (m.t === "state") {
     const first = !game;
-    game = { ...m, mine: game ? game.mine : [] };
+    game = { ...m, mine: m.mine || (game ? game.mine : []) };
     if (first && ws.pendingMe != null) {
       const mine = m.setup.players.map((p, i) => (p.user === ws.pendingMe ? i : -1)).filter(i => i >= 0);
       ws.pendingMe = null;
@@ -171,6 +180,8 @@ function onMsg(m) {
   } else if (m.t === "seats") game.seats = m.seats;
   else if (m.t === "refused") { $("#gStatus").innerHTML += ` <span class="err">${esc(m.reason)}</span>`; return; }
   draw();
+  if (m.t === "state" && m.taken && m.taken.length)        // a name in play on another device that has not left
+    $("#gStatus").innerHTML += ` <span class="err">${m.taken.map(i => esc(m.setup.players[i].name)).join(", ")} is playing on another device (press Exit there first)</span>`;
 }
 
 function draw() {

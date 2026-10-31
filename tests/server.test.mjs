@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanName, isGameId, mayCreate, newGameId } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 
@@ -21,6 +21,17 @@ test("only the admin or a room maker makes games", () => {
   assert.ok(!mayCreate(false, us, 1));
   assert.ok(!mayCreate(false, us, 9));
   assert.ok(!mayCreate(false, us, undefined));
+});
+
+test("a seat stays with the connected device until it leaves; the same browser takes it back", () => {
+  const humans = [0, 2, 3];
+  const others = [{ token: "tabletA", seats: [0] }, { token: "phoneB", seats: [] }];
+  assert.deepEqual(claimSeats([0, 2], humans, others, "phoneB"), { seats: [2], taken: [0] });
+  assert.deepEqual(claimSeats([0, 2], humans, others, "tabletA"), { seats: [0, 2], taken: [] });   // reconnecting
+  assert.deepEqual(claimSeats([0], humans, others, null), { seats: [], taken: [0] });              // no token: no way back
+  assert.deepEqual(claimSeats([1, 3, 3, 9], humans, [], "x"), { seats: [3], taken: [] });          // computer and unknown seats
+  // after Exit (or a closed connection) the device is gone from the list: the seat is free
+  assert.deepEqual(claimSeats([0], humans, [{ token: "phoneB", seats: [] }], "phoneB"), { seats: [0], taken: [] });
 });
 
 test("names are trimmed and limited", () => {

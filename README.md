@@ -12,9 +12,11 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
 ## Play
 
 * **One file:** download `supermensch.html` from the **Releases** page and open it in Chrome,
-  Edge, Firefox or Safari. **v1.0.4** is the first finished version; `latest` is the newest build
+  Edge, Firefox or Safari. **v2.0.0** is the newest version (v1.0.4 was the first finished one); `latest` is the newest build
   of `main`. What each version holds: [`CHANGELOG.md`](CHANGELOG.md). Code and font are inside that one file.
-* **Online:** GitHub Pages publishes the same page (one-time setup: repository
+* **Online with family (v2):** https://supermensch-dev.ndaneshi.workers.dev: pick a user and
+  a room, the server throws the dice and everybody sees every throw live.
+* **GitHub Pages:** GitHub Pages publishes the same page (one-time setup: repository
   **Settings → Pages → Source: GitHub Actions**).
 
 Move by clicking: click a die and then a piece, or a piece first (its possible fields show

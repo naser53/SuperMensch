@@ -24,6 +24,21 @@ export function mayCreate(adminOk, users, by) {
   return !!adminOk || users.some(u => u.id === by && u.canCreate);
 }
 
+// Which of the wanted seats a device gets. A seat held by a connected device of another
+// token stays with it until that device leaves (Exit, or its connection closes); the same
+// token (the same browser, reconnecting) takes its seats back.
+//   humans: the seats of people; others: [{ token, seats }] of the other connected devices
+export function claimSeats(want, humans, others, token) {
+  const held = new Map();
+  for (const o of others) for (const s of o.seats || []) held.set(s, o.token);
+  const seats = [], taken = [];
+  for (const s of new Set(want)) {
+    if (!humans.includes(s)) continue;
+    if (held.has(s) && !(token && held.get(s) === token)) taken.push(s); else seats.push(s);
+  }
+  return { seats, taken };
+}
+
 export function isGameId(s) { return typeof s === "string" && /^[A-Z]{4}-\d\d$/.test(s); }
 
 export function cryptoRandom() {
