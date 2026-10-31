@@ -380,10 +380,21 @@ class App {
         // a tunnel declared this turn can be taken back until the dice are rolled
         if (g.cfg.tunnels_on) acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
           this.T("undo"), "undo", ICON.undo);
-        if (tunnels.length) {
+        // the Tunnels list opens even with nothing to declare, to say why; each color's tunnels are
+        // listed (and drawn on the board) in that color
+        if (g.cfg.tunnels_on) {
           pre.tun = `data-act="tunnels"`;
           pre.tunN = tunnels.length;
-          if (this.tunnelOpen) list = tunnels.map(k => optHtml(dec.options[k], k)).join("");
+          if (this.tunnelOpen) {
+            const why = g.tunnelBlockers(g.turn);
+            const dot = c => `<span class="dot" style="background:${COLORS[c]}"></span>`;
+            const off = (c, key) => `<div class="opt off">${c === null ? "" : dot(c)}<div>${c === null ? "" :
+              `<b>${esc(COLOR_NAMES[this.lang][c])}:</b> `}${this.T(key, { n: g.cfg.tunnel_declare_range, m: g.cfg.max_active_tunnels })}</div></div>`;
+            if (why.all) list = off(null, why.all);
+            else list = p.colors.map(c => why.colors[c] ? off(c, why.colors[c]) :
+              tunnels.filter(k => dec.options[k].payload[1] === c).map(k =>
+                `<button class="opt tun" data-opt="${k}">${dot(c)}<div>${this.S(dec.options[k].label)}</div></button>`).join("")).join("");
+          }
         }
       } else if (human) {
         opts = dec.options;
@@ -410,6 +421,9 @@ class App {
     this.cmdBox.hidden = !this.debug;
     this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
+    // with the Tunnels list open, every tunnel that can be declared is drawn in its piece's color
+    this.board.tunnelCands = human && dec.kind === "pre_roll" && this.tunnelOpen
+      ? dec.options.map(o => o.payload).filter(pl => Array.isArray(pl) && pl[0] === "tunnel") : [];
     if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);

@@ -315,6 +315,24 @@ export class Game {
     return out;
   }
 
+  // Why a player, or one of its colors, has no tunnel to declare (shown in the Tunnels list).
+  // Returns { all: key | null, colors: { [col]: key } } with string keys from strings.js;
+  // a color that has a tunnel option is left out.
+  tunnelBlockers(p, st = null) {
+    st = st || this.state;
+    const c = this.cfg, out = { all: null, colors: {} };
+    if (!c.tunnels_on) return out;
+    if (st.scores[p] < 0) { out.all = "tun_why_debt"; return out; }
+    if (st.tunnels.filter(t => t[0] === p).length >= c.max_active_tunnels) { out.all = "tun_why_max"; return out; }
+    const has = new Set(this.tunnelOptions(p, st).map(o => o[0]));
+    for (const col of this.players[p].colors) {
+      if (has.has(col)) continue;
+      const free = st.pos[col].some((r, i) => r >= 0 && r < this.L && !this.tunnelOf(st, col, i));
+      out.colors[col] = free ? "tun_why_range" : "tun_why_none";
+    }
+    return out;
+  }
+
   _tunnelStep(st, p, m, die, tr, blocked, victimAt) {
     const col = m[1], i = m[2];
     const [, , , ta, tb, t] = tr;

@@ -153,6 +153,11 @@ label.check.on { color: var(--accent); }
 }
 .opt:hover, .opt:focus-visible { background: var(--btn-hover); outline: none; border-color: var(--hi); }
 .opt div + div { margin-top: 2px; }
+/* the Tunnels list: a color dot per line; a color with no tunnel says why */
+.opt.tun, .opt.off { display: flex; align-items: center; gap: 8px; }
+.opt.tun .dot, .opt.off .dot { width: 14px; height: 14px; }
+.opt.off { cursor: default; color: var(--muted); background: transparent; border-style: dashed; }
+.opt.off:hover { background: transparent; border-color: var(--line); }
 .btn {
   padding: 9px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--btn); cursor: pointer;
 }
