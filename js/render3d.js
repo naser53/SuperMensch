@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { BOARDS } from "./boards.js";
+import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 
 export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#d08a12", "#6a5ccf", "#159a7a"];
@@ -167,7 +167,7 @@ export class Board3D {
 
   // (the square board seen over a corner needs a little more room)
   viewDistance(polar, az = 0) {
-    const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : 9.2;
+    const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : this.data.extent;
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.max(r / Math.tan(vfov / 2), r / (Math.tan(vfov / 2) * this.camera.aspect));
     return fit * (polar > 0.8 ? 0.9 : 1.05 + 0.08 * polar);
@@ -240,7 +240,7 @@ export class Board3D {
     this.game = game;
     this.playerName = playerName;    // (playerIndex) -> display text
     this.n = game.cfg.n_colors;
-    this.data = BOARDS[String(this.n)];
+    this.data = boardFor(this.n, game.cfg.corridor_len);
     for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
     this.resetShine();

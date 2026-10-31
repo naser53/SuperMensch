@@ -20,8 +20,9 @@ everything. The castle-breaker piece and point loans go into later versions.
 * Repo: https://github.com/naser53/SuperMensch (branch `main`).
 * Deliverable: one self-contained file, `dist/supermensch.html`, with the code and the
   Vazirmatn font inlined (esbuild 0.20.2).
-* Boards: **6 colors** (six arms, 60 fields, 10 per corridor) and **4 colors** (classic cross,
-  40 fields).
+* Boards: **6 colors** (six arms, 60 fields, 10 per corridor; or 84 fields, 14 per corridor, chosen per
+  game as `setup.corridor` in admin and offline setup, `Config.CORRIDORS`, geometry `boardFor()` in
+  `js/boards.js`) and **4 colors** (classic cross, 40 fields).
 * Modes: **two colors per player** (two dice) or **one color per player** (one die). People at
   the same screen and/or computer players.
 * Languages: English (default), Farsi (right to left), German.

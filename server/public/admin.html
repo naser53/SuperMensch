@@ -41,6 +41,7 @@
       <div class="row">
         Board <select id="gColors"><option value="6">6 colors</option><option value="4">4 colors</option></select>
         Game <select id="gMode"><option value="two">two colors each</option><option value="one">one color each</option></select>
+        Fields <select id="gCorr"><option value="10">10 per corridor</option><option value="14">14 per corridor (longer arms)</option></select>
         Dice <select id="gLevel"><option value="beginner">beginner</option><option value="intermediate">intermediate</option></select>
         Players <select id="gN"></select>
       </div>
@@ -92,6 +93,8 @@ function seatRows() {
     `<div class="row">Seat ${i + 1} <select data-seat="${i}">${opts(old[i] || String(users[i] ? users[i].id : "ai"))}</select></div>`).join("");
 }
 for (const id of ["#gColors", "#gMode", "#gN"]) $(id).onchange = seatRows;
+const corrShown = () => { $("#gCorr").disabled = $("#gColors").value !== "6"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
+$("#gColors").addEventListener("change", corrShown);
 
 $("#createBtn").onclick = async () => {
   const colors = +$("#gColors").value, mode = $("#gMode").value, half = colors / 2;
@@ -100,7 +103,7 @@ $("#createBtn").onclick = async () => {
     return s.value === "ai" ? { ai: true, colors: cols } : { user: +s.value, colors: cols };
   });
   try {
-    const r = await api("games", { name: $("#gName").value, setup: { mode, colors, level: $("#gLevel").value, seats } });
+    const r = await api("games", { name: $("#gName").value, setup: { mode, colors, level: $("#gLevel").value, corridor: +$("#gCorr").value, seats } });
     show("#createMsg", `Room "${r.name}" made (${r.id}). It shows on the game page now.`);
     $("#gName").value = "";
     loadRooms();
@@ -111,7 +114,7 @@ $("#createBtn").onclick = async () => {
 async function loadRooms(list) {
   const gs = list || await api("admin/games", {});
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
-    <code>${g.id}</code> <span class="muted">${g.status} · ${new Date(g.updated).toLocaleString()}</span>
+    <code>${g.id}</code> <span class="muted">${g.setup.corridor ? g.setup.corridor + " fields · " : ""}${g.status} · ${new Date(g.updated).toLocaleString()}</span>
     <button data-edit="${g.id}">Edit players</button> <button data-del="${g.id}">Delete</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));

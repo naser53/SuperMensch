@@ -196,6 +196,8 @@ class App {
     if (!this.offline) { el.innerHTML = h + this.roomsHtml() + "</div>"; return; }
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
       choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
+    if (s.colors === 6) h += `<h2>${this.T("corridor")}</h2><div class="choices">` +
+      Config.CORRIDORS.map(k => choice(this.T("corridor_n", { n: num(this.lang, k) }), "corridor", k, (s.corridor || 10) === k)).join("") + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
       choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
       choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") + "</div>";
@@ -278,6 +280,7 @@ class App {
     } else if (act === "n") s.n = +val;
     else if (act === "pairing") s.pairing = val;
     else if (act === "level") s.level = val;
+    else if (act === "corridor") s.corridor = +val;
     else if (act === "seat") s.seats[+val] = s.seats[+val] === "human" ? "ai" : "human";
     else if (act === "pick") { const [i, c] = String(val).split(":").map(Number); this.pickColor(i, c); }
     else if (act === "start") { this.startGame(); return; }
@@ -293,7 +296,7 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner" }, { autoDice: !this.debug });
+    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner", corridor: s.colors === 6 ? s.corridor || 10 : 10 }, { autoDice: !this.debug });
     this.game = this.table.game;
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
