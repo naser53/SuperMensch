@@ -341,7 +341,9 @@ class App {
       const who = t(this.lang, this.online && this.online.remote.has(g.turn) ? "online_other" : p.isAi ? "thinking" : "your_turn");
       status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
       if (dec && dec.note && !(human && dec.kind === "keep")) hint = this.S(dec.note);
-      if (dec && dec.kind === "dice") {
+      if (dec && dec.kind === "dice" && this.online) {
+        // online: the table waits for the server's throw; nothing to set or press here
+      } else if (dec && dec.kind === "dice") {                  // debug: set the dice by hand
         hint = `${hint} · ${this.T("dice_hint")}`;
         acts = btn('data-act="dice_go"', this.T("continue"), "primary") + btn('data-act="dice_rand"', this.T("random"));
       } else if (dec && p.isAi && this.debug) {
@@ -574,7 +576,8 @@ class App {
       return;
     }
     let cur;
-    if (dec && ["play", "keep", "dice"].includes(dec.kind)) cur = dec.dice;
+    if (dec && ["play", "keep"].includes(dec.kind)) cur = dec.dice;
+    else if (dec && dec.kind === "dice") cur = this.online ? this.diceRef : dec.dice;   // online: the server's throw is on its way
     else if (g.lastDice !== this.seenLast) cur = g.lastDice;   // a throw with no move: every die burns
     else cur = this.diceRef;
     this.seenLast = g.lastDice;
@@ -592,7 +595,7 @@ class App {
       this.diceRef = cur;
       this.diceOwner = owner;
       this.diceCleared = false;
-    } else if (cur && dec && dec.kind === "dice") b.placeDice(cur, colors(dec.player));
+    } else if (cur && dec && dec.kind === "dice" && !this.online) b.placeDice(cur, colors(dec.player));
     this.prevTurn = g.turn;
     if (!cur) return;
     if (this.diceOwner !== g.turn && !this.diceCleared && !b.diceRolling()) {   // the turn has passed: fade after the move
@@ -637,6 +640,7 @@ class App {
     const g = this.game;
     if (!g || !hit || hit.die === undefined || !g.pending) return;
     if (g.pending.kind === "dice") {
+      if (this.online) return;                                   // only debug sets dice by hand
       const d = g.pending.dice, k = hit.die;
       d[k] = ((d[k] - 1 + step) % 6 + 6) % 6 + 1;
       this.render();
@@ -1132,6 +1136,7 @@ function wire(app) {
       return;
     }
     const act = b.dataset.act;
+    if ((act === "dice_go" || act === "dice_rand") && app.online) return;
     if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
     else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
