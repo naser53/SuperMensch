@@ -1,7 +1,7 @@
 // SuperMensch browser version: setup screen, side panel and game loop.
-import { Config } from "./config.js";
-import { Game, Option, Player } from "./engine.js";
+import { Option, Player } from "./engine.js";
 import { SimpleAI } from "./ai.js";
+import { Table } from "./table.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
@@ -235,7 +235,8 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.game = new Game(players, s.mode, Config.forBoard(s.colors, s.level || "beginner", s.mode), null, this.debug);
+    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner" }, { autoDice: !this.debug });
+    this.game = this.table.game;
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
     this.aiPlan = null;
@@ -749,7 +750,7 @@ class App {
       this.keptIdx = this.keptDice(dec.dice, opt.payload[1]);
     }
     g.noMove = null;
-    g.choose(opt);
+    this.table.choose(opt);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
     if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
@@ -785,10 +786,10 @@ class App {
   setDebug(on) {
     const g = this.game;
     this.debug = on;
-    g.manual = on;
+    this.table.autoDice = !on;
     this.aiPlan = null;
     if (!on && g.pending && g.pending.kind === "dice") {
-      g.choose(new Option(null, ["dice", g.roll(g.pending.dice.length)]));
+      this.table.choose(new Option(null, ["dice", g.roll(g.pending.dice.length)]));
     }
     this.nextAi = performance.now() + this.delay;
     this.render();

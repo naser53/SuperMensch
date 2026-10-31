@@ -71,6 +71,7 @@ After a deliberate rule change, record the fixed games again with
 | `js/render3d.js` | 3D board with Three.js |
 | `js/main.js` | Setup screen, ribbon, game loop |
 | `js/debugcmd.js` | Debug console commands |
+| `js/table.js` | A game plus its event list, for replay and the online game |
 | `js/version.js` | The game version |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |

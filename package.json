@@ -5,7 +5,7 @@
   "type": "module",
   "description": "SuperMensch \u2014 multi-color Mensch board game, 3D, in the browser, offline",
   "scripts": {
-    "test": "node --test tests/rules.test.mjs",
+    "test": "node --test tests/rules.test.mjs tests/table.test.mjs",
     "simulate": "node tests/simulate.mjs 10",
     "build": "node tools/build.mjs"
   },
