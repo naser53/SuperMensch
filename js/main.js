@@ -6,6 +6,7 @@ import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18
 import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
+import { Config } from "./config.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -53,6 +54,9 @@ class App {
       seats: ["human", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
     this.delay = st.delay || 650;
     this.follow = !!st.follow;
+    this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
+    this.rooms = null;                 // null: loading · "error": no server · [rooms]
+    this.pick = { id: null, seats: [] };
     this.debug = false;
     this.game = null;
     this.ais = {};
@@ -89,7 +93,17 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay, follow: this.follow }); }
+  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay, follow: this.follow, offline: this.offline }); }
+
+  // the open rooms of the server, with their players and the seats in play right now
+  async loadRooms() {
+    try {
+      const r = await fetch(`${apiBase()}/api/games`, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      this.rooms = await r.json();
+    } catch { this.rooms = "error"; }
+    if (!this.game) this.render();
+  }
 
   setLang(l) {
     this.lang = l;
@@ -161,7 +175,7 @@ class App {
       const ws = this.online.ws;
       this.online.ws = null;
       try { ws.send(JSON.stringify({ t: "leave" })); } catch { /* not connected */ }
-      setTimeout(() => { location.href = "./"; }, 150);
+      setTimeout(() => { location.href = location.pathname; }, 150);
       return;
     }
     this.game = null;
@@ -177,6 +191,8 @@ class App {
     const nRange = s.mode === "two" ? s.colors / 2 : s.colors;
     let h = `<div class="card"><div class="top"><div><h1>${this.T("title")}</h1>
       <div class="muted">${this.T("subtitle")} · v${VERSION}</div></div>${this.langSelect()}</div>`;
+    h += `<div class="choices">${choice((this.offline ? "☑ " : "☐ ") + this.T("offline_play"), "offline", "", this.offline)}</div>`;
+    if (!this.offline) { el.innerHTML = h + this.roomsHtml() + "</div>"; return; }
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
       choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
@@ -216,8 +232,42 @@ class App {
     el.innerHTML = h;
   }
 
+  // the first page online: every open room with its players; tap a room's names, then Play
+  roomsHtml() {
+    let h = `<h2>${this.T("rooms")}</h2>`;
+    if (this.rooms === null) return h + `<div class="muted">…</div>`;
+    if (this.rooms === "error") return h + `<div class="muted">${this.T("rooms_error")}</div>` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+    if (!this.rooms.length) return h + `<div class="muted">${this.T("rooms_none")}</div>` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+    h += `<div class="muted small pick-hint">${this.T("rooms_pick")}</div>`;
+    for (const r of this.rooms) {
+      h += `<div class="room"><h3>${esc(r.name)}</h3><div class="choices">`;
+      r.players.forEach((p, i) => {
+        if (p.isAi) { h += `<span class="choice ai">${this.T("computer")}</span>`; return; }
+        const sel = this.pick.id === r.id && this.pick.seats.includes(i), held = (r.held || []).includes(i);
+        h += `<button class="choice${sel ? " sel" : ""}" data-act="who" data-val="${r.id}:${i}" ${held && !sel ? "disabled" : ""}>` +
+          `${esc(p.name)}${held ? ` <span class="muted small">(${this.T("in_play")})</span>` : ""}</button>`;
+      });
+      h += "</div></div>";
+    }
+    return h + `<button class="btn primary start" data-act="join" ${this.pick.seats.length ? "" : "disabled"}>${this.T("start")}</button> ` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+  }
+
   setupAction(act, val) {
     const s = this.setup;
+    if (act === "offline") { this.offline = !this.offline; this.persist(); if (!this.offline) this.loadRooms(); this.render(); return; }
+    if (act === "rooms_reload") { this.rooms = null; this.render(); this.loadRooms(); return; }
+    if (act === "who") {
+      const [id, i] = [val.split(":")[0], +val.split(":")[1]];
+      if (this.pick.id !== id) this.pick = { id, seats: [] };
+      const k = this.pick.seats.indexOf(i);
+      if (k >= 0) this.pick.seats.splice(k, 1); else this.pick.seats.push(i);
+      this.render();
+      return;
+    }
+    if (act === "join") { if (this.pick.seats.length) this.startOnline(this.pick.id, [...this.pick.seats].sort()); return; }
     if (act === "colors") {
       s.colors = +val;
       s.n = Math.min(s.n, s.mode === "two" ? s.colors / 2 : s.colors);
@@ -382,6 +432,7 @@ class App {
     return g.players.map((pl, i) => {
       const place = g.places.indexOf(i);
       const tags = [];
+      if (this.online && this.online.seats.includes(i)) tags.push(`<span class="tag you">${this.T("you")}</span>`);
       if (place >= 0) tags.push(`<span class="tag">${this.T("place", { n: place + 1 })}</span>`);
       if (g.mode === "two") tags.push(`<span class="cards" title="${this.T("cards", { n: g.cards[i] })}">${ICON.cardSmall}${num(this.lang, g.cards[i])}</span>`);
       if (g.stuck(i) && place < 0) tags.push(`<span class="stuck" title="${this.T("stuck")}">${ICON.stuck}</span>`);
@@ -914,7 +965,7 @@ class App {
 
   connect() {
     const o = this.online;
-    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/games/${encodeURIComponent(o.id)}/ws`);
+    const ws = new WebSocket(`${apiBase().replace(/^http/, "ws")}/api/games/${encodeURIComponent(o.id)}/ws`);
     o.ws = ws;
     ws.onopen = () => this.hello();
     ws.onmessage = e => this.onServer(JSON.parse(e.data));
@@ -940,7 +991,7 @@ class App {
       ws.close();
       const names = m.taken.map(i => m.setup.players[i].name).join(", ");
       this.showToast(this.T("online_taken", { p: names }), true);
-      setTimeout(() => { location.href = "./"; }, 4000);
+      setTimeout(() => { location.href = location.pathname; }, 4000);
       return;
     }
     if (m.t === "state") {
@@ -1126,9 +1177,17 @@ async function main() {
   wire(app);
   app.setLang(app.lang);
   const q = new URLSearchParams(location.search);       // an online game: play?game=K7QX-42&seats=0,2
+  if (!app.offline) app.loadRooms();
   if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
+
+// where the online server is: this page's own host when the server serves it, else Config.SERVER_URL
+function apiBase() {
+  const h = location.hostname;
+  const own = location.protocol.startsWith("http") && (h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
+  return own ? location.origin : Config.SERVER_URL;
+}
 
 // a random id for this browser, kept between visits (online seats come back to it)
 function deviceToken() {

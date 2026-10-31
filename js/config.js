@@ -68,6 +68,8 @@ export class Config {
 
   // dice levels for everybody at the table (same dice for people and computers)
   static LEVELS = { beginner: null, intermediate: 0.1 };
+  // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
+  static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 
   // (entry corridor, exit corridor) pairs; corridors 1..n, the final one is never an exit.
   tunnels() {
