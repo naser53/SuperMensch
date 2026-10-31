@@ -489,8 +489,11 @@ earlier sketch (browser dice, PINs).
 * **The server throws the dice** (crypto) and checks every move with the same engine (`Room` in
   `server/core.js`); computer seats are played by the server. Devices send `{pick}`, the server
   sends the new events to every device, which replays them (`Table`), so everybody sees the
-  opponents' throws live. Several seats can sit at one device; a seat goes to the device that
-  asked for it last.
+  opponents' throws live. Several seats can sit at one device. A seat stays with the connected
+  device that holds it until that device leaves (Exit sends `{t:"leave"}`, or its connection
+  closes); then anyone may take it. The same browser (random token in localStorage
+  `supermensch-device`) takes its seats back after a break (`claimSeats` in `server/core.js`;
+  owner's rule for now, password login and moving a game to another device come in M3).
 * Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
   M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
   as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
