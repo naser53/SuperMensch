@@ -52,6 +52,8 @@
   <section id="game" hidden>
     <h2 id="gTitle"></h2>
     <div id="gSeats"></div>
+    <div class="row"><a id="play3d" class="primary" href="#"><button class="primary">Play on the 3D board</button></a>
+      <span class="muted">with the seats ticked above</span></div>
     <div id="gStatus" class="row"></div>
     <div id="gOpts" class="opts"></div>
     <div id="gLog" class="muted"></div>
@@ -174,6 +176,7 @@ function draw() {
     g.mine = [...document.querySelectorAll("[data-mine]:checked")].map(x => +x.dataset.mine);
     claim(g.mine);
   });
+  $("#play3d").href = `/play?game=${g.id}&seats=${g.mine.join(",")}`;
   const d = v.pending;
   $("#gStatus").innerHTML = v.over ? `<b>Game over.</b> ${v.places.map((p, k) => `${k + 1}. ${esc(g.setup.players[p].name)}`).join(" · ")}`
     : `Round ${v.round} · <b>${esc(g.setup.players[d.player].name)}</b> ${d.kind}${d.dice.length ? ` · dice <b>${d.dice.join(" ")}</b>` : ""}
