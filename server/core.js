@@ -57,7 +57,7 @@ export function seatColors(mode, colors, i) { return mode === "two" ? [i, i + co
 // number of seats keeps the game going (only who sits there changes); another number starts
 // the game again. seats: [{ user } | { ai: true }]
 export function editSetup(old, seats, users) {
-  const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level,
+  const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level, corridor: old.corridor,
     seats: (seats || []).map((s, i) => ({ ...(s.ai ? { ai: true } : { user: s.user }), colors: seatColors(old.mode, old.colors, i) })) }, users);
   return { setup, keep: setup.players.length === old.players.length };
 }
@@ -68,6 +68,7 @@ export function checkSetup(su, users) {
   const colors = su.colors === 4 || su.colors === 6 ? su.colors : null;
   const level = Object.keys(Config.LEVELS).includes(su.level) ? su.level : "beginner";
   if (!mode || !colors) throw new Error("bad mode or board");
+  const corridor = colors === 6 && Config.CORRIDORS.includes(su.corridor) ? su.corridor : 10;
   const seats = Array.isArray(su.seats) ? su.seats : [];
   const max = mode === "two" ? colors / 2 : colors;
   if (seats.length < 2 || seats.length > max) throw new Error("bad number of players");
@@ -86,7 +87,7 @@ export function checkSetup(su, users) {
     return { name: u.name, colors: cols, isAi: false, user: u.id };
   });
   if (!players.some(p => !p.isAi)) throw new Error("no human player");
-  return { players, mode, colors, level };
+  return { players, mode, colors, level, ...(corridor !== 10 ? { corridor } : {}) };
 }
 
 // One online game. The setup and the events are all that is stored.
