@@ -1,0 +1,21 @@
+# The online server (v2). Deployed by .github/workflows/server.yml from the v2 branch.
+name = "supermensch-dev"
+main = "server/worker.js"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "server/public"
+binding = "ASSETS"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "GameRoom"
+
+# SQLite-backed Durable Objects: the kind the free plan offers
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Lobby", "GameRoom"]
