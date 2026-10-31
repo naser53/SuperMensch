@@ -6,7 +6,8 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-10-30: **version 1.0.4** (tag `v1.0.4`), closed by the owner. The one-color game is
+State as of 2026-10-31: **version 2.0.0** (tag `v2.0.0`): the online family version (section 12) on top of
+version 1.0.4, which the owner closed. The one-color game is
 the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
 
@@ -493,7 +494,8 @@ earlier sketch (browser dice, PINs).
 * Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
   M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
   as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
-  M5 lobby in the panel, release v2.0.0.
+  M5 lobby in the panel. Released early as v2.0.0 (owner) after M2 plus room makers and admin delete;
+  M3 to M5 come as v2.x.
 * Code: `server/worker.js` (routes, both Durable Objects, WebSocket protocol in its comments),
   `server/core.js` (no Cloudflare parts, tested in `tests/server.test.mjs`), `server/public/`
   (pages), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
