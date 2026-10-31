@@ -316,6 +316,7 @@
 | `js/config.js` | همه‌ی پارامترها؛ `Config.forBoard(n, level)` و `Config.LEVELS` |
 | `js/engine.js` | موتور قوانین، بدون گرافیک |
 | `js/debugcmd.js` | دستورهای کنسول دیباگ: score، move، dice |
+| `js/table.js` | `Table`: یک بازی همراه دفتر رویدادهایش (`{dice}`، `{pick}`)؛ `Table.replay`، `fingerprint` (پایه‌ی نسخه‌ی آنلاین ۲) |
 | `js/ai.js` | بازیکن کامپیوتری ساده (کارت‌های سه‌تاس را برای لحظه‌های خوب نگه می‌دارد؛ `AI_WEIGHTS`) |
 | `js/boards.js` | هندسه‌ی صفحه‌ها، جای نام‌ها، ردیف تاس‌ها بین حیاط و دالان |
 | `js/strings.js`، `js/i18n.js` | متن‌ها به سه زبان؛ `shape()` و `num()` برای رقم فارسی |
@@ -323,6 +324,7 @@
 | `js/main.js` | `App`: صفحه‌ی شروع، ریبون، ماشین حالت کلیک، حلقه‌ی بازی |
 | `css/style.css` | چیدمان، ریبون، کارت، منوها، واکنش‌گرایی |
 | `tests/rules.test.mjs` | ۳۷ آزمون قوانین (`node:test`) |
+| `tests/table.test.mjs` | آزمون‌های میز: دفتر رویدادها همان بازی را می‌سازد |
 | `tests/golden.mjs`، `tests/golden.json` | اثر انگشت بازی‌های ثابت |
 | `tests/simulate.mjs` | بازی کامپیوتر با کامپیوتر |
 | `tools/build.mjs` | ساخت `dist/supermensch.html` |
@@ -332,7 +334,9 @@
 
 ### مدل موتور
 * ماشین حالت: `Game.pending` تصمیم فعلی است با نوع‌های `pre_roll`، `keep`، `play`، `dice`.
-  `Game.choose(option)` انتخاب را اجرا می‌کند. `Game.manual` تاس دستی را روشن می‌کند.
+  `Game.choose(option)` انتخاب را اجرا می‌کند. `Game.manual` هر پرتاب را یک تصمیم `dice` می‌کند.
+  برنامه از راه یک `Table` (`js/table.js`) بازی می‌کند که موتورش همیشه manual است: میز خودش تاس
+  می‌ریزد (`autoDice`)، جز در حالت دیباگ، و هر پاسخ را به‌صورت یک رویداد در دفترش می‌نویسد.
   `Game.sequences()` همه‌ی ترتیب‌های کلیک مجاز را می‌دهد. موتور قطعی است: تاس‌ها و انتخاب‌های
   یکسان همیشه به وضعیت یکسان می‌رسند (پایه‌ی طرح آنلاین).
 * وضعیت: `pos`، `kills` (امتیاز درجه)، `hunters` (`[color, abs, dir, rankPts]`)، `scores`، `tunnels`،
@@ -355,7 +359,7 @@
 
 ```
 npm ci
-npm test            # 37 rule tests + fixed-game check
+npm test            # 37 rule tests + fixed-game check + table tests
 npm run simulate    # computer-vs-computer games
 npm run build       # dist/supermensch.html
 ```

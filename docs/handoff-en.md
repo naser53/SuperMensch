@@ -359,6 +359,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
 | `js/engine.js` | Rules engine, no graphics |
 | `js/debugcmd.js` | Debug console commands: score, move, dice |
+| `js/table.js` | `Table`: a game plus its event list (`{dice}`, `{pick}`); `Table.replay`, `fingerprint` (v2 online groundwork) |
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
@@ -366,6 +367,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
 | `tests/rules.test.mjs` | 37 rule tests (`node:test`) |
+| `tests/table.test.mjs` | Table tests: events rebuild the same game |
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
 | `tools/build.mjs` | Builds `dist/supermensch.html` |
@@ -375,7 +377,9 @@ numbers are wrapped in `<bdi dir="ltr">`.
 
 ### Engine model
 * A state machine. `Game.pending` is the current Decision; its kinds are `pre_roll`, `keep`,
-  `play`, `dice`. `Game.choose(option)` applies a choice. `Game.manual` turns on debug dice.
+  `play`, `dice`. `Game.choose(option)` applies a choice. `Game.manual` makes every throw a `dice` decision.
+  The app plays through a `Table` (`js/table.js`), whose engine is always manual: the table
+  throws the dice itself (`autoDice`), except in debug mode, and logs every answer as an event.
   `Game.sequences()` lists every legal click order. The engine is deterministic: the same dice
   and choices always give the same state (the basis for the online plan).
 * State: `pos`, `kills` (rank points), `hunters` (`[color, abs, dir, rankPts]`), `scores`,
@@ -400,7 +404,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 ## 7. Build, test, release
 ```
 npm ci
-npm test            # 37 rule tests + fixed-game check
+npm test            # 37 rule tests + fixed-game check + table tests
 npm run simulate    # computer-vs-computer games
 npm run build       # dist/supermensch.html
 ```
