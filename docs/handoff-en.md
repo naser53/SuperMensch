@@ -480,9 +480,15 @@ npm run build       # dist/supermensch.html
 Agreed plan (2026-10-31): the claude.ai doc "طرح نسخه ۲ سوپرمنش: آنلاین خانوادگی". It replaces the
 earlier sketch (browser dice, PINs).
 * Family use, free plan, light security: no passwords; 10 users `user1`..`user10` made at the
-  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin, or a
-  user the admin gave the room-maker role (`can_create`, a tick on the admin list), makes games.
-  The admin list also shows every game with a Delete button (two presses; closes its connections).
+  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin makes
+  rooms (owner, 2026-10-31: the room-maker role is gone; the old `can_create` column is unused).
+* Pages (owner's redesign for children, 2026-10-31): `/` is the game itself. Its first page lists
+  the open rooms with their players (`GET /api/games` adds `held`, the seats in play now); a child
+  taps a room's names (several on one device) and Start, and plays without leaving the page. A tick
+  "Offline game" shows the usual setup instead. `/admin` (`server/public/admin.html`) is settings
+  only, behind the admin key: rename players, make rooms, delete rooms (two presses). `/play?…`
+  redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
+  else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
   `GameRoom` per game. Each game has a GameID (`K7QX-42`, made by the server) and a GameName
   (typed by its creator); the lobby lists open games (idle 24 h → off the list, kept in history).

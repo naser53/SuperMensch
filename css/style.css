@@ -279,3 +279,9 @@ label.check.on { color: var(--accent); }
   #setup .choice { padding: 9px 12px; }
   .pad { padding: 10px 12px; }
 }
+/* the first page online: rooms and their players */
+#setup .room { margin: 10px 0 14px; }
+#setup .room h3 { font-size: 16px; margin: 0 0 8px; }
+#setup .choice.ai { opacity: .6; cursor: default; }
+#setup .choice:disabled { opacity: .45; cursor: default; }
+.chip .tag.you { background: var(--accent); color: #fff; }

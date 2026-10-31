@@ -1,21 +1,26 @@
 // SuperMensch online server (Cloudflare Worker).
 //   Lobby     one Durable Object: users, the list of games and their results
 //   GameRoom  one Durable Object per game: setup, events, the devices' WebSockets
-// Pages come from server/public. Security is light on purpose (family use): no passwords,
-// only the admin key (secret ADMIN_KEY) guards renaming users and handing out the room-maker
-// role; games are made by the admin or by a user with that role.
+// Pages come from server/public: / is the game (built from js/, with the room list on its first
+// page), /admin the admin page. Security is light on purpose (family use): no passwords for
+// players; only the admin key (secret ADMIN_KEY) renames users and makes and deletes rooms.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, mayCreate, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
-  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
+// the downloaded game file (file://) asks this server too
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, x-admin-key",
+  "access-control-allow-methods": "GET, POST, OPTIONS" };
 const fail = (msg, status = 400) => json({ error: msg }, status);
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    if (url.pathname === "/play") return Response.redirect(new URL("/" + url.search, url).href, 301);   // old links
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     try { return await api(req, env, url); }
     catch (e) { return fail(String(e.message || e)); }
   },
@@ -32,7 +37,6 @@ async function api(req, env, url) {
     if (!adminOk) return fail("wrong admin key", 403);
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
-    if (parts[1] === "role" && body) return json(await lobby.setRole(body.id, !!body.canCreate));
     if (parts[1] === "games") return json(await lobby.allGames());
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
@@ -40,10 +44,14 @@ async function api(req, env, url) {
     }
   }
   if (parts[0] === "games" && parts.length === 1) {
-    if (req.method === "GET") return json(await lobby.openGames());
+    if (req.method === "GET") {        // with the seats held right now by a connected device
+      const gs = await lobby.openGames();
+      await Promise.all(gs.map(async g => { g.held = Object.keys(await env.ROOM.get(env.ROOM.idFromName(g.id)).held()).map(Number); }));
+      return json(gs);
+    }
     if (req.method === "POST") {
       const users = await lobby.users();
-      if (!mayCreate(adminOk, users, body.by)) return fail("only the admin or a room maker can make a game", 403);
+      if (!adminOk) return fail("only the admin makes rooms", 403);
       const name = cleanName(body.name);
       if (!name) return fail("the game needs a name");
       const setup = checkSetup(body.setup, users);
@@ -79,15 +87,9 @@ export class Lobby extends DurableObject {
   }
 
   users() {
-    return this.sql.exec(`SELECT id, name, can_create FROM users ORDER BY id`).toArray()
-      .map(u => ({ id: u.id, name: u.name, canCreate: !!u.can_create }));
+    return this.sql.exec(`SELECT id, name FROM users ORDER BY id`).toArray().map(u => ({ id: u.id, name: u.name }));
   }
 
-  setRole(id, canCreate) {
-    if (!this.sql.exec(`SELECT id FROM users WHERE id = ?`, id | 0).toArray().length) throw new Error("no such user");
-    this.sql.exec(`UPDATE users SET can_create = ? WHERE id = ?`, canCreate ? 1 : 0, id | 0);
-    return this.users();
-  }
 
   rename(id, name) {
     name = cleanName(name);
@@ -213,6 +215,8 @@ export class GameRoom extends DurableObject {
     server.serializeAttachment({ device: "?", seats: [] });
     return new Response(null, { status: 101, webSocket: client });
   }
+
+  held() { return this._seats(); }
 
   // seat -> device name, for every seat held by a connected device
   _seats() {
