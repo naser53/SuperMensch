@@ -82,15 +82,22 @@ const api = async (path, opts = {}) => {
   return d;
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-let users = [], ws = null, game = null;
+let users = [], ws = null, game = null, adminOk = false;
+
+// games are made by the admin or by a user the admin gave the room-maker role
+function showCreate() {
+  const me = users.find(u => u.id === +$("#me").value);
+  $("#create").hidden = !!game || !(adminOk || (me && me.canCreate));
+}
 
 async function loadUsers() {
   users = await api("users");
   const me = store.get("me") || "1";
   $("#me").innerHTML = users.map(u => `<option value="${u.id}" ${String(u.id) === me ? "selected" : ""}>${esc(u.name)}</option>`).join("");
   seatRows();
+  showCreate();
 }
-$("#me").onchange = () => { store.set("me", $("#me").value); seatRows(); };
+$("#me").onchange = () => { store.set("me", $("#me").value); seatRows(); showCreate(); };
 
 async function loadGames() {
   const gs = await api("games");
@@ -124,8 +131,8 @@ $("#createBtn").onclick = async () => {
     return s.value === "ai" ? { ai: true, colors: cols } : { user: +s.value, colors: cols };
   });
   try {
-    const r = await api("games", { method: "POST", body: JSON.stringify({ name: $("#gName").value,
-      setup: { mode, colors, level: $("#gLevel").value, seats } }) });
+    const r = await api("games", { method: "POST", headers: adminOk ? { "x-admin-key": $("#adminKey").value } : {},
+      body: JSON.stringify({ name: $("#gName").value, by: +$("#me").value, setup: { mode, colors, level: $("#gLevel").value, seats } }) });
     join(r.id);
   } catch (e) { $("#createErr").textContent = e.message; }
 };
@@ -189,7 +196,7 @@ function draw() {
 }
 
 $("#leaveBtn").onclick = () => { if (ws) ws.close(); ws = null; game = null;
-  $("#game").hidden = true; $("#lobby").hidden = $("#create").hidden = false; loadGames(); };
+  $("#game").hidden = true; $("#lobby").hidden = false; showCreate(); loadGames(); };
 
 $("#adminKey").value = store.get("adminKey") || "";
 $("#adminBtn").onclick = async () => {
@@ -198,8 +205,19 @@ $("#adminBtn").onclick = async () => {
   try { await api("admin/check", { method: "POST", body: "{}", headers: { "x-admin-key": key } }); }
   catch (e) { $("#adminErr").textContent = e.message; return; }
   store.set("adminKey", key);
+  adminOk = true;
+  showCreate();
   $("#admin").innerHTML = users.map(u => `<div class="row"><code>user ${u.id}</code>
-    <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button></div>`).join("");
+    <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button>
+    <label><input type="checkbox" data-role="${u.id}" ${u.canCreate ? "checked" : ""}> can make games</label></div>`).join("");
+  document.querySelectorAll("[data-role]").forEach(c => c.onchange = async () => {
+    try {
+      await api("admin/role", { method: "POST", headers: { "x-admin-key": key },
+        body: JSON.stringify({ id: +c.dataset.role, canCreate: c.checked }) });
+      $("#adminErr").textContent = "";
+      await loadUsers();
+    } catch (e) { $("#adminErr").textContent = e.message; c.checked = !c.checked; }
+  });
   document.querySelectorAll("[data-ren]").forEach(b => b.onclick = async () => {
     const id = +b.dataset.ren;
     try {
