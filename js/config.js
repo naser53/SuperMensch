@@ -68,6 +68,11 @@ export class Config {
 
   // dice levels for everybody at the table (same dice for people and computers)
   static LEVELS = { beginner: null, intermediate: 0.1 };
+  // animation speed in the panel: the pause between moves (ms) times the factor; a piece's
+  // hop takes HOP_SHARE of that pause. "fast" is the speed of version 1.
+  static ANIM_PAUSE = 650;
+  static ANIM_SPEEDS = { slow: 2.4, medium: 1.6, fast: 1 };
+  static HOP_SHARE = 0.22;
   // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 

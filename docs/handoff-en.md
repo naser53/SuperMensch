@@ -243,7 +243,7 @@ seat also shows the board's color dots to pick its color.
 The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
-  Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens). Menu (and
+  Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), Menu (icons with tooltips; labels on wide screens). Menu (and
   Esc) asks first while a game is running: *Leave* or *Keep playing*; the computer waits meanwhile.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
@@ -486,7 +486,10 @@ earlier sketch (browser dice, PINs).
   the open rooms with their players (`GET /api/games` adds `held`, the seats in play now); a child
   taps a room's names (several on one device) and Start, and plays without leaving the page. A tick
   "Offline game" shows the usual setup instead. `/admin` (`server/public/admin.html`) is settings
-  only, behind the admin key: rename players, make rooms, delete rooms (two presses). `/play?…`
+  only, behind the admin key: rename players, make rooms, delete rooms (two presses), and edit a
+  room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
+  `server/core.js`). The same number of players keeps the moves; another number starts the game
+  again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page. `/play?…`
   redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
   else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
