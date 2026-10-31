@@ -2,10 +2,11 @@
 //   Lobby     one Durable Object: users, the list of games and their results
 //   GameRoom  one Durable Object per game: setup, events, the devices' WebSockets
 // Pages come from server/public. Security is light on purpose (family use): no passwords,
-// only the admin key (secret ADMIN_KEY) guards renaming users.
+// only the admin key (secret ADMIN_KEY) guards renaming users and handing out the room-maker
+// role; games are made by the admin or by a user with that role.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, cleanName, isGameId, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -24,19 +25,23 @@ async function api(req, env, url) {
   const lobby = env.LOBBY.get(env.LOBBY.idFromName("lobby"));
   const parts = url.pathname.split("/").filter(Boolean).slice(1);   // after "api"
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : null;
+  const adminOk = !!env.ADMIN_KEY && req.headers.get("x-admin-key") === env.ADMIN_KEY;
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   if (parts[0] === "admin") {
-    if (!env.ADMIN_KEY || req.headers.get("x-admin-key") !== env.ADMIN_KEY) return fail("wrong admin key", 403);
+    if (!adminOk) return fail("wrong admin key", 403);
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
+    if (parts[1] === "role" && body) return json(await lobby.setRole(body.id, !!body.canCreate));
   }
   if (parts[0] === "games" && parts.length === 1) {
     if (req.method === "GET") return json(await lobby.openGames());
     if (req.method === "POST") {
+      const users = await lobby.users();
+      if (!mayCreate(adminOk, users, body.by)) return fail("only the admin or a room maker can make a game", 403);
       const name = cleanName(body.name);
       if (!name) return fail("the game needs a name");
-      const setup = checkSetup(body.setup, await lobby.users());
+      const setup = checkSetup(body.setup, users);
       const id = await lobby.addGame(name, setup);
       const room = env.ROOM.get(env.ROOM.idFromName(id));
       await room.init(id, name, setup);
@@ -62,11 +67,22 @@ export class Lobby extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, name TEXT NOT NULL,
       created INTEGER, updated INTEGER, status TEXT, setup TEXT, result TEXT)`);
+    const cols = this.sql.exec(`PRAGMA table_info(users)`).toArray().map(c => c.name);
+    if (!cols.includes("can_create")) this.sql.exec(`ALTER TABLE users ADD COLUMN can_create INTEGER NOT NULL DEFAULT 0`);
     if (!this.sql.exec(`SELECT COUNT(*) AS n FROM users`).one().n)
       for (let i = 1; i <= USERS; i++) this.sql.exec(`INSERT INTO users (id, name) VALUES (?, ?)`, i, `user${i}`);
   }
 
-  users() { return this.sql.exec(`SELECT id, name FROM users ORDER BY id`).toArray(); }
+  users() {
+    return this.sql.exec(`SELECT id, name, can_create FROM users ORDER BY id`).toArray()
+      .map(u => ({ id: u.id, name: u.name, canCreate: !!u.can_create }));
+  }
+
+  setRole(id, canCreate) {
+    if (!this.sql.exec(`SELECT id FROM users WHERE id = ?`, id | 0).toArray().length) throw new Error("no such user");
+    this.sql.exec(`UPDATE users SET can_create = ? WHERE id = ?`, canCreate ? 1 : 0, id | 0);
+    return this.users();
+  }
 
   rename(id, name) {
     name = cleanName(name);

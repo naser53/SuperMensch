@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, cleanName, isGameId, newGameId } from "../server/core.js";
+import { Room, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 
@@ -12,6 +12,15 @@ test("game ids are short and readable", () => {
   for (let k = 0; k < 200; k++) assert.ok(isGameId(newGameId()));
   assert.ok(!isGameId("K7QX-4"));
   assert.ok(!isGameId("../x"));
+});
+
+test("only the admin or a room maker makes games", () => {
+  const us = [{ id: 1, name: "a", canCreate: false }, { id: 2, name: "b", canCreate: true }];
+  assert.ok(mayCreate(true, us, undefined));
+  assert.ok(mayCreate(false, us, 2));
+  assert.ok(!mayCreate(false, us, 1));
+  assert.ok(!mayCreate(false, us, 9));
+  assert.ok(!mayCreate(false, us, undefined));
 });
 
 test("names are trimmed and limited", () => {

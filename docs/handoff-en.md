@@ -479,7 +479,8 @@ npm run build       # dist/supermensch.html
 Agreed plan (2026-10-31): the claude.ai doc "طرح نسخه ۲ سوپرمنش: آنلاین خانوادگی". It replaces the
 earlier sketch (browser dice, PINs).
 * Family use, free plan, light security: no passwords; 10 users `user1`..`user10` made at the
-  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`).
+  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin, or a
+  user the admin gave the room-maker role (`can_create`, a tick on the admin list), makes games.
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
   `GameRoom` per game. Each game has a GameID (`K7QX-42`, made by the server) and a GameName
   (typed by its creator); the lobby lists open games (idle 24 h → off the list, kept in history).

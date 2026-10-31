@@ -18,6 +18,12 @@ export function newGameId(rand = cryptoRandom) {
   return `${s}-${String(Math.floor(rand() * 100)).padStart(2, "0")}`;
 }
 
+// Who may make a game: the admin, or a user the admin gave the room-maker role.
+// (No passwords: a device says who it is; enough for the family.)
+export function mayCreate(adminOk, users, by) {
+  return !!adminOk || users.some(u => u.id === by && u.canCreate);
+}
+
 export function isGameId(s) { return typeof s === "string" && /^[A-Z]{4}-\d\d$/.test(s); }
 
 export function cryptoRandom() {
