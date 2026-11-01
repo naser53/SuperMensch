@@ -377,7 +377,8 @@ the fingerprint.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
   locked until *Scores* is pressed again.
 * **View menu:** grows out of the button and folds back into it.
-* **Sound effects** (`js/sound.js`, made with the Web Audio API, no sound files): a wooden clack
+* **Sound effects** (`js/sound.js`, made with the Web Audio API, no sound files): dice clicking
+  on the board at each bounce of the throw and when they land at the yard; a wooden clack
   like a chess piece when a piece lands; a small blast when a piece is captured, a stronger one
   with a rumble when a general or marshal is hit; three knocks on a door when a triple-dice card is
   played; a rising chime when a piece comes out of the yard onto its gate (also a hunter); a whistle

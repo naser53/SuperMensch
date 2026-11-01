@@ -1092,6 +1092,9 @@ export class Board3D {
       d.spinAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
       d.spin = (5 + Math.random() * 3) * Math.PI;
       d.throw = { t0: null, delay: k * 40, t1, hold, t2, from, land };
+      // the die hits the board where its bounce touches down (u = 0.2, 0.6, 1 in stepDice), then lands at the yard
+      [[0.2, 1], [0.6, 0.45], [1, 0.15]].forEach(([u, v]) => sound.at(k * 40 + u * t1, () => sound.die(v)));
+      sound.at(k * 40 + t1 + hold + t2, () => sound.die(0.3));
       d.grp.position.copy(from);
       this.dice.push(d);
     });

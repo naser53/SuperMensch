@@ -1,5 +1,6 @@
 // Sound effects, made with the Web Audio API (no sound files, so the single-file build stays small
 // and works offline). Every sound is synthesized when it plays:
+//   die       dice hitting the board as they tumble, and landing at the yard
 //   move      a wooden clack, like a chess piece set down on the board
 //   capture   a small blast; a hit general or marshal: a stronger blast with a rumble
 //   knock     three knocks on a door: a triple-dice card is played
@@ -98,6 +99,16 @@ class Sound {
     this.noise(t, 0.05, this.filter("bandpass", 2600 + Math.random() * 600, 2.5, this.env(t, 0.55 * v, 0.001, 0.035)));
     this.tone(t, "sine", 720 * v, 520, 0.07, this.env(t, 0.35 * v, 0.002, 0.06));
     this.tone(t, "triangle", 210, 150, 0.12, this.env(t, 0.5 * v, 0.003, 0.1));
+  }
+
+  // a die hits the board (v: how hard): a hard, bright click with a little rattle
+  die(v = 1) {
+    const c = this.live(); if (!c) return;
+    const t = c.currentTime + 0.003, f = 3200 + Math.random() * 1500;
+    this.noise(t, 0.03, this.filter("bandpass", f, 4, this.env(t, 0.45 * v, 0.0008, 0.02)));
+    this.tone(t, "sine", 1500 + Math.random() * 400, 1100, 0.04, this.env(t, 0.18 * v, 0.001, 0.035));
+    const t2 = t + 0.025 + Math.random() * 0.03;           // the die tips over: a second, softer tick
+    this.noise(t2, 0.02, this.filter("bandpass", f * 0.8, 4, this.env(t2, 0.2 * v, 0.0008, 0.015)));
   }
 
   // a blast; big: a general or marshal is hit (louder, deeper, longer, with a rumble)
