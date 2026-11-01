@@ -860,7 +860,10 @@ class App {
   command(input) {
     const g = this.game;
     if (!g || !input.value.trim()) return;
+    const text = input.value.trim(), at = this.table.events.length;
     const r = runCommand(g, input.value, o => this.choose(o));
+    if (r.key === "cmd_score" || r.key === "cmd_moved")
+      (this.table.edits = this.table.edits || []).push({ at, cmd: text });     // score / move change the state outside the events
     this.cmdBox.querySelector(".cmd-out").textContent = t(this.lang, r.key, r.params);
     this.cmdBox.querySelector(".cmd-out").classList.toggle("bad", !/^cmd_(score|moved|dice|dice_next)$/.test(r.key));
     if (!/usage|not_|no_|bad|taken|count/.test(r.key)) input.value = "";
@@ -964,7 +967,49 @@ class App {
       ${table("info_hits", corr)}${c.walls ? table("info_breaks", brk) : ""}${c.ranks ? table("info_ranks", ranks) : ""}
       ${table("info_end", end)}${c.tunnels_on ? table("info_tunnels", tun) : ""}
       <p class="muted small">${this.T("info_note")}</p>
-      <h3>${this.T("log")}</h3><div class="info-log">${g.log.slice().reverse().map(m => `<div>${this.S(m)}</div>`).join("")}</div></div>`;
+      <div class="row between log-head"><h3>${this.T("log")}</h3><button class="btn" data-act="copy_log" title="${this.T("copy_log_hint")}">${this.T("copy_log")}</button></div><div class="info-log">${g.log.slice().reverse().map(m => `<div>${this.S(m)}</div>`).join("")}</div></div>`;
+  }
+
+  // The text behind the Copy button of the move log: the setup, the moves in English, and the
+  // setup and events as JSON, so the owner can paste a game into a chat and tools/replay.mjs
+  // rebuilds it exactly.
+  gameReport() {
+    const g = this.game, tb = this.table, en = x => tr("en", x);
+    const cname = c => COLOR_NAMES.en[c] || String(c);
+    const setup = { ...tb.setup, players: tb.setup.players.map(p => ({ name: p.name, colors: p.colors.slice(), isAi: !!p.isAi })) };
+    const lines = [
+      `SuperMensch ${VERSION} · game report · ${new Date().toISOString()}`,
+      `Board: ${g.cfg.n_colors} colors · corridor ${setup.corridor || 10} · mode ${g.mode} · level ${setup.level || "beginner"}`,
+      "Players:",
+      ...g.players.map((p, i) => `  ${i + 1}. ${en(p.name)} · ${p.isAi ? "computer" : "human"} · colors ${p.colors.map(cname).join(", ")} · score ${g.state.scores[i]}`),
+      `Online: ${this.online ? `room ${this.online.id}, this device plays seats ${this.online.seats.map(i => i + 1).join(", ")}` : "no (one device)"}`,
+      `Debug mode: ${this.debug ? "on" : "off"} · debug edits: ${(tb.edits || []).length}`,
+      `Language: ${this.lang} · round ${g.turnNo} · turn of player ${g.turn + 1} · pending ${g.pending ? g.pending.kind : "none"} · over ${!!g.over}`,
+      `Fingerprint: ${fingerprint(g)} · events ${tb.events.length}`,
+      "",
+      "Moves (oldest first):",
+      ...g.log.map((m, i) => `${i + 1}. ${en(m)}`),
+      "",
+      "Replay data (node tools/replay.mjs <file>):",
+      JSON.stringify({ version: VERSION, setup, events: tb.events, edits: tb.edits || [], fp: fingerprint(g) }),
+    ];
+    return lines.join("\n");
+  }
+
+  async copyLog() {
+    const text = this.gameReport();
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* file:// or an old browser: below */ }
+    if (!ok) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      ta.remove();
+    }
+    this.showToast(this.T(ok ? "copy_log_done" : "copy_log_failed"));
   }
 
   // Board views, as in chess programs: from above, angled, low; turn by one seat; my side.
@@ -1175,6 +1220,7 @@ function wire(app) {
     else if (act === "info") app.showInfo(true);
     else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
+    else if (act === "copy_log") app.copyLog();
   });
   document.addEventListener("input", e => {
     if (e.target.dataset.name === undefined) return;
