@@ -4,6 +4,17 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v2.1.0 (2026-11-01)
+
+The online and the offline game come from one branch again (`main`); the server deploys from it.
+* **Colors online:** on the first page a child taps their name and picks the seat's colors on a
+  small picture of the board, until the first move. First come, first served.
+* **Wall and castle sign:** when an opponent's wall or castle stops a move, its sign pops up over
+  that structure and shakes, instead of the plain "not allowed" sign.
+* **Rule fix:** a piece on its threshold and one on its own gate are not a wall.
+* **Copy button** in Info > Moves: copies the setup, the moves and a replay line, for debugging.
+* **Board:** turn it from any free spot; zoom with the wheel.
+
 ## v2.0.0 (2026-10-31)
 
 The online family version (owner). The offline game in `supermensch.html` plays as before.

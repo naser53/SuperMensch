@@ -534,14 +534,17 @@ earlier sketch (browser dice, PINs).
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
 * **Colors on the first page** (owner, 2026-11-01): after tapping a name, a child picks the
-  seat's colors (two in the two-color game; a tap replaces the older one) until a person makes
+  seat's colors on a small picture of the board (`roomColorsHtml`: each yard is a button, as the
+  3D view first shows the board) (two in the two-color game; a tap replaces the older one) until a person makes
   the first move. First come, first served: colors of seats that picked already are grey; a color
   of a seat that has not picked (or of a computer) is swapped. `POST /api/games/<ID>/colors
   {seat, colors}` (`pickColors`, `colorsKeep`, `Room.recolor` in `server/core.js`): the
   throws before the first move stay, the rest is played again; devices in the game get
   `{t:"recolor"}` and load the new state. The admin page has no color choice.
-* Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
-  (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.
+* Git (owner, 2026-11-01, from v2.1.0): one long-lived branch, `main`. Each piece of work is a
+  short branch with a PR into `main`; the branch is deleted after the merge. A push to `main`
+  publishes `latest`, makes a release when the version is new, and deploys the server. The old
+  `v2` branch is no longer used.
 
 ### 12.1 Reading a live game from a Claude thread (owner, 2026-11-01)
 `GET /api/games/<ID>` returns `{ setup, events, fp, ... }` with no key (fine by the owner: anyone

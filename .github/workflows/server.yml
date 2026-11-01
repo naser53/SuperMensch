@@ -1,12 +1,12 @@
 name: Online server
 
-# Deploys the v2 online server (wrangler.toml) to Cloudflare from the v2 branch.
+# Deploys the online server (wrangler.toml) to Cloudflare from the main branch (since v2.1.0).
 # Repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and ADMIN_KEY (the key
 # for renaming users on the page; any password the owner chooses).
 
 on:
   push:
-    branches: [v2]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
