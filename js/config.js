@@ -77,6 +77,8 @@ export class Config {
   static ANIM_PAUSE = 650;
   static ANIM_SPEEDS = { slow: 2.4, medium: 1.6, fast: 1 };
   static HOP_SHARE = 0.22;
+  // loudness of the sound effects (js/sound.js), 0..1; players switch them on or off in the ribbon
+  static SOUND_VOLUME = 0.7;
   // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 

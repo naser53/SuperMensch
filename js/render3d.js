@@ -4,6 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
+import { sound } from "./sound.js";
 
 export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#d08a12", "#6a5ccf", "#159a7a"];
 export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fbefd6", "#e9e6fb", "#d8f2ea"];
@@ -898,6 +899,12 @@ export class Board3D {
     return pts;
   }
 
+  // a piece (or a hunter) comes out of the yard onto the track: the gate sound
+  entersGate(a, b, m) {
+    if (m[0] === "p") return a.pos[m[1]][m[2]] === YARD && b.pos[m[1]][m[2]] >= 0 && b.pos[m[1]][m[2]] < this.game.L;
+    return !a.hunters[m[1]] && !!b.hunters[m[1]];
+  }
+
   meshOf(m) {
     return m[0] === "p" ? this.pieceMeshes.get(`${m[1]},${m[2]}`) : this.hunterMeshes.get(m[1]);
   }
@@ -912,10 +919,14 @@ export class Board3D {
       if (grp && pts && pts.length > 1) {
         const dur = hop * (pts.length - 1) * (pts.length === 2 ? 2.2 : 1);
         grp.userData.moves = (grp.userData.moves || []).concat([{ pts, t0: t, dur }]);
+        if (this.entersGate(before, after, step.mover)) sound.at(t - performance.now(), () => sound.gate());
         t += dur;
+        if (!step.captures.length) sound.at(t - performance.now(), () => sound.move());   // set down on the field
       }
       for (const c of step.captures) {
-        if (c.demoted || c.yardRank) {         // a general or marshal is hit: a blast and a shake
+        const big = !!(c.demoted || c.yardRank);
+        if (c === step.captures[0] || big) sound.at(t - performance.now(), () => sound.blast(big));
+        if (big) {                             // a general or marshal is hit: a blast and a shake
           const at = this.xz(this.data.track[c.abs], this.surfaceY());
           setTimeout(() => this.boom(at), Math.max(0, t - performance.now()));
         }
@@ -1291,6 +1302,7 @@ export class Board3D {
       const top = new THREE.Vector3(Math.cos(a) * rr, 2.5 + Math.random() * 2, Math.sin(a) * rr);
       const gr = 0.9, vy = (top.y - ground.y + gr * T * T) / T;
       add(ground, delay, T * 1000, (top.x - ground.x) / T, vy, (top.z - ground.z) / T, "#fff2c0", gr, 0.6, true);
+      sound.at(delay, () => sound.rocket(T * 1000));
       const color = colors[b % colors.length];
       for (let k = 0; k < 46; k++) {
         const u = Math.random() * 2 - 1, ph = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = 2.2 + Math.random() * 0.8;

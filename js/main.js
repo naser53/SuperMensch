@@ -8,6 +8,7 @@ import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
 import { Config } from "./config.js";
 import { boardFor } from "./boards.js";
+import { sound } from "./sound.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -46,6 +47,8 @@ const ICON = {
   bug: svg('<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M12 7V4M8 11H4M16 11h4M8 16H4M16 16h4M9 5l-2-2M15 5l2-2"/>'),
   speed: svg('<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>'),
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  soundOn: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>'),
+  soundOff: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>'),
   stuck: svg('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>', 14),
 };
 
@@ -61,6 +64,8 @@ class App {
     this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
     this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
     this.follow = !!st.follow;
+    this.sound = st.sound !== false;   // sound effects (js/sound.js), on unless switched off
+    sound.setOn(this.sound);
     this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
     this.rooms = null;                 // null: loading · "error": no server · [rooms]
     this.pick = { id: null, seats: [] };
@@ -100,7 +105,7 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, follow: this.follow, offline: this.offline }); }
+  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, sound: this.sound, follow: this.follow, offline: this.offline }); }
 
   // the open rooms of the server, with their players and the seats in play right now
   async loadRooms() {
@@ -538,6 +543,7 @@ class App {
       this.langSelect() +
       `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<select data-act="speed" aria-label="${this.T("speed")}">` +
         Object.keys(Config.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
+      `<button class="btn rb-btn icon${this.sound ? "" : " off"}" data-act="sound" aria-pressed="${this.sound}" title="${this.T(this.sound ? "sound_off" : "sound_on")}">${this.sound ? ICON.soundOn : ICON.soundOff}<span>${this.T("sound")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
   }
 
@@ -631,6 +637,7 @@ class App {
   // A triple-dice card is played: the card flies in over the board, the three dice glow for 2 s.
   cardEffect() {
     this.cardUntil = performance.now() + 2000;
+    sound.knock();                                      // knock, knock, knock: three dice
     this.board.glowDice(2000);
     const fx = document.createElement("div");
     fx.className = "card-fx";
@@ -1284,7 +1291,7 @@ function wire(app) {
     }
     const g = app.game;
     if (!g) return;
-    if (app.scoresMode && !["scores", "info", "info_close", "menu"].includes(b.dataset.act) && b.dataset.view === undefined) return;
+    if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound"].includes(b.dataset.act) && b.dataset.view === undefined) return;
     if (b.dataset.view !== undefined) { app.view(b.dataset.view); app.openViewMenu(false); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
@@ -1306,6 +1313,7 @@ function wire(app) {
     else if (act === "tunnels") { const c = +b.dataset.val; app.tunnelOpen = app.tunnelOpen === c ? null : c; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.askLeave(true);
+    else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
     else if (act === "scores") app.toggleScores();

@@ -61,6 +61,7 @@ button, select, input { font: inherit; color: inherit; }
 .rb-tools select { padding: 6px 6px; min-height: 38px; max-width: 96px; }
 .rb-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; font-size: 13.5px; white-space: nowrap; min-height: 38px; }
 .rb-btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
+.rb-btn.off { color: var(--muted); }
 .rb-btn.check input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .rb-btn.check { cursor: pointer; user-select: none; }
 .rb-btn:disabled { opacity: .35; cursor: default; background: var(--btn); }

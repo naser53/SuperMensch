@@ -4,6 +4,13 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## Unreleased
+
+* **Sound effects:** a wooden clack when a piece lands (like a chess piece), a small blast for a
+  capture and a stronger one for a hit general or marshal, three knocks on a door for a
+  triple-dice card, a rising chime when a piece comes in on its gate, and fireworks with whistles
+  and crackles at the end. A speaker button in the ribbon switches them off and on.
+
 ## v2.1.0 (2026-11-01)
 
 The online and the offline game come from one branch again (`main`); the server deploys from it.

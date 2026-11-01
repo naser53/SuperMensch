@@ -255,7 +255,7 @@ seat also shows the board's color dots to pick its color.
 The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
-  Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), Menu (icons with tooltips; labels on wide screens). Menu (and
+  Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), sound on/off, Menu (icons with tooltips; labels on wide screens). Menu (and
   Esc) asks first while a game is running: *Leave* or *Keep playing*; the computer waits meanwhile.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
@@ -377,6 +377,13 @@ the fingerprint.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
   locked until *Scores* is pressed again.
 * **View menu:** grows out of the button and folds back into it.
+* **Sound effects** (`js/sound.js`, made with the Web Audio API, no sound files): a wooden clack
+  like a chess piece when a piece lands; a small blast when a piece is captured, a stronger one
+  with a rumble when a general or marshal is hit; three knocks on a door when a triple-dice card is
+  played; a rising chime when a piece comes out of the yard onto its gate (also a hunter); a whistle
+  and a crackling burst for each firework rocket at the end. A speaker button in the ribbon
+  (before Menu) switches them on or off, saved in the browser; loudness `Config.SOUND_VOLUME`.
+  Browsers start audio only after the first click or key.
 
 ## 6. Code map
 
@@ -389,6 +396,7 @@ the fingerprint.
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
+| `js/sound.js` | Sound effects, synthesized (move, capture, knock, gate, fireworks) |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
