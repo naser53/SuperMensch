@@ -136,7 +136,8 @@ use a card.
 
 ### 3.9 Walls and castles
 * Same-color pieces on consecutive fields: 2 = **wall**, 3 or more = **castle** (a fortress of 4
-  is Pro-only, off). Two colors of one player do not combine.
+  is Pro-only, off). Two colors of one player do not combine. A color's threshold and its own gate
+  are not consecutive: a piece on each makes no wall (owner, 2026-11-01).
 * **Breaking:** all pieces of the structure must be captured at once, each by its own die and its
   own piece; none of the single moves is legal alone. Breakers may be any color of the player.
 * **Wall break:** only with the two dice of the same throw (no sum move).
