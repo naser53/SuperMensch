@@ -697,7 +697,7 @@ class App {
     }
     if (dec.kind !== "play" || sel.list) return;
     if (sel.piece) {                         // piece first: this die moves it
-      if (!this.pieceDice(sel.piece).has(k)) { this.board.forbid(ev); return; }
+      if (!this.pieceDice(sel.piece).has(k)) { this.forbidMove(ev, sel.piece, [k]); return; }
       sel.die = k;
       this.movePiece(sel.piece, ev);
       return;
@@ -750,8 +750,21 @@ class App {
       sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
       this.render();
     } else {
-      this.board.forbid(ev);
+      this.forbidMove(ev, pc, [sel.die]);
     }
+  }
+
+  // The "not allowed" sign. When an opponent's wall or castle stops piece pc with one of these
+  // dice (indices into the throw), the sign of that wall or castle shows on its pieces instead.
+  forbidMove(ev, pc, dieIdx) {
+    const g = this.game, sel = this.sel;
+    const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    if (pc && pc[0] === "p" && sel.dec)
+      for (const di of dieIdx) {
+        const b = g.blockerOf(shown, g.turn, pc, sel.dec.dice[di]);
+        if (b) { this.board.forbidStructure(shown, b, ev); return; }
+      }
+    this.board.forbid(ev);
   }
 
   // The view menu: a button at the top of the panel; it opens a small panel of views
@@ -910,7 +923,13 @@ class App {
       if (sel.die !== null) { this.movePiece(pc, ev); return; }
       if (sel.piece && sel.piece.join() === pc.join()) { sel.piece = null; this.render(); return; }
       const dice = this.pieceDice(pc);
-      if (!dice.size) { sel.piece = null; this.board.forbid(ev); this.render(); return; }
+      if (!dice.size) {
+        const used = sel.picks.map(c => c.di);
+        sel.piece = null;
+        this.forbidMove(ev, pc, sel.dec ? sel.dec.dice.map((_, i) => i).filter(i => !used.includes(i)) : []);
+        this.render();
+        return;
+      }
       sel.piece = pc;
       this.render();
       return;

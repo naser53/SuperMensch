@@ -242,6 +242,41 @@ export class Board3D {
     setTimeout(() => el.remove(), 650);
   }
 
+  // A move is stopped by an opponent's wall or castle: a red ring pulses under each piece of
+  // that structure, and a wall or castle sign with a small "not allowed" badge pops up above it,
+  // shakes and fades out. block = { color, cells, castle } from Game.blockerOf; st = the state shown.
+  forbidStructure(st, block, ev) {
+    const g = this.game, rect = this.renderer.domElement.getBoundingClientRect();
+    const cells = new Set(block.cells);
+    const toScreen = v => { v.project(this.camera); return [rect.left + (v.x + 1) / 2 * rect.width, rect.top + (1 - v.y) / 2 * rect.height]; };
+    const feet = [], tops = [];
+    st.pos[block.color].forEach((rel, i) => {
+      if (rel < 0 || rel >= g.L || !cells.has(g.absOf(block.color, rel))) return;
+      const grp = this.pieceMeshes.get(`${block.color},${i}`);
+      if (!grp) return;
+      const v = new THREE.Vector3();
+      grp.getWorldPosition(v);
+      feet.push(toScreen(v.clone()));
+      tops.push(toScreen(v.clone().setY(v.y + 1.1)));
+    });
+    if (!feet.length) return this.forbid(ev);
+    const add = (cls, x, y, html, ms) => {
+      const el = document.createElement("div");
+      el.className = cls;
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), ms);
+    };
+    for (const [x, y] of feet) add("forbid-ring", x, y, "", 1300);
+    const x = tops.reduce((s, p) => s + p[0], 0) / tops.length, y = Math.min(...tops.map(p => p[1]));
+    const wall = '<g fill="#c0703f" stroke="#5a2e17" stroke-width="1.4"><rect x="4" y="14" width="14" height="8"/><rect x="18" y="14" width="14" height="8"/><rect x="4" y="22" width="7" height="8"/><rect x="11" y="22" width="14" height="8"/><rect x="25" y="22" width="7" height="8"/><rect x="4" y="30" width="14" height="8"/><rect x="18" y="30" width="14" height="8"/></g>';
+    const castle = '<path d="M4 38V10h5v5h4v-5h5v5h4v-5h5v5h4v-5h5v28H24v-8a5 5 0 0 0-10 0v8z" fill="#a3a3a3" stroke="#444" stroke-width="1.5" stroke-linejoin="round"/>';
+    const ban = '<circle cx="34" cy="34" r="9" fill="#fff" stroke="#d62828" stroke-width="3.2"/><line x1="28" y1="40" x2="40" y2="28" stroke="#d62828" stroke-width="3.2" stroke-linecap="round"/>';
+    add("forbid-struct", x, y, `<svg viewBox="0 0 46 46" width="60" height="60">${block.castle ? castle : wall}${ban}</svg>`, 1300);
+  }
+
   // ------------------------------------------------------------ board
   setGame(game, playerName) {
     this.game = game;

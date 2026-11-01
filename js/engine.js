@@ -275,6 +275,26 @@ export class Game {
     return out;
   }
 
+  // Is a step of piece m with this die stopped by an opponent's wall or castle? For the board's
+  // "not allowed" sign: a wall stops a lone landing on it, a castle also stops passing.
+  // Returns { color, cells, castle } or null (the move may still be illegal for other reasons).
+  blockerOf(st, p, m, die) {
+    if (m[0] !== "p") return null;
+    const [, col, i] = m, r = st.pos[col][i], L = this.L;
+    if (r === TUN || r >= L || this.tunnelOf(st, col, i) !== null) return null;
+    let rels;
+    if (r === YARD) rels = die === 6 ? [0] : [];
+    else { rels = []; for (let x = r + 1; x <= Math.min(r + die, L - 1); x++) rels.push(x); }
+    const structs = this.structures(st), own = new Set(this.players[p].colors);
+    for (const x of rels) {
+      const s = structs.get(this.absOf(col, x));
+      if (!s || own.has(s[1])) continue;
+      const castle = s[2].length >= 3;
+      if (castle || x === (r === YARD ? 0 : r + die)) return { color: s[1], cells: s[2], castle };
+    }
+    return null;
+  }
+
   // ------------------------------------------------------------ tunnels §13
   // Entrance rel, exit rel and tunnel length for a tunnel from corridor a to b.
   tunnelGeom(a, b) {
