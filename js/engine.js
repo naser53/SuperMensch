@@ -952,12 +952,15 @@ export class Game {
     else this._normalThrow();
   }
 
-  // §6 gift-six counter, only while the player is stuck
+  // §6 gift-six counter, only while the player is stuck. The one-color game counts throws; the
+  // two-color game counts stuck turns with no 6 (the first try of a turn counts it, the second try
+  // only resets it on a 6).
   _countSix(p, dice) {
     if (!this.stuck(p)) return false;
     if (dice.includes(6)) { this.noSix[p] = 0; return false; }
-    this.noSix[p] += 1;
-    return this.noSix[p] >= this.cfg.gift_six_n;
+    if (this.mode === "one") return ++this.noSix[p] >= this.cfg.gift_six_n;
+    if (this._attempt === 1) this.noSix[p] += 1;
+    return this.noSix[p] >= this.cfg.gift_six_turns;
   }
 
   _normalThrow() { this._withDice(2, d => this._normalThrowWith(d)); }

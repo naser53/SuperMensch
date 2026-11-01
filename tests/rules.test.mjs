@@ -644,3 +644,17 @@ test("WALLS off (one-color game): two in a row protect nothing", () => {
   put(g, 0, 0, g.relOf(0, g.absOf(1, 20)) - 3);
   assert.ok(g.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));   // a single die hits it
 });
+
+test("gift six (two colors): counted per stuck turn without a 6", () => {
+  const g = make();                                    // every piece at home: player A is stuck
+  const N = g.cfg.gift_six_turns;
+  g.noSix[0] = 0;
+  for (let k = 1; k < N; k++) {
+    g._attempt = 1; assert.equal(g._countSix(0, [1, 2, 3]), false);
+    g._attempt = 2; assert.equal(g._countSix(0, [4, 5, 1]), false);   // the second try is not counted again
+    assert.equal(g.noSix[0], k);
+  }
+  g._attempt = 1; assert.equal(g._countSix(0, [1, 2, 3]), true);       // the Nth turn: the gift
+  g._attempt = 2; assert.equal(g._countSix(0, [1, 6, 3]), false);      // ... unless the second try throws a 6
+  assert.equal(g.noSix[0], 0);
+});

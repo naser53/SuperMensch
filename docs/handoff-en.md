@@ -103,13 +103,14 @@ A player is **stuck** when no piece is "alive" (none can move; hunters do not co
   with no 6 and no pair (nothing to keep could move), the dice show crossed out and the turn passes
   by itself (owner's request); the app holds the burnt dice (`Game.noMove`, `App.hold`) before
   the next player's throw.
-* **Gift six:** after `GIFT_SIX_N` = 6 stuck throws without a 6, a single 6 is given; bring a
-  piece in, then the turn passes. Every 6 resets the counter. Each non-6 pair bonus die counts as
-  a throw. If the count reaches N on the first try, the second try is played first.
+* **Gift six:** after `GIFT_SIX_TURNS` = 4 stuck turns without a 6, a single 6 is given; bring a
+  piece in, then the turn passes (owner's change in v2.1: counted per turn, it was 6 throws). The
+  first try of a turn counts it; the second try only resets it on a 6. Every 6 resets the counter.
+  In the 4th turn the second try is played first; still no 6, the gift comes.
 
 ### 3.6 One-color game
-One die per turn; two-color-only rules do not apply. Every 6 throws again. Gift six after N
-throws without a 6.
+One die per turn; two-color-only rules do not apply. Every 6 throws again. Gift six after
+`GIFT_SIX_N` = 6 throws without a 6.
 * **Color choice:** each seat picks its own color on the setup screen (tap a color dot; a color
   another seat holds swaps the two seats). Stored in `setup.picks` (`App.fixPicks`, `App.pickColor`).
 * **One-color game = the traditional game** (one color per player, both boards; owner's
@@ -257,10 +258,13 @@ The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
   place and is greyed out, standing still, until it is the human's time to roll), triple-dice card,
-  castle-break declaration and tunnels (these three are also always shown, greyed out when they
-  cannot be used; card and castle break only in the two-color game; on phones as icon + count), castle-break declaration, **Tunnels (n)** (opens the
-  list), Undo while moving (the *List of all moves* button is hidden for now; the owner will
-  decide later), *Second try* / *Take the gift six*,
+  **Second try** right beside it (an icon only, a die in a turning arrow; always shown, greyed out
+  when it cannot be used), triple-dice card and tunnels (also always shown, greyed out when they
+  cannot be used; the card only in the two-color game; on phones as icon + count). The tunnel
+  buttons show only the tunnel icon and the count (the word "Tunnels" is in the tooltip) and open
+  the list. The **castle-break button is hidden for now** (owner's call; `SHOW_BREAK_BTN` in
+  `js/main.js`, its code stays). Undo while moving (the *List of all moves* button is hidden for
+  now; the owner will decide later), *Take the gift six*,
   *Continue* / *Random* in debug.
 * Longer lists (all moves, which move, the tunnel declarations, the computer's plan, the final
   places) open in a card at the top left of the board (`#drop`).
