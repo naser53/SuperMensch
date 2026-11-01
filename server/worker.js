@@ -53,7 +53,11 @@ async function api(req, env, url) {
   if (parts[0] === "games" && parts.length === 1) {
     if (req.method === "GET") {        // with the seats held right now by a connected device
       const gs = await lobby.openGames();
-      await Promise.all(gs.map(async g => { g.held = Object.keys(await env.ROOM.get(env.ROOM.idFromName(g.id)).held()).map(Number); }));
+      await Promise.all(gs.map(async g => {
+        const room = env.ROOM.get(env.ROOM.idFromName(g.id));
+        g.held = Object.keys(await room.held()).map(Number);
+        g.colorsOpen = await room.colorsOpen();      // the seats may still pick their colors
+      }));
       return json(gs);
     }
     if (req.method === "POST") {
@@ -72,6 +76,11 @@ async function api(req, env, url) {
   if (parts[0] === "games" && isGameId(parts[1])) {
     const room = env.ROOM.get(env.ROOM.idFromName(parts[1]));
     if (parts[2] === "ws") return room.fetch(req);
+    if (parts[2] === "colors" && body) {           // a child picks the colors of a seat, before the first move
+      const setup = await room.recolor(body.seat, body.colors);
+      await lobby.setSetup(parts[1], setup);
+      return json({ ok: true });
+    }
     if (req.method === "GET") {
       const s = await room.snapshot();
       return s ? json(s) : fail("no such game", 404);
@@ -128,7 +137,7 @@ export class Lobby extends DurableObject {
       ORDER BY updated DESC`, since).toArray().map(r => {
       const su = JSON.parse(r.setup);
       return { id: r.id, name: r.name, created: r.created, updated: r.updated, mode: su.mode, colors: su.colors,
-        players: su.players.map(p => ({ name: p.name, isAi: p.isAi, user: p.user })) };
+        players: su.players.map(p => ({ name: p.name, isAi: p.isAi, user: p.user, colors: p.colors, picked: !!p.picked })) };
     });
   }
 
@@ -192,6 +201,25 @@ export class GameRoom extends DurableObject {
     this._save(keep ? events.length : 0);
     for (const ws of this.ctx.getWebSockets()) { try { ws.close(4001, "players changed"); } catch { /* closed */ } }
     await this._report();
+  }
+
+  colorsOpen() { const room = this._load(); return !!room && room.colorsOpen(); }
+
+  // a seat picks its colors before the first move (Room.recolor): the throws after the first
+  // move are made again; the devices in the game start again from the new state
+  async recolor(seat, colors) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const next = room.recolor(seat, colors);
+    let same = 0;                                     // the events that stay as they were
+    while (same < next.events.length && JSON.stringify(next.events[same]) === JSON.stringify(room.events[same])) same++;
+    this.sql.exec(`DELETE FROM events WHERE seq >= ?`, same);
+    this.sql.exec(`UPDATE meta SET v = ? WHERE k = 'setup'`, JSON.stringify(next.setup));
+    this.room = next;
+    this._save(same);
+    this._all({ t: "recolor" });
+    await this._report();
+    return next.setup;
   }
 
   // the admin deletes the game: close the devices' connections and forget everything

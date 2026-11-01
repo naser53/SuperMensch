@@ -250,12 +250,45 @@ class App {
         if (p.isAi) { h += `<span class="choice ai">${this.T("computer")}</span>`; return; }
         const sel = this.pick.id === r.id && this.pick.seats.includes(i), held = (r.held || []).includes(i);
         h += `<button class="choice${sel ? " sel" : ""}" data-act="who" data-val="${r.id}:${i}" ${held && !sel ? "disabled" : ""}>` +
+          (p.colors || []).map(c => `<span class="dot" style="background:${COLORS[c]}"></span> `).join("") +
           `${esc(p.name)}${held ? ` <span class="muted small">(${this.T("in_play")})</span>` : ""}</button>`;
       });
-      h += "</div></div>";
+      h += "</div>";
+      if (r.colorsOpen && this.pick.id === r.id) for (const i of this.pick.seats) h += this.roomColorsHtml(r, i);
+      h += "</div>";
     }
     return h + `<button class="btn primary start" data-act="join" ${this.pick.seats.length ? "" : "disabled"}>${this.T("start")}</button> ` +
       `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+  }
+
+  // Before the first move a child picks the colors of a seat: a color picked by another seat
+  // first is grey; tapping a free one takes it (in the two-color game it replaces the older of the two).
+  roomColorsHtml(r, i) {
+    const p = r.players[i], two = r.mode === "two";
+    let h = `<div class="room-colors"><div class="muted small">${this.T(two ? "pick_colors_two" : "pick_colors_one", { p: esc(p.name) })}</div><span class="picks">`;
+    for (let c = 0; c < r.colors; c++) {
+      const mine = p.colors.includes(c), owner = r.players.find((q, k) => k !== i && q.colors.includes(c));
+      const taken = !mine && owner && owner.picked, nm = esc(COLOR_NAMES[this.lang][c]);
+      h += `<button class="dot pick${mine ? " sel" : ""}${taken ? " taken" : ""}" data-act="room_color" data-val="${r.id}:${i}:${c}"` +
+        ` style="background:${COLORS[c]}" title="${nm}" aria-label="${nm}" aria-pressed="${mine}" ${taken ? "disabled" : ""}></button>`;
+    }
+    return h + "</span></div>";
+  }
+
+  async pickRoomColor(id, i, c) {
+    const r = Array.isArray(this.rooms) && this.rooms.find(x => x.id === id), p = r && r.players[i];
+    if (!p || p.colors.includes(c)) return;
+    const colors = r.mode === "two" ? [p.colors[p.colors.length - 1], c] : [c];   // the newest two
+    try {
+      const res = await fetch(`${apiBase()}/api/games/${encodeURIComponent(id)}/colors`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seat: i, colors }) });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        const why = String(e.error || "");
+        this.showToast(this.T(why.includes("taken") ? "color_taken" : why.includes("started") ? "colors_fixed" : "rooms_error"));
+      }
+    } catch { this.showToast(this.T("rooms_error")); }
+    this.loadRooms();
   }
 
   setupAction(act, val) {
@@ -270,6 +303,7 @@ class App {
       this.render();
       return;
     }
+    if (act === "room_color") { const [id, i, c] = String(val).split(":"); this.pickRoomColor(id, +i, +c); return; }
     if (act === "join") { if (this.pick.seats.length) this.startOnline(this.pick.id, [...this.pick.seats].sort()); return; }
     if (act === "colors") {
       s.colors = +val;
@@ -697,7 +731,7 @@ class App {
     }
     if (dec.kind !== "play" || sel.list) return;
     if (sel.piece) {                         // piece first: this die moves it
-      if (!this.pieceDice(sel.piece).has(k)) { this.board.forbid(ev); return; }
+      if (!this.pieceDice(sel.piece).has(k)) { this.forbidMove(ev, sel.piece, [k]); return; }
       sel.die = k;
       this.movePiece(sel.piece, ev);
       return;
@@ -750,8 +784,21 @@ class App {
       sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
       this.render();
     } else {
-      this.board.forbid(ev);
+      this.forbidMove(ev, pc, [sel.die]);
     }
+  }
+
+  // The "not allowed" sign. When an opponent's wall or castle stops piece pc with one of these
+  // dice (indices into the throw), the sign of that wall or castle shows on its pieces instead.
+  forbidMove(ev, pc, dieIdx) {
+    const g = this.game, sel = this.sel;
+    const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    if (pc && pc[0] === "p" && sel.dec)
+      for (const di of dieIdx) {
+        const b = g.blockerOf(shown, g.turn, pc, sel.dec.dice[di]);
+        if (b) { this.board.forbidStructure(shown, b, ev); return; }
+      }
+    this.board.forbid(ev);
   }
 
   // The view menu: a button at the top of the panel; it opens a small panel of views
@@ -910,7 +957,13 @@ class App {
       if (sel.die !== null) { this.movePiece(pc, ev); return; }
       if (sel.piece && sel.piece.join() === pc.join()) { sel.piece = null; this.render(); return; }
       const dice = this.pieceDice(pc);
-      if (!dice.size) { sel.piece = null; this.board.forbid(ev); this.render(); return; }
+      if (!dice.size) {
+        const used = sel.picks.map(c => c.di);
+        sel.piece = null;
+        this.forbidMove(ev, pc, sel.dec ? sel.dec.dice.map((_, i) => i).filter(i => !used.includes(i)) : []);
+        this.render();
+        return;
+      }
       sel.piece = pc;
       this.render();
       return;
@@ -1077,6 +1130,13 @@ class App {
       setTimeout(() => { location.href = location.pathname; }, 4000);
       return;
     }
+    if (m.t === "recolor") {                // a seat picked its colors before the first move: start again
+      this.table = null;
+      o.queue = [];
+      o.sent = null;
+      this.hello();
+      return;
+    }
     if (m.t === "state") {
       if (!this.table) { this.openOnline(m); return; }
       const have = this.table.events.length + o.queue.length;
@@ -1084,6 +1144,7 @@ class App {
       o.queue.push(...m.events.slice(have));
       o.fp = m.fp;
     } else if (m.t === "events") {
+      if (!this.table) return;                 // the new state is on its way
       const have = this.table.events.length + o.queue.length;
       if (m.from !== have) { this.hello(); return; }   // missed some: ask again
       o.queue.push(...m.events);

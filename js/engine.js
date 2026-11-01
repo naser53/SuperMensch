@@ -247,31 +247,52 @@ export class Game {
 
   // §10: runs of same-color pieces on consecutive track fields.
   // Returns Map abs -> [sid, color, cells] for runs of length >= 2.
+  // Runs are counted along the color's own way, so a piece on its threshold (rel L-1) and one on
+  // its gate (rel 0) are not next to each other: no wall across the threshold (owner, 2026-11-01).
   structures(st) {
     const out = new Map(), L = this.L;
     if (!this.cfg.walls) return out;                  // WALLS off (the one-color game): no structures
     let sid = 0;
     for (let col = 0; col < this.cfg.n_colors; col++) {
-      const cells = st.pos[col].filter(r => r >= 0 && r < L).map(r => this.absOf(col, r)).sort((a, b) => a - b);
-      if (cells.length < 2) continue;
-      const cs = new Set(cells), seen = new Set();
-      for (const a of cells) {
-        const prev = mod(a - 1, L);
-        if ((seen.has(a) || (cs.has(prev) && cs.size < L)) && cs.has(prev)) continue;
-        const run = [a];
-        let b = mod(a + 1, L);
-        while (cs.has(b) && b !== a) { run.push(b); b = mod(b + 1, L); }
-        run.forEach(x => seen.add(x));
+      const rels = [...new Set(st.pos[col].filter(r => r >= 0 && r < L))].sort((a, b) => a - b);
+      const runs = [];
+      for (const r of rels) {
+        const last = runs[runs.length - 1];
+        if (last && last[last.length - 1] === r - 1) last.push(r); else runs.push([r]);
+      }
+      for (const run of runs) {
+        if (run.length < 2) continue;
         // no castles (CASTLES off): a long run is a chain of walls of two (and a lone piece)
         const parts = this.cfg.castles ? [run] : run.reduce((acc, x, k) => (k % 2 ? acc[acc.length - 1].push(x) : acc.push([x]), acc), []);
         for (const part of parts) {
           if (part.length < 2) continue;
-          for (const x of part) out.set(x, [sid, col, part]);
+          const cells = part.map(r => this.absOf(col, r));
+          for (const x of cells) out.set(x, [sid, col, cells]);
           sid++;
         }
       }
     }
     return out;
+  }
+
+  // Is a step of piece m with this die stopped by an opponent's wall or castle? For the board's
+  // "not allowed" sign: a wall stops a lone landing on it, a castle also stops passing.
+  // Returns { color, cells, castle } or null (the move may still be illegal for other reasons).
+  blockerOf(st, p, m, die) {
+    if (m[0] !== "p") return null;
+    const [, col, i] = m, r = st.pos[col][i], L = this.L;
+    if (r === TUN || r >= L || this.tunnelOf(st, col, i) !== null) return null;
+    let rels;
+    if (r === YARD) rels = die === 6 ? [0] : [];
+    else { rels = []; for (let x = r + 1; x <= Math.min(r + die, L - 1); x++) rels.push(x); }
+    const structs = this.structures(st), own = new Set(this.players[p].colors);
+    for (const x of rels) {
+      const s = structs.get(this.absOf(col, x));
+      if (!s || own.has(s[1])) continue;
+      const castle = s[2].length >= 3;
+      if (castle || x === (r === YARD ? 0 : r + die)) return { color: s[1], cells: s[2], castle };
+    }
+    return null;
   }
 
   // ------------------------------------------------------------ tunnels §13

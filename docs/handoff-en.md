@@ -137,7 +137,8 @@ use a card.
 
 ### 3.9 Walls and castles
 * Same-color pieces on consecutive fields: 2 = **wall**, 3 or more = **castle** (a fortress of 4
-  is Pro-only, off). Two colors of one player do not combine.
+  is Pro-only, off). Two colors of one player do not combine. A color's threshold and its own gate
+  are not consecutive: a piece on each makes no wall (owner, 2026-11-01).
 * **Breaking:** all pieces of the structure must be captured at once, each by its own die and its
   own piece; none of the single moves is legal alone. Breakers may be any color of the player.
 * **Wall break:** only with the two dice of the same throw (no sum move).
@@ -294,6 +295,10 @@ Two orders work, and you can switch at any time:
 * **Die first:** click a die (it alone is highlighted), then a piece. A piece that cannot move
   with it shows a "not allowed" sign that fades in half a second. If you click a piece before
   rolling or choosing, the piece stays highlighted and "First choose a die" appears.
+* When an opponent's **wall or castle** stops the move, a wall or castle sign with a small "not
+  allowed" badge pops up above that structure and shakes, and red rings pulse under its pieces
+  (owner, 2026-11-01: signs and effects instead of written messages; `Game.blockerOf`,
+  `Board3D.forbidStructure`).
 * **Piece first:** click a piece. Only the dice it can use stay active, and **yellow target
   rings** with the die value appear on its possible fields. Click a ring or a die to move.
 * After the first die is played, the **remaining die is selected automatically**.
@@ -528,5 +533,30 @@ earlier sketch (browser dice, PINs).
   (pages), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
+* **Colors on the first page** (owner, 2026-11-01): after tapping a name, a child picks the
+  seat's colors (two in the two-color game; a tap replaces the older one) until a person makes
+  the first move. First come, first served: colors of seats that picked already are grey; a color
+  of a seat that has not picked (or of a computer) is swapped. `POST /api/games/<ID>/colors
+  {seat, colors}` (`pickColors`, `colorsKeep`, `Room.recolor` in `server/core.js`): the
+  throws before the first move stay, the rest is played again; devices in the game get
+  `{t:"recolor"}` and load the new state. The admin page has no color choice.
 * Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
   (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.
+
+### 12.1 Reading a live game from a Claude thread (owner, 2026-11-01)
+`GET /api/games/<ID>` returns `{ setup, events, fp, ... }` with no key (fine by the owner: anyone
+with the GameID may read the moves). A thread fetches it and rebuilds the game with `Table.replay`
+(as `tools/replay.mjs` does) to answer the owner's questions. The cloud environment allows the host
+`supermensch-dev.ndaneshi.workers.dev`. No timestamps, connection or browser logs are stored, and
+the owner does not want them. Debug mode stays off by default and hidden in the online game.
+
+The owner and Claude talk about a game with these commands. They run on a **local copy**; the game
+on the server never changes.
+* `game ID` read that game · `at N` go to event N (none = the end) · `show` pieces, scores, turn,
+  legal moves
+* `dice 4 5` the dice of the current throw (always for the player whose turn it is)
+* `play s2B 4` move Blue piece 2 with the die 4. In the two-color game one option is the whole
+  throw, so `play s2B 4 s1R 5` names both steps; with one step, Claude lists the options left.
+* `move 1 s2B 33`, `score 1 50` as in the debug console (`js/debugcmd.js`).
+Pieces are written `s` + number + color letter (R B G Y P T), as in the debug console: `P` is
+Purple, so it cannot also mean "piece".

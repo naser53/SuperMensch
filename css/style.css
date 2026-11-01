@@ -211,6 +211,20 @@ label.check.on { color: var(--accent); }
 
 .forbid { position: fixed; transform: translate(-50%, -50%); pointer-events: none; z-index: 50;
   animation: forbid .6s ease-out forwards; }
+.forbid-struct { position: fixed; transform: translate(-50%, -100%); pointer-events: none; z-index: 50;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); animation: forbid-struct 1.25s ease-out forwards; }
+@keyframes forbid-struct { 0% { opacity: 0; transform: translate(-50%, -100%) scale(.5); }
+  12% { opacity: 1; transform: translate(-50%, -100%) scale(1.15); }
+  20% { transform: translate(calc(-50% - 5px), -100%) rotate(-6deg); }
+  28% { transform: translate(calc(-50% + 5px), -100%) rotate(6deg); }
+  36% { transform: translate(calc(-50% - 3px), -100%) rotate(-3deg); }
+  44% { transform: translate(-50%, -100%) rotate(0); }
+  75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -110%); } }
+.forbid-ring { position: fixed; width: 34px; height: 20px; transform: translate(-50%, -50%); pointer-events: none;
+  z-index: 49; border: 3px solid #d62828; border-radius: 50%; animation: forbid-ring 1.25s ease-out forwards; }
+@keyframes forbid-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+  15% { opacity: 1; } 50% { opacity: .9; transform: translate(-50%, -50%) scale(1.25); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
 @keyframes forbid { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
   15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
   35% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; } }
@@ -300,3 +314,6 @@ label.check.on { color: var(--accent); }
 #setup .choice.ai { opacity: .6; cursor: default; }
 #setup .choice:disabled { opacity: .45; cursor: default; }
 .chip .tag.you { background: var(--accent); color: #fff; }
+.room-colors { margin: 6px 0 2px; }
+.room-colors .picks { display: inline-flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.room .choice .dot { width: 12px; height: 12px; vertical-align: -1px; }
