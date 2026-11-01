@@ -62,6 +62,48 @@ export function editSetup(old, seats, users) {
   return { setup, keep: setup.players.length === old.players.length };
 }
 
+// A child picks the colors of a seat on the first page, until the first move of a person
+// (owner, 2026-11-01). First come, first served: a color picked by another seat is taken; a
+// color of a seat that has not picked yet (or of a computer) is swapped with the one given up.
+// In the two-color game the seat names both its colors. Returns the new setup (the seat is
+// marked `picked`) or throws.
+export function pickColors(setup, seat, colors) {
+  const players = setup.players.map(p => ({ ...p, colors: p.colors.slice() }));
+  const me = players[seat];
+  if (!Number.isInteger(seat) || !me || me.isAi) throw new Error("no such seat");
+  const n = setup.mode === "two" ? 2 : 1;
+  if (!Array.isArray(colors) || colors.length !== n || new Set(colors).size !== n ||
+      colors.some(c => !Number.isInteger(c) || c < 0 || c >= setup.colors)) throw new Error("bad colors");
+  const give = me.colors.filter(c => !colors.includes(c));
+  for (const c of colors) {
+    if (me.colors.includes(c)) continue;
+    const j = players.findIndex((p, k) => k !== seat && p.colors.includes(c));
+    if (j >= 0) {
+      if (players[j].picked) throw new Error("color taken");
+      players[j].colors[players[j].colors.indexOf(c)] = give.shift();
+    } else give.shift();                                  // a free color: the given-up one stays free
+  }
+  me.colors = colors.slice();
+  me.picked = true;
+  return { ...setup, players };
+}
+
+// How many events stay when the colors change: those before the first move (a pick) of
+// anybody; or -1 when a person has moved already and the colors are fixed.
+export function colorsKeep(setup, events) {
+  const t = new Table(setup, { autoDice: false });
+  let keep = -1;
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (ev.pick !== undefined) {
+      if (keep < 0) keep = i;
+      if (!setup.players[t.game.pending.player].isAi) return -1;
+    }
+    t.apply(ev);
+  }
+  return keep < 0 ? events.length : keep;
+}
+
 export function checkSetup(su, users) {
   if (!su || typeof su !== "object") throw new Error("no setup");
   const mode = su.mode === "one" ? "one" : su.mode === "two" ? "two" : null;
@@ -104,6 +146,17 @@ export class Room {
   }
 
   get events() { return this.table.events; }
+
+  // may the seats still pick their colors? (no person has moved yet)
+  colorsOpen() { return colorsKeep(this.setup, this.events) >= 0; }
+
+  // A seat picks its colors (pickColors). Returns a new room with the new setup and the events
+  // before the first move; the server answers the new throws and the computer's moves again.
+  recolor(seat, colors) {
+    const keep = colorsKeep(this.setup, this.events);
+    if (keep < 0) throw new Error("the game has started");
+    return new Room(pickColors(this.setup, seat, colors), this.events.slice(0, keep), this.table.game.rng);
+  }
 
   // A device's move. `seq` is the number of events the device has seen; `seats` the seats it
   // holds. Returns { from, events } (the new events) or throws with the reason.

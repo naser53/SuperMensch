@@ -295,6 +295,10 @@ Two orders work, and you can switch at any time:
 * **Die first:** click a die (it alone is highlighted), then a piece. A piece that cannot move
   with it shows a "not allowed" sign that fades in half a second. If you click a piece before
   rolling or choosing, the piece stays highlighted and "First choose a die" appears.
+* When an opponent's **wall or castle** stops the move, a wall or castle sign with a small "not
+  allowed" badge pops up above that structure and shakes, and red rings pulse under its pieces
+  (owner, 2026-11-01: signs and effects instead of written messages; `Game.blockerOf`,
+  `Board3D.forbidStructure`).
 * **Piece first:** click a piece. Only the dice it can use stay active, and **yellow target
   rings** with the die value appear on its possible fields. Click a ring or a die to move.
 * After the first die is played, the **remaining die is selected automatically**.
@@ -529,6 +533,13 @@ earlier sketch (browser dice, PINs).
   (pages), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
+* **Colors on the first page** (owner, 2026-11-01): after tapping a name, a child picks the
+  seat's colors (two in the two-color game; a tap replaces the older one) until a person makes
+  the first move. First come, first served: colors of seats that picked already are grey; a color
+  of a seat that has not picked (or of a computer) is swapped. `POST /api/games/<ID>/colors
+  {seat, colors}` (`pickColors`, `colorsKeep`, `Room.recolor` in `server/core.js`): the
+  throws before the first move stay, the rest is played again; devices in the game get
+  `{t:"recolor"}` and load the new state. The admin page has no color choice.
 * Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
   (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.
 
