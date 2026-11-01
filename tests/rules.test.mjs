@@ -409,6 +409,21 @@ test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 
   assert.equal(g.tunnelCost(1, 4), 160);
 });
 
+test("six first only when one of the two pieces stands on the gate", () => {
+  // red on its gate (stays), two other red pieces move: the 3 first, then the 6, is allowed
+  const g = make();
+  put(g, 0, 0, 0); put(g, 0, 1, 10); put(g, 0, 2, 20);
+  const ok = g.playsFor(0, [6, 3]).some(p => p.steps.length === 2 && p.steps[0].die === 3
+    && p.steps[0].mover.join() === "p,0,1" && p.steps[1].mover.join() === "p,0,2");
+  assert.ok(ok);
+  // the gate piece takes part: the 6 must come first
+  for (const p of g.playsFor(0, [6, 3])) {
+    const [x, y] = p.steps;
+    if (y && x.mover[1] === 0 && y.mover[1] === 0 && x.mover.join() !== y.mover.join()
+        && [x, y].some(s => s.mover[2] === 0)) assert.equal(x.die, 6);
+  }
+});
+
 test("six first only when an own piece stands on the gate", () => {
   // blue piece on the board (not on its gate), 6 and 5: the 5 for that piece, then the 6 brings a new one in
   const g = make();
