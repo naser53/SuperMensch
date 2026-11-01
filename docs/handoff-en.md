@@ -530,3 +530,21 @@ earlier sketch (browser dice, PINs).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
 * Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
   (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.
+
+### 12.1 Reading a live game from a Claude thread (owner, 2026-11-01)
+`GET /api/games/<ID>` returns `{ setup, events, fp, ... }` with no key (fine by the owner: anyone
+with the GameID may read the moves). A thread fetches it and rebuilds the game with `Table.replay`
+(as `tools/replay.mjs` does) to answer the owner's questions. The cloud environment allows the host
+`supermensch-dev.ndaneshi.workers.dev`. No timestamps, connection or browser logs are stored, and
+the owner does not want them. Debug mode stays off by default and hidden in the online game.
+
+The owner and Claude talk about a game with these commands. They run on a **local copy**; the game
+on the server never changes.
+* `game ID` read that game · `at N` go to event N (none = the end) · `show` pieces, scores, turn,
+  legal moves
+* `dice 4 5` the dice of the current throw (always for the player whose turn it is)
+* `play s2B 4` move Blue piece 2 with the die 4. In the two-color game one option is the whole
+  throw, so `play s2B 4 s1R 5` names both steps; with one step, Claude lists the options left.
+* `move 1 s2B 33`, `score 1 50` as in the debug console (`js/debugcmd.js`).
+Pieces are written `s` + number + color letter (R B G Y P T), as in the debug console: `P` is
+Purple, so it cannot also mean "piece".
