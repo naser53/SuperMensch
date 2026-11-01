@@ -8,7 +8,8 @@ export class Config {
       pieces_per_color: 4,
       home_len: 4,              // Z1..Z4
 
-      gift_six_n: 6,            // GIFT_SIX_N
+      gift_six_n: 6,            // GIFT_SIX_N: one-color game, throws without a 6
+      gift_six_turns: 4,        // GIFT_SIX_TURNS: two-color game, stuck turns without a 6
       triple_dice_cards: 3,     // TRIPLE_DICE_CARDS
       hunter_can_break: false,  // HUNTER_CAN_BREAK
 

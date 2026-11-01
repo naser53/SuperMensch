@@ -37,6 +37,8 @@ const ICON = {
   cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
   castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
   tunnel: svg('<path d="M3 20v-6a9 9 0 0 1 18 0v6"/><path d="M7 20v-6a5 5 0 0 1 10 0v6"/>'),
+  // Second try: a die inside a turning arrow ("throw again")
+  retry: svg('<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/><rect x="7.5" y="7.5" width="9" height="9" rx="2"/><circle cx="10.3" cy="10.3" r="1" fill="currentColor" stroke="none"/><circle cx="13.7" cy="13.7" r="1" fill="currentColor" stroke="none"/>', 30),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
   list: svg('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
   star: svg('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),
@@ -46,6 +48,9 @@ const ICON = {
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   stuck: svg('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>', 14),
 };
+
+// The castle-break button is hidden for now (the owner's call); its code stays. Set to true to show it.
+const SHOW_BREAK_BTN = false;
 
 class App {
   constructor() {
@@ -418,7 +423,10 @@ class App {
         acts = btn(`data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}"`, this.T("undo"), "undo", ICON.undo);   // the all-moves list button is hidden for now (the owner will decide later)
       } else if (human && dec.kind === "keep") {
         if (dec.options.some(o => Array.isArray(o.payload))) hint = this.T("pick_keep");
-        acts = dec.options.filter(o => !Array.isArray(o.payload)).map(o =>
+        // Second try sits next to the big die as an icon (see below); the rest stay as buttons
+        const r = dec.options.findIndex(o => o.payload === "retry");
+        if (r >= 0) pre.retry = `data-pay="retry" title="${this.S(dec.options[r].label)}" aria-label="${this.S(dec.options[r].label)}"`;
+        acts = dec.options.filter(o => !Array.isArray(o.payload) && o.payload !== "retry").map(o =>
           btn(`data-pay="${esc(o.payload)}"`, this.S(o.label), o.payload === "gift" ? "primary" : "")).join("");
       } else if (human && dec.kind === "pre_roll") {
         opts = dec.options;
@@ -459,12 +467,13 @@ class App {
       // the roll-time buttons stay in their places, greyed out until they can be used
       const two = g.mode === "two";
       acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
+        `<button class="btn rb-retry" ${pre.retry || `disabled title="${this.T("retry")}" aria-label="${this.T("retry")}"`}>${ICON.retry}</button>` +
         (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
-        (two && g.cfg.break_decl_on ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
+        (two && g.cfg.break_decl_on && SHOW_BREAK_BTN ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
         (g.cfg.tunnels_on ? p.colors.map(c => {
           const n = pre.tun ? pre.tun[c] || 0 : 0;
-          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]}" title="${esc(COLOR_NAMES[this.lang][c])}"`,
-            this.T("tunnel_menu", { n }), `pre tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
+          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]}" title="${esc(this.T("tunnel_menu", { n }))}: ${esc(COLOR_NAMES[this.lang][c])}"`,
+            esc(num(this.lang, n)), `pre tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
         }).join("") : "") + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }

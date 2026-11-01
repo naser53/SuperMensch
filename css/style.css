@@ -70,6 +70,11 @@ button, select, input { font: inherit; color: inherit; }
 .btn.rb-roll:hover { background: var(--accent); filter: brightness(1.08); }
 .btn.rb-roll:disabled { background: #e4e1da; border-color: #d6d2c9; color: #a8a49b; animation: none; cursor: default; filter: none; }
 .btn.rb-roll:disabled .cube3d { opacity: .5; }
+/* Second try: an icon button right beside the big die, as tall as it */
+.btn.rb-retry { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; min-width: 56px; padding: 4px;
+  background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.rb-retry:hover { background: var(--accent); filter: brightness(1.08); }
+.btn.rb-retry:disabled { background: #e4e1da; border-color: #d6d2c9; color: #a8a49b; cursor: default; filter: none; }
 .btn.rb-roll:disabled .cube3d-in { animation-play-state: paused; }
 /* the roll button's die: a cube that turns slowly (no face is a value) */
 .cube3d { --s: 34px; width: var(--s); height: var(--s); margin: 0 6px; perspective: 200px; flex: none; }
@@ -107,9 +112,12 @@ button, select, input { font: inherit; color: inherit; }
   #ribbon { gap: 6px 8px; padding: 6px 8px; }
   .rb-tools { gap: 4px; }
   .btn.rb-roll { min-height: 50px; font-size: 16px; }
+  .btn.rb-retry { min-height: 50px; min-width: 50px; }
   /* card, castle break and tunnels: the icon and the count only */
   .rb-btn.pre span { display: none; }
   .rb-btn.pre[data-n]::after { content: attr(data-n); font-weight: 700; }
+  .rb-btn.pre.tunc span { display: inline; }        /* the tunnel buttons already show just the count */
+  .rb-btn.pre.tunc::after { content: none; }
   .rb-btn.pre { padding: 6px 9px; gap: 3px; }
   .chip { font-size: 13px; padding: 3px 7px; }
   .chip .nm { max-width: 6em; }
@@ -155,6 +163,7 @@ label.check.on { color: var(--accent); }
 .opt div + div { margin-top: 2px; }
 /* the Tunnels list: a color dot per line; a color with no tunnel says why */
 .rb-btn.tunc svg { color: var(--tc); }
+.rb-btn.tunc span { font-weight: 700; }
 /* Undo: the icon alone (its label stays in the title), to keep the button narrow */
 .rb-btn.undo span { display: none; }
 .rb-btn.undo { padding-inline: 10px; }
