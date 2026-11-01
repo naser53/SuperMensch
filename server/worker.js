@@ -136,7 +136,7 @@ export class Lobby extends DurableObject {
     return this.sql.exec(`SELECT id, name, created, updated, setup FROM games WHERE status = 'open' AND updated > ?
       ORDER BY updated DESC`, since).toArray().map(r => {
       const su = JSON.parse(r.setup);
-      return { id: r.id, name: r.name, created: r.created, updated: r.updated, mode: su.mode, colors: su.colors,
+      return { id: r.id, name: r.name, created: r.created, updated: r.updated, mode: su.mode, colors: su.colors, corridor: su.corridor || 10,
         players: su.players.map(p => ({ name: p.name, isAi: p.isAi, user: p.user, colors: p.colors, picked: !!p.picked })) };
     });
   }

@@ -7,6 +7,7 @@ import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
 import { Config } from "./config.js";
+import { boardFor } from "./boards.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -261,18 +262,37 @@ class App {
       `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
   }
 
-  // Before the first move a child picks the colors of a seat: a color picked by another seat
-  // first is grey; tapping a free one takes it (in the two-color game it replaces the older of the two).
+  // Before the first move a child picks the colors of a seat on a small picture of the board,
+  // so the colors are seen where they sit. Each color's yard is a button: a color picked by
+  // another seat first is grey; tapping a free one takes it (in the two-color game it
+  // replaces the older of the two). The picture is the board as the 3D view first shows it.
   roomColorsHtml(r, i) {
-    const p = r.players[i], two = r.mode === "two";
-    let h = `<div class="room-colors"><div class="muted small">${this.T(two ? "pick_colors_two" : "pick_colors_one", { p: esc(p.name) })}</div><span class="picks">`;
+    const p = r.players[i], two = r.mode === "two", cl = r.corridor || 10, b = boardFor(r.colors, cl);
+    const P = ([x, y]) => [(-x).toFixed(2), (-y).toFixed(2)];            // the 3D view's first angle
+    const cen = pts => [pts.reduce((s, q) => s + q[0], 0) / pts.length, pts.reduce((s, q) => s + q[1], 0) / pts.length];
+    const R = r.colors === 4 ? 1.15 : 1.6;                                  // a yard button
+    const ext = Math.max(...b.outline.flat().map(Math.abs), ...b.yard.flat(2).map(Math.abs).map(v => v + R)) + 0.7;
+    let s = `<svg class="mini-board" viewBox="${-ext} ${-ext} ${2 * ext} ${2 * ext}" role="group">` +
+      `<polygon points="${b.outline.map(q => P(q).join(",")).join(" ")}" fill="#e8dcc2" stroke="#b9a681" stroke-width=".18" stroke-linejoin="round"/>`;
+    b.track.forEach((q, k) => {
+      const gate = k % cl === 0 ? COLORS[k / cl] : null;
+      s += `<circle cx="${P(q)[0]}" cy="${P(q)[1]}" r=".34" fill="${gate || "#fff"}" stroke="#c9bda3" stroke-width=".06"/>`;
+    });
+    b.home.forEach((hs, c) => hs.forEach(q => { s += `<circle cx="${P(q)[0]}" cy="${P(q)[1]}" r=".3" fill="${COLORS[c]}" opacity=".45"/>`; }));
     for (let c = 0; c < r.colors; c++) {
-      const mine = p.colors.includes(c), owner = r.players.find((q, k) => k !== i && q.colors.includes(c));
-      const taken = !mine && owner && owner.picked, nm = esc(COLOR_NAMES[this.lang][c]);
-      h += `<button class="dot pick${mine ? " sel" : ""}${taken ? " taken" : ""}" data-act="room_color" data-val="${r.id}:${i}:${c}"` +
-        ` style="background:${COLORS[c]}" title="${nm}" aria-label="${nm}" aria-pressed="${mine}" ${taken ? "disabled" : ""}></button>`;
+      const mine = p.colors.includes(c), oi = r.players.findIndex((q, k) => k !== i && q.colors.includes(c));
+      const owner = oi >= 0 ? r.players[oi] : null, taken = !mine && owner && owner.picked;
+      const [x, y] = P(cen(b.yard[c])), nm = esc(COLOR_NAMES[this.lang][c]);
+      const who = mine ? p.name : owner ? (owner.isAi ? "🤖" : owner.name) : "";
+      s += `<g class="mini-yard${mine ? " sel" : ""}${taken ? " taken" : ""}"${taken ? "" : ` data-act="room_color" data-val="${r.id}:${i}:${c}"`}>` +
+        `<title>${nm}</title>` +
+        (mine ? `<circle cx="${x}" cy="${y}" r="${(R + 0.45).toFixed(2)}" fill="none" stroke="#1d1d1d" stroke-width=".28"/>` : "") +
+        `<circle cx="${x}" cy="${y}" r="${R}" fill="${COLORS[c]}" stroke="#fff" stroke-width=".22"/>` +
+        (who ? `<text x="${x}" y="${(+y + R * 0.2).toFixed(2)}" text-anchor="middle" font-size="${(R * 0.55).toFixed(2)}" fill="#fff" font-weight="700">${esc(shape(who).slice(0, 6))}</text>` : "") +
+        "</g>";
     }
-    return h + "</span></div>";
+    s += "</svg>";
+    return `<div class="room-colors"><div class="muted small">${this.T(two ? "pick_colors_two" : "pick_colors_one", { p: esc(p.name) })}</div>${s}</div>`;
   }
 
   async pickRoomColor(id, i, c) {
