@@ -6,6 +6,7 @@ attached. The `latest` release is always the newest build of `main`.
 
 ## Unreleased
 
+* **Dice sound:** the dice click on the board as they tumble and land.
 * **Sound effects:** a wooden clack when a piece lands (like a chess piece), a small blast for a
   capture and a stronger one for a hit general or marshal, three knocks on a door for a
   triple-dice card, a rising chime when a piece comes in on its gate, and fireworks with whistles
