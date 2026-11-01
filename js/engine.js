@@ -275,6 +275,26 @@ export class Game {
     return out;
   }
 
+  // Is a step of piece m with this die stopped by an opponent's wall or castle? For the board's
+  // "not allowed" sign: a wall stops a lone landing on it, a castle also stops passing.
+  // Returns { color, cells, castle } or null (the move may still be illegal for other reasons).
+  blockerOf(st, p, m, die) {
+    if (m[0] !== "p") return null;
+    const [, col, i] = m, r = st.pos[col][i], L = this.L;
+    if (r === TUN || r >= L || this.tunnelOf(st, col, i) !== null) return null;
+    let rels;
+    if (r === YARD) rels = die === 6 ? [0] : [];
+    else { rels = []; for (let x = r + 1; x <= Math.min(r + die, L - 1); x++) rels.push(x); }
+    const structs = this.structures(st), own = new Set(this.players[p].colors);
+    for (const x of rels) {
+      const s = structs.get(this.absOf(col, x));
+      if (!s || own.has(s[1])) continue;
+      const castle = s[2].length >= 3;
+      if (castle || x === (r === YARD ? 0 : r + die)) return { color: s[1], cells: s[2], castle };
+    }
+    return null;
+  }
+
   // ------------------------------------------------------------ tunnels §13
   // Entrance rel, exit rel and tunnel length for a tunnel from corridor a to b.
   tunnelGeom(a, b) {
@@ -312,6 +332,24 @@ export class Game {
           if (E - r >= 0 && E - r <= c.tunnel_declare_range && !busy.has(`${col},${a},${b}`)) out.push([col, i, a, b]);
         }
       });
+    }
+    return out;
+  }
+
+  // Why a player, or one of its colors, has no tunnel to declare (shown in the Tunnels list).
+  // Returns { all: key | null, colors: { [col]: key } } with string keys from strings.js;
+  // a color that has a tunnel option is left out.
+  tunnelBlockers(p, st = null) {
+    st = st || this.state;
+    const c = this.cfg, out = { all: null, colors: {} };
+    if (!c.tunnels_on) return out;
+    if (st.scores[p] < 0) { out.all = "tun_why_debt"; return out; }
+    if (st.tunnels.filter(t => t[0] === p).length >= c.max_active_tunnels) { out.all = "tun_why_max"; return out; }
+    const has = new Set(this.tunnelOptions(p, st).map(o => o[0]));
+    for (const col of this.players[p].colors) {
+      if (has.has(col)) continue;
+      const free = st.pos[col].some((r, i) => r >= 0 && r < this.L && !this.tunnelOf(st, col, i));
+      out.colors[col] = free ? "tun_why_range" : "tun_why_none";
     }
     return out;
   }

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperMensch admin</title>
+<style>
+  :root { --bg: #f6f4ef; --card: #fff; --ink: #222; --muted: #777; --line: #ddd; --accent: #2b6cb0; }
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fafafa; cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input, select { font: inherit; padding: 3px 6px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .err { color: #b00; } .ok { color: #070; }
+  code { background: #eee; padding: 0 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>SuperMensch admin <span class="muted">· players start at <a href="/">the game page</a></span></h1>
+
+  <section id="login">
+    <div class="row">Admin key <input id="adminKey" type="password" size="18"><button class="primary" id="adminBtn">Open</button>
+      <span id="loginErr" class="err"></span></div>
+  </section>
+
+  <div id="panel" hidden>
+    <section>
+      <h2>Players</h2>
+      <div id="users"></div>
+    </section>
+
+    <section>
+      <h2>New room</h2>
+      <div class="row">Name <input id="gName" placeholder="Friday at grandma's" size="24"></div>
+      <div class="row">
+        Board <select id="gColors"><option value="6">6 colors</option><option value="4">4 colors</option></select>
+        Game <select id="gMode"><option value="two">two colors each</option><option value="one">one color each</option></select>
+        Fields <select id="gCorr"><option value="10">10 per corridor</option><option value="14">14 per corridor (longer arms)</option></select>
+        Dice <select id="gLevel"><option value="beginner">beginner</option><option value="intermediate">intermediate</option></select>
+        Players <select id="gN"></select>
+      </div>
+      <div id="seats"></div>
+      <div class="row"><button class="primary" id="createBtn">Create room</button> <span id="createMsg"></span></div>
+    </section>
+
+    <section>
+      <h2>Rooms</h2>
+      <div id="rooms"></div>
+    </section>
+  </div>
+</main>
+<script type="module">
+const $ = s => document.querySelector(s);
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let key = "", users = [];
+const api = async (path, body) => {
+  const r = await fetch("/api/" + path, body === undefined ? {} :
+    { method: "POST", headers: { "content-type": "application/json", "x-admin-key": key }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.status);
+  return d;
+};
+const show = (el, msg, bad) => { $(el).className = bad ? "err" : "ok"; $(el).textContent = msg; };
+
+async function loadUsers() {
+  users = await api("users");
+  $("#users").innerHTML = users.map(u => `<div class="row"><code>${u.id}</code>
+    <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button></div>`).join("") +
+    `<div id="renMsg"></div>`;
+  document.querySelectorAll("[data-ren]").forEach(b => b.onclick = async () => {
+    const id = +b.dataset.ren;
+    try { await api("admin/rename", { id, name: document.querySelector(`[data-uid="${id}"]`).value }); await loadUsers(); seatRows(); show("#renMsg", "Saved"); }
+    catch (e) { show("#renMsg", e.message, true); }
+  });
+}
+
+function seatRows() {
+  const colors = +$("#gColors").value, two = $("#gMode").value === "two", max = two ? colors / 2 : colors;
+  const n = Math.min(+$("#gN").value || 2, max);
+  $("#gN").innerHTML = Array.from({ length: max - 1 }, (_, i) => `<option ${i + 2 === n ? "selected" : ""}>${i + 2}</option>`).join("");
+  const old = [...document.querySelectorAll("[data-seat]")].map(s => s.value);
+  const opts = sel => users.map(u => `<option value="${u.id}" ${String(u.id) === sel ? "selected" : ""}>${esc(u.name)}</option>`).join("") +
+    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Computer</option>`;
+  $("#seats").innerHTML = Array.from({ length: n }, (_, i) =>
+    `<div class="row">Seat ${i + 1} <select data-seat="${i}">${opts(old[i] || String(users[i] ? users[i].id : "ai"))}</select></div>`).join("");
+}
+for (const id of ["#gColors", "#gMode", "#gN"]) $(id).onchange = seatRows;
+const corrShown = () => { $("#gCorr").disabled = $("#gColors").value !== "6"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
+$("#gColors").addEventListener("change", corrShown);
+
+$("#createBtn").onclick = async () => {
+  const colors = +$("#gColors").value, mode = $("#gMode").value, half = colors / 2;
+  const seats = [...document.querySelectorAll("[data-seat]")].map((s, i) => {
+    const cols = mode === "two" ? [i, i + half] : [i];
+    return s.value === "ai" ? { ai: true, colors: cols } : { user: +s.value, colors: cols };
+  });
+  try {
+    const r = await api("games", { name: $("#gName").value, setup: { mode, colors, level: $("#gLevel").value, corridor: +$("#gCorr").value, seats } });
+    show("#createMsg", `Room "${r.name}" made (${r.id}). It shows on the game page now.`);
+    $("#gName").value = "";
+    loadRooms();
+  } catch (e) { show("#createMsg", e.message, true); }
+};
+
+// every room, with a button to delete it (a second press deletes)
+async function loadRooms(list) {
+  const gs = list || await api("admin/games", {});
+  $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
+    <code>${g.id}</code> <span class="muted">${g.setup.corridor ? g.setup.corridor + " fields · " : ""}${g.status} · ${new Date(g.updated).toLocaleString()}</span>
+    <button data-edit="${g.id}">Edit players</button> <button data-del="${g.id}">Delete</button></div>
+    <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }
+    try { await loadRooms(await api("admin/delete", { id: b.dataset.del })); }
+    catch (e) { show("#delMsg", e.message, true); }
+  });
+}
+
+// change who plays in a room (a test aid): replace, add or remove players. The same number
+// of players keeps the game going; another number starts it again.
+function editRoom(g) {
+  const box = $("#edit-" + g.id), su = g.setup, max = su.mode === "two" ? su.colors / 2 : su.colors;
+  let seats = su.players.map(p => (p.isAi ? "ai" : String(p.user)));
+  const opts = sel => users.map(u => `<option value="${u.id}" ${String(u.id) === sel ? "selected" : ""}>${esc(u.name)}</option>`).join("") +
+    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Computer</option>`;
+  const draw = () => {
+    const full = seats.length >= max;
+    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">${seats.length} of ${max} places${full ? " (full: change a player, or remove one first)" : ""}</div>` +
+      seats.map((v, i) => `<div class="row">Seat ${i + 1} <select data-es="${i}">${opts(v)}</select>
+        ${seats.length > 2 ? `<button data-rm="${i}">Remove</button>` : ""}</div>`).join("") +
+      `<div class="row"><button data-add ${full ? "disabled" : ""}>Add player</button>
+        <button class="primary" data-save>Save</button> <button data-cancel>Cancel</button></div>
+      <div class="muted">${seats.length === su.players.length ? "Same number of players: the game goes on." : "Another number of players: the game starts again."}
+        Players in this room go back to the first page and pick their names again.</div><div data-msg></div></section>`;
+    box.querySelectorAll("[data-es]").forEach(x => x.onchange = () => { seats[+x.dataset.es] = x.value; });
+    box.querySelectorAll("[data-rm]").forEach(x => x.onclick = () => { seats.splice(+x.dataset.rm, 1); draw(); });
+    box.querySelector("[data-add]").onclick = () => {
+      const free = users.find(u => !seats.includes(String(u.id)));
+      seats.push(free ? String(free.id) : "ai"); draw();
+    };
+    box.querySelector("[data-cancel]").onclick = () => { box.innerHTML = ""; };
+    box.querySelector("[data-save]").onclick = async () => {
+      try {
+        const list = await api("admin/edit", { id: g.id, seats: seats.map(v => (v === "ai" ? { ai: true } : { user: +v })) });
+        await loadRooms(list);
+        show("#delMsg", `Players of "${g.name}" saved.`);
+      } catch (e) { box.querySelector("[data-msg]").className = "err"; box.querySelector("[data-msg]").textContent = e.message; }
+    };
+  };
+  draw();
+}
+
+async function open() {
+  key = $("#adminKey").value;
+  try { await api("admin/check", {}); } catch (e) { show("#loginErr", e.message, true); return; }
+  store.set("adminKey", key);
+  $("#login").hidden = true;
+  $("#panel").hidden = false;
+  await loadUsers();
+  seatRows();
+  await loadRooms();
+}
+$("#adminBtn").onclick = open;
+$("#adminKey").value = store.get("adminKey") || "";
+if ($("#adminKey").value) open();
+</script>
+</body>
+</html>

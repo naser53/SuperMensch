@@ -53,8 +53,9 @@ export class Config {
   // The one-color game (one color per player) is the traditional game: no tunnels, no walls or
   // castles (so no castle-break declarations), no generals or marshals and so no nest swap (it only
   // carries rank points back into play). The game where a player has several colors keeps them all.
-  static forBoard(n, level = "beginner", mode = "two") {
+  static forBoard(n, level = "beginner", mode = "two", corridor = 10) {
     const dice = { six_chance: Config.LEVELS[level] ?? null };
+    const long = n === 6 && Config.CORRIDORS.includes(corridor) ? { corridor_len: corridor } : {};
     const classic = mode === "one"
       ? { ranks: false, nest_swap: false, tunnels_on: false, walls: false, castles: false, break_decl_on: false } : {};
     if (n === 4) {
@@ -63,11 +64,20 @@ export class Config {
                           tunnel_max_skip: 2, tunnel_last_corridor: 3,
                           color_bonus: 25, finish_bonus: [40, 20], ...classic, ...dice });
     }
-    return new Config({ n_colors: 6, ...classic, ...dice });
+    return new Config({ n_colors: 6, ...classic, ...dice, ...long });
   }
 
   // dice levels for everybody at the table (same dice for people and computers)
   static LEVELS = { beginner: null, intermediate: 0.1 };
+  // fields per corridor on the 6-color board (14: every arm two fields longer)
+  static CORRIDORS = [10, 14];
+  // animation speed in the panel: the pause between moves (ms) times the factor; a piece's
+  // hop takes HOP_SHARE of that pause. "fast" is the speed of version 1.
+  static ANIM_PAUSE = 650;
+  static ANIM_SPEEDS = { slow: 2.4, medium: 1.6, fast: 1 };
+  static HOP_SHARE = 0.22;
+  // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
+  static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 
   // (entry corridor, exit corridor) pairs; corridors 1..n, the final one is never an exit.
   tunnels() {

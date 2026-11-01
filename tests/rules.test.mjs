@@ -190,6 +190,21 @@ test("tunnel options and cost", () => {
   assert.deepEqual(g.tunnelOptions(0), []);
 });
 
+test("tunnel list says why a color has no tunnel", () => {
+  const g = make();                        // player A plays colors 0 and 3
+  put(g, 0, 0, 0);                         // color 0: before the corridor 1 entrance
+  assert.deepEqual(g.tunnelBlockers(0), { all: null, colors: { 3: "tun_why_none" } });
+  put(g, 3, 0, 6);                         // color 3: just past the corridor 1 entrance
+  assert.deepEqual(g.tunnelBlockers(0).colors, { 3: "tun_why_range" });
+  put(g, 3, 0, 9);                         // color 3: before the corridor 2 entrance
+  assert.deepEqual(g.tunnelBlockers(0).colors, {});
+  g.state.tunnels.push([0, 0, 1, 1, 2, null], [0, 0, 2, 1, 2, null]);
+  assert.equal(g.tunnelBlockers(0).all, "tun_why_max");
+  g.state.tunnels = [];
+  g.state.scores[0] = -1;
+  assert.equal(g.tunnelBlockers(0).all, "tun_why_debt");
+});
+
 test("a tunnel declared this turn can be taken back before the roll, with its cost", () => {
   const g = make();
   g.cfg.tunnels_on = true;

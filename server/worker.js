@@ -1,21 +1,26 @@
 // SuperMensch online server (Cloudflare Worker).
 //   Lobby     one Durable Object: users, the list of games and their results
 //   GameRoom  one Durable Object per game: setup, events, the devices' WebSockets
-// Pages come from server/public. Security is light on purpose (family use): no passwords,
-// only the admin key (secret ADMIN_KEY) guards renaming users and handing out the room-maker
-// role; games are made by the admin or by a user with that role.
+// Pages come from server/public: / is the game (built from js/, with the room list on its first
+// page), /admin the admin page. Security is light on purpose (family use): no passwords for
+// players; only the admin key (secret ADMIN_KEY) renames users and makes and deletes rooms.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, editSetup, isGameId, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
-  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
+// the downloaded game file (file://) asks this server too
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, x-admin-key",
+  "access-control-allow-methods": "GET, POST, OPTIONS" };
 const fail = (msg, status = 400) => json({ error: msg }, status);
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    if (url.pathname === "/play") return Response.redirect(new URL("/" + url.search, url).href, 301);   // old links
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     try { return await api(req, env, url); }
     catch (e) { return fail(String(e.message || e)); }
   },
@@ -32,18 +37,32 @@ async function api(req, env, url) {
     if (!adminOk) return fail("wrong admin key", 403);
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
-    if (parts[1] === "role" && body) return json(await lobby.setRole(body.id, !!body.canCreate));
     if (parts[1] === "games") return json(await lobby.allGames());
+    if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
+      const old = await lobby.setupOf(body.id);
+      if (!old) return fail("no such game", 404);
+      const { setup, keep } = editSetup(old, body.seats, await lobby.users());
+      await env.ROOM.get(env.ROOM.idFromName(body.id)).edit(setup, keep);
+      return json(await lobby.setSetup(body.id, setup));
+    }
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
       return json(await lobby.removeGame(body.id));
     }
   }
   if (parts[0] === "games" && parts.length === 1) {
-    if (req.method === "GET") return json(await lobby.openGames());
+    if (req.method === "GET") {        // with the seats held right now by a connected device
+      const gs = await lobby.openGames();
+      await Promise.all(gs.map(async g => {
+        const room = env.ROOM.get(env.ROOM.idFromName(g.id));
+        g.held = Object.keys(await room.held()).map(Number);
+        g.colorsOpen = await room.colorsOpen();      // the seats may still pick their colors
+      }));
+      return json(gs);
+    }
     if (req.method === "POST") {
       const users = await lobby.users();
-      if (!mayCreate(adminOk, users, body.by)) return fail("only the admin or a room maker can make a game", 403);
+      if (!adminOk) return fail("only the admin makes rooms", 403);
       const name = cleanName(body.name);
       if (!name) return fail("the game needs a name");
       const setup = checkSetup(body.setup, users);
@@ -57,6 +76,11 @@ async function api(req, env, url) {
   if (parts[0] === "games" && isGameId(parts[1])) {
     const room = env.ROOM.get(env.ROOM.idFromName(parts[1]));
     if (parts[2] === "ws") return room.fetch(req);
+    if (parts[2] === "colors" && body) {           // a child picks the colors of a seat, before the first move
+      const setup = await room.recolor(body.seat, body.colors);
+      await lobby.setSetup(parts[1], setup);
+      return json({ ok: true });
+    }
     if (req.method === "GET") {
       const s = await room.snapshot();
       return s ? json(s) : fail("no such game", 404);
@@ -79,15 +103,9 @@ export class Lobby extends DurableObject {
   }
 
   users() {
-    return this.sql.exec(`SELECT id, name, can_create FROM users ORDER BY id`).toArray()
-      .map(u => ({ id: u.id, name: u.name, canCreate: !!u.can_create }));
+    return this.sql.exec(`SELECT id, name FROM users ORDER BY id`).toArray().map(u => ({ id: u.id, name: u.name }));
   }
 
-  setRole(id, canCreate) {
-    if (!this.sql.exec(`SELECT id FROM users WHERE id = ?`, id | 0).toArray().length) throw new Error("no such user");
-    this.sql.exec(`UPDATE users SET can_create = ? WHERE id = ?`, canCreate ? 1 : 0, id | 0);
-    return this.users();
-  }
 
   rename(id, name) {
     name = cleanName(name);
@@ -118,13 +136,24 @@ export class Lobby extends DurableObject {
     return this.sql.exec(`SELECT id, name, created, updated, setup FROM games WHERE status = 'open' AND updated > ?
       ORDER BY updated DESC`, since).toArray().map(r => {
       const su = JSON.parse(r.setup);
-      return { id: r.id, name: r.name, created: r.created, updated: r.updated, mode: su.mode, colors: su.colors,
-        players: su.players.map(p => ({ name: p.name, isAi: p.isAi, user: p.user })) };
+      return { id: r.id, name: r.name, created: r.created, updated: r.updated, mode: su.mode, colors: su.colors, corridor: su.corridor || 10,
+        players: su.players.map(p => ({ name: p.name, isAi: p.isAi, user: p.user, colors: p.colors, picked: !!p.picked })) };
     });
   }
 
   allGames() {
-    return this.sql.exec(`SELECT id, name, created, updated, status FROM games ORDER BY updated DESC`).toArray();
+    return this.sql.exec(`SELECT id, name, created, updated, status, setup FROM games ORDER BY updated DESC`).toArray()
+      .map(g => ({ ...g, setup: JSON.parse(g.setup) }));
+  }
+
+  setupOf(id) {
+    const r = this.sql.exec(`SELECT setup FROM games WHERE id = ?`, id).toArray();
+    return r.length ? JSON.parse(r[0].setup) : null;
+  }
+
+  setSetup(id, setup) {
+    this.sql.exec(`UPDATE games SET setup = ?, status = 'open', result = NULL, updated = ? WHERE id = ?`, JSON.stringify(setup), Date.now(), id);
+    return this.allGames();
   }
 
   removeGame(id) {
@@ -139,9 +168,11 @@ export class Lobby extends DurableObject {
 }
 
 // WebSocket messages (JSON):
-//   device -> room  { t: "hello", device, seats: [0, 2] }   which seats this device plays
+//   device -> room  { t: "hello", device, token, seats: [0, 2] }   which seats this device plays
+//                   { t: "leave" }                           Exit: free this device's seats
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
-//   room -> device  { t: "state", id, name, setup, events, seats, fp, view }
+//   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
+//                   (mine: the seats this device got; taken: wanted seats another device holds)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
@@ -156,6 +187,39 @@ export class GameRoom extends DurableObject {
   _tables() {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY, ev TEXT NOT NULL)`);
+  }
+
+  // the admin changes who plays: the same number of seats keeps the moves, another starts again.
+  // The devices are sent back to the first page (code 4001), where they pick their names again.
+  async edit(setup, keep) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const events = keep ? room.events.slice() : [];
+    if (!keep) this.sql.exec(`DELETE FROM events`);
+    this.sql.exec(`UPDATE meta SET v = ? WHERE k = 'setup'`, JSON.stringify(setup));
+    this.room = new Room(setup, events);
+    this._save(keep ? events.length : 0);
+    for (const ws of this.ctx.getWebSockets()) { try { ws.close(4001, "players changed"); } catch { /* closed */ } }
+    await this._report();
+  }
+
+  colorsOpen() { const room = this._load(); return !!room && room.colorsOpen(); }
+
+  // a seat picks its colors before the first move (Room.recolor): the throws after the first
+  // move are made again; the devices in the game start again from the new state
+  async recolor(seat, colors) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const next = room.recolor(seat, colors);
+    let same = 0;                                     // the events that stay as they were
+    while (same < next.events.length && JSON.stringify(next.events[same]) === JSON.stringify(room.events[same])) same++;
+    this.sql.exec(`DELETE FROM events WHERE seq >= ?`, same);
+    this.sql.exec(`UPDATE meta SET v = ? WHERE k = 'setup'`, JSON.stringify(next.setup));
+    this.room = next;
+    this._save(same);
+    this._all({ t: "recolor" });
+    await this._report();
+    return next.setup;
   }
 
   // the admin deletes the game: close the devices' connections and forget everything
@@ -212,6 +276,8 @@ export class GameRoom extends DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  held() { return this._seats(); }
+
   // seat -> device name, for every seat held by a connected device
   _seats() {
     const out = {};
@@ -231,16 +297,24 @@ export class GameRoom extends DurableObject {
     const room = this._load();
     if (msg.t === "hello") {
       const humans = room.setup.players.map((p, i) => (p.isAi ? -1 : i)).filter(i => i >= 0);
-      const seats = (Array.isArray(msg.seats) ? msg.seats : []).filter(s => humans.includes(s));
-      // a seat goes to the device that asked last (a child moves to another tablet)
-      for (const other of this.ctx.getWebSockets()) {
-        if (other === ws) continue;
-        const a = other.deserializeAttachment() || {};
-        if ((a.seats || []).some(s => seats.includes(s))) other.serializeAttachment({ ...a, seats: a.seats.filter(s => !seats.includes(s)) });
-      }
-      ws.serializeAttachment({ device: String(msg.device || "?").slice(0, 40), seats });
-      this._send(ws, { t: "state", ...this.snapshot() });
+      const old = ws.deserializeAttachment() || {};
+      const token = msg.token ? String(msg.token).slice(0, 64) : old.token || null;
+      const device = msg.device ? String(msg.device).slice(0, 40) : old.device || "?";
+      const others = this.ctx.getWebSockets().filter(o => o !== ws).map(o => ({ ws: o, ...(o.deserializeAttachment() || {}) }));
+      // a seat stays with a connected device until it leaves; the same browser takes it back
+      const { seats, taken } = claimSeats(Array.isArray(msg.seats) ? msg.seats : [], humans, others, token);
+      for (const o of others)
+        if (token && o.token === token && (o.seats || []).some(s => seats.includes(s)))
+          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)) });
+      ws.serializeAttachment({ device, token, seats });
+      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken });
       this._all({ t: "seats", seats: this._seats() });
+      return;
+    }
+    if (msg.t === "leave") {
+      ws.serializeAttachment({ device: "?", seats: [] });
+      this._all({ t: "seats", seats: this._seats() });
+      try { ws.close(1000, "left"); } catch { /* closed */ }
       return;
     }
     if (msg.t === "move") {

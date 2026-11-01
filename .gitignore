@@ -4,4 +4,4 @@ dist/
 !fonts/*.png
 .dev.vars
 .wrangler/
-server/public/play.html
+server/public/index.html

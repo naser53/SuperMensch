@@ -20,8 +20,9 @@ everything. The castle-breaker piece and point loans go into later versions.
 * Repo: https://github.com/naser53/SuperMensch (branch `main`).
 * Deliverable: one self-contained file, `dist/supermensch.html`, with the code and the
   Vazirmatn font inlined (esbuild 0.20.2).
-* Boards: **6 colors** (six arms, 60 fields, 10 per corridor) and **4 colors** (classic cross,
-  40 fields).
+* Boards: **6 colors** (six arms, 60 fields, 10 per corridor; or 84 fields, 14 per corridor, chosen per
+  game as `setup.corridor` in admin and offline setup, `Config.CORRIDORS`, geometry `boardFor()` in
+  `js/boards.js`) and **4 colors** (classic cross, 40 fields).
 * Modes: **two colors per player** (two dice) or **one color per player** (one die). People at
   the same screen and/or computer players.
 * Languages: English (default), Farsi (right to left), German.
@@ -206,6 +207,13 @@ game: no declarations, no Tunnels button, no info table).
   (`TUNNEL_DECLARE_RANGE`). Until the dice are rolled that turn it can be taken back with Undo
   (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. The chosen tunnel is shown; other players' tunnels
   appear paler.
+* **Tunnels buttons:** one per color of the player, its icon in that color, with that color's count.
+  It opens that color's list (each line with a color dot) and draws its tunnels on the board, faint, in
+  the color; the one under the mouse is drawn full and thicker. A tap on a drawn tunnel (its tube, or
+  the exit disc where tunnels from one entrance overlap) declares it, for phones without hover. A
+  color with nothing to declare gets a dashed line with the reason (`Game.tunnelBlockers`: no piece
+  on the track, no piece in range, the active-tunnel limit, or a negative score); the button opens
+  even at (0), to read why.
 * **Entering:** the piece moves to the entrance and uses the rest of the die inside. A die that
   does not reach the entrance burns; the declaration stays for later turns.
 * **Inside:** one die at a time, no sum moves, no captures inside.
@@ -244,7 +252,7 @@ seat also shows the board's color dots to pick its color.
 The old side panel is gone; the board takes the whole screen under a ribbon.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
-  Debug, language, computer speed, Menu (icons with tooltips; labels on wide screens). Menu (and
+  Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), Menu (icons with tooltips; labels on wide screens). Menu (and
   Esc) asks first while a game is running: *Leave* or *Keep playing*; the computer waits meanwhile.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
@@ -287,6 +295,10 @@ Two orders work, and you can switch at any time:
 * **Die first:** click a die (it alone is highlighted), then a piece. A piece that cannot move
   with it shows a "not allowed" sign that fades in half a second. If you click a piece before
   rolling or choosing, the piece stays highlighted and "First choose a die" appears.
+* When an opponent's **wall or castle** stops the move, a wall or castle sign with a small "not
+  allowed" badge pops up above that structure and shakes, and red rings pulse under its pieces
+  (owner, 2026-11-01: signs and effects instead of written messages; `Game.blockerOf`,
+  `Board3D.forbidStructure`).
 * **Piece first:** click a piece. Only the dice it can use stay active, and **yellow target
   rings** with the die value appear on its possible fields. Click a ring or a die to move.
 * After the first die is played, the **remaining die is selected automatically**.
@@ -488,17 +500,29 @@ npm run build       # dist/supermensch.html
 Agreed plan (2026-10-31): the claude.ai doc "طرح نسخه ۲ سوپرمنش: آنلاین خانوادگی". It replaces the
 earlier sketch (browser dice, PINs).
 * Family use, free plan, light security: no passwords; 10 users `user1`..`user10` made at the
-  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin, or a
-  user the admin gave the room-maker role (`can_create`, a tick on the admin list), makes games.
-  The admin list also shows every game with a Delete button (two presses; closes its connections).
+  first start, renamed by the owner with the admin key (secret `ADMIN_KEY`). Only the admin makes
+  rooms (owner, 2026-10-31: the room-maker role is gone; the old `can_create` column is unused).
+* Pages (owner's redesign for children, 2026-10-31): `/` is the game itself. Its first page lists
+  the open rooms with their players (`GET /api/games` adds `held`, the seats in play now); a child
+  taps a room's names (several on one device) and Start, and plays without leaving the page. A tick
+  "Offline game" shows the usual setup instead. `/admin` (`server/public/admin.html`) is settings
+  only, behind the admin key: rename players, make rooms, delete rooms (two presses), and edit a
+  room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
+  `server/core.js`). The same number of players keeps the moves; another number starts the game
+  again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page. `/play?…`
+  redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
+  else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
   `GameRoom` per game. Each game has a GameID (`K7QX-42`, made by the server) and a GameName
   (typed by its creator); the lobby lists open games (idle 24 h → off the list, kept in history).
 * **The server throws the dice** (crypto) and checks every move with the same engine (`Room` in
   `server/core.js`); computer seats are played by the server. Devices send `{pick}`, the server
   sends the new events to every device, which replays them (`Table`), so everybody sees the
-  opponents' throws live. Several seats can sit at one device; a seat goes to the device that
-  asked for it last.
+  opponents' throws live. Several seats can sit at one device. A seat stays with the connected
+  device that holds it until that device leaves (Exit sends `{t:"leave"}`, or its connection
+  closes); then anyone may take it. The same browser (random token in localStorage
+  `supermensch-device`) takes its seats back after a break (`claimSeats` in `server/core.js`;
+  owner's rule for now, password login and moving a game to another device come in M3).
 * Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
   M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
   as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
@@ -509,5 +533,33 @@ earlier sketch (browser dice, PINs).
   (pages), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
-* Git: `main` stays v1 (fixes only); `v2` collects the work through PRs from short branches
-  (`v2-<topic>`; a branch cannot be named `v2/...` next to `v2`); `v2` merges into `main` at v2.0.0.
+* **Colors on the first page** (owner, 2026-11-01): after tapping a name, a child picks the
+  seat's colors on a small picture of the board (`roomColorsHtml`: each yard is a button, as the
+  3D view first shows the board) (two in the two-color game; a tap replaces the older one) until a person makes
+  the first move. First come, first served: colors of seats that picked already are grey; a color
+  of a seat that has not picked (or of a computer) is swapped. `POST /api/games/<ID>/colors
+  {seat, colors}` (`pickColors`, `colorsKeep`, `Room.recolor` in `server/core.js`): the
+  throws before the first move stay, the rest is played again; devices in the game get
+  `{t:"recolor"}` and load the new state. The admin page has no color choice.
+* Git (owner, 2026-11-01, from v2.1.0): one long-lived branch, `main`. Each piece of work is a
+  short branch with a PR into `main`; the branch is deleted after the merge. A push to `main`
+  publishes `latest`, makes a release when the version is new, and deploys the server. The old
+  `v2` branch is no longer used.
+
+### 12.1 Reading a live game from a Claude thread (owner, 2026-11-01)
+`GET /api/games/<ID>` returns `{ setup, events, fp, ... }` with no key (fine by the owner: anyone
+with the GameID may read the moves). A thread fetches it and rebuilds the game with `Table.replay`
+(as `tools/replay.mjs` does) to answer the owner's questions. The cloud environment allows the host
+`supermensch-dev.ndaneshi.workers.dev`. No timestamps, connection or browser logs are stored, and
+the owner does not want them. Debug mode stays off by default and hidden in the online game.
+
+The owner and Claude talk about a game with these commands. They run on a **local copy**; the game
+on the server never changes.
+* `game ID` read that game · `at N` go to event N (none = the end) · `show` pieces, scores, turn,
+  legal moves
+* `dice 4 5` the dice of the current throw (always for the player whose turn it is)
+* `play s2B 4` move Blue piece 2 with the die 4. In the two-color game one option is the whole
+  throw, so `play s2B 4 s1R 5` names both steps; with one step, Claude lists the options left.
+* `move 1 s2B 33`, `score 1 50` as in the debug console (`js/debugcmd.js`).
+Pieces are written `s` + number + color letter (R B G Y P T), as in the debug console: `P` is
+Purple, so it cannot also mean "piece".

@@ -6,6 +6,8 @@ import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18
 import { Board3D, COLORS } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
+import { Config } from "./config.js";
+import { boardFor } from "./boards.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -51,8 +53,12 @@ class App {
     this.lang = LANGS.includes(st.lang) ? st.lang : "en";
     this.setup = Object.assign({ colors: 6, mode: "two", n: 3, pairing: "opposite",
       seats: ["human", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
-    this.delay = st.delay || 650;
+    this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
+    this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
     this.follow = !!st.follow;
+    this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
+    this.rooms = null;                 // null: loading · "error": no server · [rooms]
+    this.pick = { id: null, seats: [] };
     this.debug = false;
     this.game = null;
     this.ais = {};
@@ -89,7 +95,17 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, delay: this.delay, follow: this.follow }); }
+  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, follow: this.follow, offline: this.offline }); }
+
+  // the open rooms of the server, with their players and the seats in play right now
+  async loadRooms() {
+    try {
+      const r = await fetch(`${apiBase()}/api/games`, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      this.rooms = await r.json();
+    } catch { this.rooms = "error"; }
+    if (!this.game) this.render();
+  }
 
   setLang(l) {
     this.lang = l;
@@ -150,14 +166,20 @@ class App {
     if (!open) { if (el) el.hidden = true; return; }
     if (!el) { el = document.createElement("div"); el.id = "confirm"; document.body.appendChild(el); }
     el.dir = this.rtl ? "rtl" : "ltr";
-    el.innerHTML = `<div class="confirm-card"><p>${this.T("leave_q")}</p><div class="acts">
+    el.innerHTML = `<div class="confirm-card"><p>${this.T(this.online ? "leave_q_online" : "leave_q")}</p><div class="acts">
       <button class="btn" data-act="leave_no">${this.T("leave_no")}</button>
       <button class="btn primary" data-act="leave_yes">${this.T("leave_yes")}</button></div></div>`;
     el.hidden = false;
   }
 
   showSetup() {
-    if (this.online) { location.href = "./"; return; }        // an online game goes back to the lobby
+    if (this.online) {                                          // Exit: free this device's seats, back to the lobby
+      const ws = this.online.ws;
+      this.online.ws = null;
+      try { ws.send(JSON.stringify({ t: "leave" })); } catch { /* not connected */ }
+      setTimeout(() => { location.href = location.pathname; }, 150);
+      return;
+    }
     this.game = null;
     $("#setup").hidden = false;
     this.render();
@@ -171,8 +193,12 @@ class App {
     const nRange = s.mode === "two" ? s.colors / 2 : s.colors;
     let h = `<div class="card"><div class="top"><div><h1>${this.T("title")}</h1>
       <div class="muted">${this.T("subtitle")} · v${VERSION}</div></div>${this.langSelect()}</div>`;
+    h += `<div class="choices">${choice((this.offline ? "☑ " : "☐ ") + this.T("offline_play"), "offline", "", this.offline)}</div>`;
+    if (!this.offline) { el.innerHTML = h + this.roomsHtml() + "</div>"; return; }
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
       choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
+    if (s.colors === 6) h += `<h2>${this.T("corridor")}</h2><div class="choices">` +
+      Config.CORRIDORS.map(k => choice(this.T("corridor_n", { n: num(this.lang, k) }), "corridor", k, (s.corridor || 10) === k)).join("") + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
       choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
       choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") + "</div>";
@@ -210,8 +236,95 @@ class App {
     el.innerHTML = h;
   }
 
+  // the first page online: every open room with its players; tap a room's names, then Play
+  roomsHtml() {
+    let h = `<h2>${this.T("rooms")}</h2>`;
+    if (this.rooms === null) return h + `<div class="muted">…</div>`;
+    if (this.rooms === "error") return h + `<div class="muted">${this.T("rooms_error")}</div>` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+    if (!this.rooms.length) return h + `<div class="muted">${this.T("rooms_none")}</div>` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+    h += `<div class="muted small pick-hint">${this.T("rooms_pick")}</div>`;
+    for (const r of this.rooms) {
+      h += `<div class="room"><h3>${esc(r.name)}</h3><div class="choices">`;
+      r.players.forEach((p, i) => {
+        if (p.isAi) { h += `<span class="choice ai">${this.T("computer")}</span>`; return; }
+        const sel = this.pick.id === r.id && this.pick.seats.includes(i), held = (r.held || []).includes(i);
+        h += `<button class="choice${sel ? " sel" : ""}" data-act="who" data-val="${r.id}:${i}" ${held && !sel ? "disabled" : ""}>` +
+          (p.colors || []).map(c => `<span class="dot" style="background:${COLORS[c]}"></span> `).join("") +
+          `${esc(p.name)}${held ? ` <span class="muted small">(${this.T("in_play")})</span>` : ""}</button>`;
+      });
+      h += "</div>";
+      if (r.colorsOpen && this.pick.id === r.id) for (const i of this.pick.seats) h += this.roomColorsHtml(r, i);
+      h += "</div>";
+    }
+    return h + `<button class="btn primary start" data-act="join" ${this.pick.seats.length ? "" : "disabled"}>${this.T("start")}</button> ` +
+      `<button class="btn" data-act="rooms_reload">${this.T("rooms_reload")}</button>`;
+  }
+
+  // Before the first move a child picks the colors of a seat on a small picture of the board,
+  // so the colors are seen where they sit. Each color's yard is a button: a color picked by
+  // another seat first is grey; tapping a free one takes it (in the two-color game it
+  // replaces the older of the two). The picture is the board as the 3D view first shows it.
+  roomColorsHtml(r, i) {
+    const p = r.players[i], two = r.mode === "two", cl = r.corridor || 10, b = boardFor(r.colors, cl);
+    const P = ([x, y]) => [(-x).toFixed(2), (-y).toFixed(2)];            // the 3D view's first angle
+    const cen = pts => [pts.reduce((s, q) => s + q[0], 0) / pts.length, pts.reduce((s, q) => s + q[1], 0) / pts.length];
+    const R = r.colors === 4 ? 1.15 : 1.6;                                  // a yard button
+    const ext = Math.max(...b.outline.flat().map(Math.abs), ...b.yard.flat(2).map(Math.abs).map(v => v + R)) + 0.7;
+    let s = `<svg class="mini-board" viewBox="${-ext} ${-ext} ${2 * ext} ${2 * ext}" role="group">` +
+      `<polygon points="${b.outline.map(q => P(q).join(",")).join(" ")}" fill="#e8dcc2" stroke="#b9a681" stroke-width=".18" stroke-linejoin="round"/>`;
+    b.track.forEach((q, k) => {
+      const gate = k % cl === 0 ? COLORS[k / cl] : null;
+      s += `<circle cx="${P(q)[0]}" cy="${P(q)[1]}" r=".34" fill="${gate || "#fff"}" stroke="#c9bda3" stroke-width=".06"/>`;
+    });
+    b.home.forEach((hs, c) => hs.forEach(q => { s += `<circle cx="${P(q)[0]}" cy="${P(q)[1]}" r=".3" fill="${COLORS[c]}" opacity=".45"/>`; }));
+    for (let c = 0; c < r.colors; c++) {
+      const mine = p.colors.includes(c), oi = r.players.findIndex((q, k) => k !== i && q.colors.includes(c));
+      const owner = oi >= 0 ? r.players[oi] : null, taken = !mine && owner && owner.picked;
+      const [x, y] = P(cen(b.yard[c])), nm = esc(COLOR_NAMES[this.lang][c]);
+      const who = mine ? p.name : owner ? (owner.isAi ? "🤖" : owner.name) : "";
+      s += `<g class="mini-yard${mine ? " sel" : ""}${taken ? " taken" : ""}"${taken ? "" : ` data-act="room_color" data-val="${r.id}:${i}:${c}"`}>` +
+        `<title>${nm}</title>` +
+        (mine ? `<circle cx="${x}" cy="${y}" r="${(R + 0.45).toFixed(2)}" fill="none" stroke="#1d1d1d" stroke-width=".28"/>` : "") +
+        `<circle cx="${x}" cy="${y}" r="${R}" fill="${COLORS[c]}" stroke="#fff" stroke-width=".22"/>` +
+        (who ? `<text x="${x}" y="${(+y + R * 0.2).toFixed(2)}" text-anchor="middle" font-size="${(R * 0.55).toFixed(2)}" fill="#fff" font-weight="700">${esc(shape(who).slice(0, 6))}</text>` : "") +
+        "</g>";
+    }
+    s += "</svg>";
+    return `<div class="room-colors"><div class="muted small">${this.T(two ? "pick_colors_two" : "pick_colors_one", { p: esc(p.name) })}</div>${s}</div>`;
+  }
+
+  async pickRoomColor(id, i, c) {
+    const r = Array.isArray(this.rooms) && this.rooms.find(x => x.id === id), p = r && r.players[i];
+    if (!p || p.colors.includes(c)) return;
+    const colors = r.mode === "two" ? [p.colors[p.colors.length - 1], c] : [c];   // the newest two
+    try {
+      const res = await fetch(`${apiBase()}/api/games/${encodeURIComponent(id)}/colors`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seat: i, colors }) });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        const why = String(e.error || "");
+        this.showToast(this.T(why.includes("taken") ? "color_taken" : why.includes("started") ? "colors_fixed" : "rooms_error"));
+      }
+    } catch { this.showToast(this.T("rooms_error")); }
+    this.loadRooms();
+  }
+
   setupAction(act, val) {
     const s = this.setup;
+    if (act === "offline") { this.offline = !this.offline; this.persist(); if (!this.offline) this.loadRooms(); this.render(); return; }
+    if (act === "rooms_reload") { this.rooms = null; this.render(); this.loadRooms(); return; }
+    if (act === "who") {
+      const [id, i] = [val.split(":")[0], +val.split(":")[1]];
+      if (this.pick.id !== id) this.pick = { id, seats: [] };
+      const k = this.pick.seats.indexOf(i);
+      if (k >= 0) this.pick.seats.splice(k, 1); else this.pick.seats.push(i);
+      this.render();
+      return;
+    }
+    if (act === "room_color") { const [id, i, c] = String(val).split(":"); this.pickRoomColor(id, +i, +c); return; }
+    if (act === "join") { if (this.pick.seats.length) this.startOnline(this.pick.id, [...this.pick.seats].sort()); return; }
     if (act === "colors") {
       s.colors = +val;
       s.n = Math.min(s.n, s.mode === "two" ? s.colors / 2 : s.colors);
@@ -221,6 +334,7 @@ class App {
     } else if (act === "n") s.n = +val;
     else if (act === "pairing") s.pairing = val;
     else if (act === "level") s.level = val;
+    else if (act === "corridor") s.corridor = +val;
     else if (act === "seat") s.seats[+val] = s.seats[+val] === "human" ? "ai" : "human";
     else if (act === "pick") { const [i, c] = String(val).split(":").map(Number); this.pickColor(i, c); }
     else if (act === "start") { this.startGame(); return; }
@@ -236,7 +350,7 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner" }, { autoDice: !this.debug });
+    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner", corridor: s.colors === 6 ? s.corridor || 10 : 10 }, { autoDice: !this.debug });
     this.game = this.table.game;
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
@@ -267,7 +381,7 @@ class App {
     this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
     const human = dec && !p.isAi && !g.over;
-    if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = false; }
+    if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = null; }
     let status, hint = "", acts = "", list = "", opts = [], shown = g.state;
     const pre = {};                     // the roll-time buttons: roll, card, castle break, tunnels
     const btn = (attrs, label, cls = "", icon = "") =>
@@ -284,7 +398,9 @@ class App {
       const who = t(this.lang, this.online && this.online.remote.has(g.turn) ? "online_other" : p.isAi ? "thinking" : "your_turn");
       status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
       if (dec && dec.note && !(human && dec.kind === "keep")) hint = this.S(dec.note);
-      if (dec && dec.kind === "dice") {
+      if (dec && dec.kind === "dice" && this.online) {
+        // online: the table waits for the server's throw; nothing to set or press here
+      } else if (dec && dec.kind === "dice") {                  // debug: set the dice by hand
         hint = `${hint} · ${this.T("dice_hint")}`;
         acts = btn('data-act="dice_go"', this.T("continue"), "primary") + btn('data-act="dice_rand"', this.T("random"));
       } else if (dec && p.isAi && this.debug) {
@@ -316,12 +432,24 @@ class App {
           else tunnels.push(k);
         });
         // a tunnel declared this turn can be taken back until the dice are rolled
-        if (g.cfg.tunnels_on) acts = btn(undo === null ? "disabled" : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
+        if (g.cfg.tunnels_on) acts = btn(undo === null ? `disabled title="${this.T("undo")}"` : `data-opt="${undo}" title="${this.S(dec.options[undo].label)}"`,
           this.T("undo"), "undo", ICON.undo);
-        if (tunnels.length) {
-          pre.tun = `data-act="tunnels"`;
-          pre.tunN = tunnels.length;
-          if (this.tunnelOpen) list = tunnels.map(k => optHtml(dec.options[k], k)).join("");
+        // one Tunnels button per color (its icon in that color); it opens even with nothing to
+        // declare, to say why. The open color's tunnels are listed and drawn on the board, where a
+        // tap on a tunnel declares it (phones have no hover).
+        if (g.cfg.tunnels_on) {
+          pre.tun = {};
+          for (const k of tunnels) { const c = dec.options[k].payload[1]; pre.tun[c] = (pre.tun[c] || 0) + 1; }
+          const c = this.tunnelOpen;
+          if (c !== null && c !== undefined) {
+            const why = g.tunnelBlockers(g.turn);
+            const dot = `<span class="dot" style="background:${COLORS[c]}"></span>`;
+            const off = key => `<div class="opt off">${dot}<div><b>${esc(COLOR_NAMES[this.lang][c])}:</b> ${this.T(key, { n: g.cfg.tunnel_declare_range, m: g.cfg.max_active_tunnels })}</div></div>`;
+            const why1 = why.all || why.colors[c];
+            list = why1 ? off(why1) : `<div class="muted small">${this.T("tun_tap")}</div>` +
+              tunnels.filter(k => dec.options[k].payload[1] === c).map(k =>
+                `<button class="opt tun" data-opt="${k}">${dot}<div>${this.S(dec.options[k].label)}</div></button>`).join("");
+          }
         }
       } else if (human) {
         opts = dec.options;
@@ -333,8 +461,11 @@ class App {
       acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
         (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
         (two && g.cfg.break_decl_on ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
-        (g.cfg.tunnels_on ? btn(`${pre.tun || "disabled"} data-n="${pre.tunN || 0}"`, this.T("tunnel_menu", { n: pre.tunN || 0 }),
-          `pre${pre.tun && this.tunnelOpen ? " on" : ""}`, ICON.tunnel) : "") + acts;
+        (g.cfg.tunnels_on ? p.colors.map(c => {
+          const n = pre.tun ? pre.tun[c] || 0 : 0;
+          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]}" title="${esc(COLOR_NAMES[this.lang][c])}"`,
+            this.T("tunnel_menu", { n }), `pre tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
+        }).join("") : "") + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;
@@ -348,6 +479,9 @@ class App {
     this.cmdBox.hidden = !this.debug;
     this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
+    // with the Tunnels list open, every tunnel that can be declared is drawn in its piece's color
+    this.board.tunnelCands = human && dec.kind === "pre_roll" && this.tunnelOpen !== null && this.tunnelOpen !== undefined
+      ? dec.options.map(o => o.payload).filter(pl => Array.isArray(pl) && pl[0] === "tunnel" && pl[1] === this.tunnelOpen) : [];
     if (g.over) {
       this.board.sync(g.state);
       this.board.preview(null);
@@ -376,6 +510,7 @@ class App {
     return g.players.map((pl, i) => {
       const place = g.places.indexOf(i);
       const tags = [];
+      if (this.online && this.online.seats.includes(i)) tags.push(`<span class="tag you">${this.T("you")}</span>`);
       if (place >= 0) tags.push(`<span class="tag">${this.T("place", { n: place + 1 })}</span>`);
       if (g.mode === "two") tags.push(`<span class="cards" title="${this.T("cards", { n: g.cards[i] })}">${ICON.cardSmall}${num(this.lang, g.cards[i])}</span>`);
       if (g.stuck(i) && place < 0) tags.push(`<span class="stuck" title="${this.T("stuck")}">${ICON.stuck}</span>`);
@@ -387,13 +522,13 @@ class App {
 
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
-    const speed = Math.round((2050 - this.delay) / 20);
     return this.viewMenuHtml() +
       `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
       (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
       this.langSelect() +
-      `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<input type="range" min="0" max="100" value="${speed}" data-act="speed" aria-label="${this.T("speed")}"></label>` +
+      `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<select data-act="speed" aria-label="${this.T("speed")}">` +
+        Object.keys(Config.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
       `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
   }
 
@@ -452,7 +587,7 @@ class App {
     this.board.animateSteps(entry, this.hop());
   }
 
-  hop() { return Math.max(50, Math.min(200, this.delay * 0.22)); }
+  hop() { return this.delay * Config.HOP_SHARE; }
 
   // a nest that has just been filled shines (after the piece has landed)
   checkNests(when = performance.now()) {
@@ -516,7 +651,8 @@ class App {
       return;
     }
     let cur;
-    if (dec && ["play", "keep", "dice"].includes(dec.kind)) cur = dec.dice;
+    if (dec && ["play", "keep"].includes(dec.kind)) cur = dec.dice;
+    else if (dec && dec.kind === "dice") cur = this.online ? this.diceRef : dec.dice;   // online: the server's throw is on its way
     else if (g.lastDice !== this.seenLast) cur = g.lastDice;   // a throw with no move: every die burns
     else cur = this.diceRef;
     this.seenLast = g.lastDice;
@@ -534,7 +670,7 @@ class App {
       this.diceRef = cur;
       this.diceOwner = owner;
       this.diceCleared = false;
-    } else if (cur && dec && dec.kind === "dice") b.placeDice(cur, colors(dec.player));
+    } else if (cur && dec && dec.kind === "dice" && !this.online) b.placeDice(cur, colors(dec.player));
     this.prevTurn = g.turn;
     if (!cur) return;
     if (this.diceOwner !== g.turn && !this.diceCleared && !b.diceRolling()) {   // the turn has passed: fade after the move
@@ -579,6 +715,7 @@ class App {
     const g = this.game;
     if (!g || !hit || hit.die === undefined || !g.pending) return;
     if (g.pending.kind === "dice") {
+      if (this.online) return;                                   // only debug sets dice by hand
       const d = g.pending.dice, k = hit.die;
       d[k] = ((d[k] - 1 + step) % 6 + 6) % 6 + 1;
       this.render();
@@ -614,7 +751,7 @@ class App {
     }
     if (dec.kind !== "play" || sel.list) return;
     if (sel.piece) {                         // piece first: this die moves it
-      if (!this.pieceDice(sel.piece).has(k)) { this.board.forbid(ev); return; }
+      if (!this.pieceDice(sel.piece).has(k)) { this.forbidMove(ev, sel.piece, [k]); return; }
       sel.die = k;
       this.movePiece(sel.piece, ev);
       return;
@@ -667,8 +804,21 @@ class App {
       sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
       this.render();
     } else {
-      this.board.forbid(ev);
+      this.forbidMove(ev, pc, [sel.die]);
     }
+  }
+
+  // The "not allowed" sign. When an opponent's wall or castle stops piece pc with one of these
+  // dice (indices into the throw), the sign of that wall or castle shows on its pieces instead.
+  forbidMove(ev, pc, dieIdx) {
+    const g = this.game, sel = this.sel;
+    const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
+    if (pc && pc[0] === "p" && sel.dec)
+      for (const di of dieIdx) {
+        const b = g.blockerOf(shown, g.turn, pc, sel.dec.dice[di]);
+        if (b) { this.board.forbidStructure(shown, b, ev); return; }
+      }
+    this.board.forbid(ev);
   }
 
   // The view menu: a button at the top of the panel; it opens a small panel of views
@@ -770,6 +920,7 @@ class App {
       setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
     }
     this.nextAi = end + this.delay;
+    this.moveEnd = entries && entries.length ? end + this.delay : end;   // online: the next throw waits for this
   }
 
   // A debug command was typed (js/debugcmd.js); the answer shows under the box.
@@ -809,6 +960,11 @@ class App {
     const g = this.game, sel = this.sel;
     if (this.busy()) return;
     if (g && hit && hit.die !== undefined) { this.dieClick(hit, ev); return; }
+    if (g && hit && hit.tunnel && g.pending && g.pending.kind === "pre_roll" && !g.players[g.turn].isAi) {   // a tap on a drawn tunnel declares it
+      const o = g.pending.options.find(o => Array.isArray(o.payload) && o.payload.join() === hit.tunnel.join());
+      if (o) this.choose(o);
+      return;
+    }
     if (!g || !hit || !g.pending || g.pending.kind !== "play" || g.players[g.turn].isAi || sel.list || sel.ambig) return;
     const shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
     if (hit.target !== undefined && sel.piece) {     // a highlighted field of the selected piece
@@ -821,7 +977,13 @@ class App {
       if (sel.die !== null) { this.movePiece(pc, ev); return; }
       if (sel.piece && sel.piece.join() === pc.join()) { sel.piece = null; this.render(); return; }
       const dice = this.pieceDice(pc);
-      if (!dice.size) { sel.piece = null; this.board.forbid(ev); this.render(); return; }
+      if (!dice.size) {
+        const used = sel.picks.map(c => c.di);
+        sel.piece = null;
+        this.forbidMove(ev, pc, sel.dec ? sel.dec.dice.map((_, i) => i).filter(i => !used.includes(i)) : []);
+        this.render();
+        return;
+      }
       sel.piece = pc;
       this.render();
       return;
@@ -953,19 +1115,48 @@ class App {
 
   connect() {
     const o = this.online;
-    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/games/${encodeURIComponent(o.id)}/ws`);
+    const ws = new WebSocket(`${apiBase().replace(/^http/, "ws")}/api/games/${encodeURIComponent(o.id)}/ws`);
     o.ws = ws;
-    ws.onopen = () => ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer", seats: o.seats }));
+    ws.onopen = () => this.hello();
     ws.onmessage = e => this.onServer(JSON.parse(e.data));
-    ws.onclose = () => {
+    ws.onclose = e => {
       if (o.ws !== ws) return;
+      if (e.code === 4000 || e.code === 4001) {                  // the admin deleted the room or changed its players
+        o.ws = null;
+        this.showToast(this.T(e.code === 4000 ? "online_deleted" : "online_changed"), true);
+        setTimeout(() => { location.href = location.pathname; }, 3000);
+        return;
+      }
       this.showToast(this.T("online_lost"), true);
       setTimeout(() => { if (o.ws === ws) this.connect(); }, 2000);
     };
   }
 
+  // which seats this device plays; the token lets this browser take its seats back after a break
+  hello() {
+    const o = this.online;
+    o.ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer",
+      token: deviceToken(), seats: o.seats }));
+  }
+
   onServer(m) {
     const o = this.online;
+    if (m.t === "state" && m.taken && m.taken.length) {     // a name is in play on another device that has not left
+      const ws = o.ws;
+      o.ws = null;
+      ws.close();
+      const names = m.taken.map(i => m.setup.players[i].name).join(", ");
+      this.showToast(this.T("online_taken", { p: names }), true);
+      setTimeout(() => { location.href = location.pathname; }, 4000);
+      return;
+    }
+    if (m.t === "recolor") {                // a seat picked its colors before the first move: start again
+      this.table = null;
+      o.queue = [];
+      o.sent = null;
+      this.hello();
+      return;
+    }
     if (m.t === "state") {
       if (!this.table) { this.openOnline(m); return; }
       const have = this.table.events.length + o.queue.length;
@@ -973,14 +1164,15 @@ class App {
       o.queue.push(...m.events.slice(have));
       o.fp = m.fp;
     } else if (m.t === "events") {
+      if (!this.table) return;                 // the new state is on its way
       const have = this.table.events.length + o.queue.length;
-      if (m.from !== have) { o.ws.send(JSON.stringify({ t: "hello", seats: o.seats })); return; }   // missed some: ask again
+      if (m.from !== have) { this.hello(); return; }   // missed some: ask again
       o.queue.push(...m.events);
       o.fp = m.fp;
     } else if (m.t === "refused") {
       o.sent = null;
       this.showToast(esc(m.reason), true);
-      if (m.reason === "stale") o.ws.send(JSON.stringify({ t: "hello", seats: o.seats }));
+      if (m.reason === "stale") this.hello();
       this.render();
     }
   }
@@ -1028,6 +1220,7 @@ class App {
     const ev = o.queue[0], dec = g.pending;
     const mine = dec && o.seats.includes(dec.player);
     if (!ev.dice && !mine && performance.now() < this.nextAi) return;
+    if (ev.dice && performance.now() < (this.moveEnd || 0)) return;    // let the last move land before the next throw
     o.queue.shift();
     let opt, entries = null;
     if (ev.dice) opt = new Option(null, ["dice", ev.dice]);
@@ -1095,12 +1288,13 @@ function wire(app) {
       return;
     }
     const act = b.dataset.act;
+    if ((act === "dice_go" || act === "dice_rand") && app.online) return;
     if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
     else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
     else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
     else if (act === "list") { app.sel.list = true; app.render(); }
-    else if (act === "tunnels") { app.tunnelOpen = !app.tunnelOpen; app.render(); }
+    else if (act === "tunnels") { const c = +b.dataset.val; app.tunnelOpen = app.tunnelOpen === c ? null : c; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") app.askLeave(true);
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
@@ -1126,7 +1320,11 @@ function wire(app) {
       if (app.follow && app.game && !app.game.players[app.game.turn].isAi) app.view("mine");
       app.openViewMenu(false);
     }
-    else if (act === "speed") { app.delay = 2050 - 20 * +e.target.value; app.persist(); }
+    else if (act === "speed" && Config.ANIM_SPEEDS[e.target.value]) {
+      app.speed = e.target.value;
+      app.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[app.speed];
+      app.persist();
+    }
   });
   const hover = e => {
     const b = e.target.closest("[data-opt]");
@@ -1150,6 +1348,23 @@ async function main() {
   wire(app);
   app.setLang(app.lang);
   const q = new URLSearchParams(location.search);       // an online game: play?game=K7QX-42&seats=0,2
+  if (!app.offline) app.loadRooms();
   if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
+
+// where the online server is: this page's own host when the server serves it, else Config.SERVER_URL
+function apiBase() {
+  const h = location.hostname;
+  const own = location.protocol.startsWith("http") && (h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
+  return own ? location.origin : Config.SERVER_URL;
+}
+
+// a random id for this browser, kept between visits (online seats come back to it)
+function deviceToken() {
+  try {
+    let k = localStorage.getItem("supermensch-device");
+    if (!k) { k = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("supermensch-device", k); }
+    return k;
+  } catch { return null; }
+}

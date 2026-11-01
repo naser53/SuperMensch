@@ -1,4 +1,4 @@
-# The online server (v2). Deployed by .github/workflows/server.yml from the v2 branch.
+# The online server (v2). Deployed by .github/workflows/server.yml from the main branch.
 name = "supermensch-dev"
 main = "server/worker.js"
 compatibility_date = "2026-10-01"

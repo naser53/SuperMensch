@@ -35,6 +35,22 @@ test("a table plays exactly like the engine with its own dice", () => {
   }
 });
 
+test("the 6-color board with 14 fields per corridor plays whole games", async () => {
+  const { boardFor } = await import("../js/boards.js");
+  for (const [mode, n] of [["two", 3], ["one", 6]]) {
+    const su = { ...setup(mode, n, 6), corridor: 14 };
+    const t = playTable(su, 3);
+    assert.equal(t.game.cfg.corridor_len, 14);
+    assert.ok(t.game.over, `${mode}: finished`);
+    assert.equal(fingerprint(Table.replay(su, t.events).game), fingerprint(t.game));
+  }
+  const b = boardFor(6, 14);
+  assert.equal(b.track.length, 84);
+  const key = p => p.map(v => v.toFixed(3)).join();
+  assert.equal(new Set(b.track.map(key)).size, 84);                 // no two fields in one place
+  assert.equal(boardFor(6, 10).track.length, 60);
+});
+
 test("setup and events (through JSON) rebuild the same game", () => {
   for (const [mode, n, colors, level] of CASES) {
     const su = setup(mode, n, colors, level);

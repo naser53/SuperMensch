@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { BOARDS } from "./boards.js";
+import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 
 export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#d08a12", "#6a5ccf", "#159a7a"];
@@ -174,7 +174,7 @@ export class Board3D {
 
   // (the square board seen over a corner needs a little more room)
   viewDistance(polar, az = 0) {
-    const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : 9.2;
+    const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : this.data.extent;
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.max(r / Math.tan(vfov / 2), r / (Math.tan(vfov / 2) * this.camera.aspect));
     return fit * (polar > 0.8 ? 0.9 : 1.05 + 0.08 * polar);
@@ -242,12 +242,47 @@ export class Board3D {
     setTimeout(() => el.remove(), 650);
   }
 
+  // A move is stopped by an opponent's wall or castle: a red ring pulses under each piece of
+  // that structure, and a wall or castle sign with a small "not allowed" badge pops up above it,
+  // shakes and fades out. block = { color, cells, castle } from Game.blockerOf; st = the state shown.
+  forbidStructure(st, block, ev) {
+    const g = this.game, rect = this.renderer.domElement.getBoundingClientRect();
+    const cells = new Set(block.cells);
+    const toScreen = v => { v.project(this.camera); return [rect.left + (v.x + 1) / 2 * rect.width, rect.top + (1 - v.y) / 2 * rect.height]; };
+    const feet = [], tops = [];
+    st.pos[block.color].forEach((rel, i) => {
+      if (rel < 0 || rel >= g.L || !cells.has(g.absOf(block.color, rel))) return;
+      const grp = this.pieceMeshes.get(`${block.color},${i}`);
+      if (!grp) return;
+      const v = new THREE.Vector3();
+      grp.getWorldPosition(v);
+      feet.push(toScreen(v.clone()));
+      tops.push(toScreen(v.clone().setY(v.y + 1.1)));
+    });
+    if (!feet.length) return this.forbid(ev);
+    const add = (cls, x, y, html, ms) => {
+      const el = document.createElement("div");
+      el.className = cls;
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), ms);
+    };
+    for (const [x, y] of feet) add("forbid-ring", x, y, "", 1300);
+    const x = tops.reduce((s, p) => s + p[0], 0) / tops.length, y = Math.min(...tops.map(p => p[1]));
+    const wall = '<g fill="#c0703f" stroke="#5a2e17" stroke-width="1.4"><rect x="4" y="14" width="14" height="8"/><rect x="18" y="14" width="14" height="8"/><rect x="4" y="22" width="7" height="8"/><rect x="11" y="22" width="14" height="8"/><rect x="25" y="22" width="7" height="8"/><rect x="4" y="30" width="14" height="8"/><rect x="18" y="30" width="14" height="8"/></g>';
+    const castle = '<path d="M4 38V10h5v5h4v-5h5v5h4v-5h5v5h4v-5h5v28H24v-8a5 5 0 0 0-10 0v8z" fill="#a3a3a3" stroke="#444" stroke-width="1.5" stroke-linejoin="round"/>';
+    const ban = '<circle cx="34" cy="34" r="9" fill="#fff" stroke="#d62828" stroke-width="3.2"/><line x1="28" y1="40" x2="40" y2="28" stroke="#d62828" stroke-width="3.2" stroke-linecap="round"/>';
+    add("forbid-struct", x, y, `<svg viewBox="0 0 46 46" width="60" height="60">${block.castle ? castle : wall}${ban}</svg>`, 1300);
+  }
+
   // ------------------------------------------------------------ board
   setGame(game, playerName) {
     this.game = game;
     this.playerName = playerName;    // (playerIndex) -> display text
     this.n = game.cfg.n_colors;
-    this.data = BOARDS[String(this.n)];
+    this.data = boardFor(this.n, game.cfg.corridor_len);
     for (const g of [this.boardGroup, this.tunnelGroup, this.previewGroup, this.pieceGroup, this.targetGroup]) g.clear();
     this.pieceMeshes.clear();
     this.resetShine();
@@ -685,21 +720,34 @@ export class Board3D {
   }
 
   // §13: tunnels are see-through tubes; the current player's in full, the others' fainter.
+  // tunnelCands (set by the app while the Tunnels list is open): the tunnels that can be declared,
+  // faint in their piece's color; the one under the mouse (extra) in full, in its color, thicker.
   drawTunnels(st, extra = null) {
     this.tunnelGroup.clear();
     const g = this.game;
     for (const t of st.tunnels) this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3);
-    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, HILITE);
+    const same = (a, b) => a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4];
+    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.6, null, 1, c);
+    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7, extra);
   }
 
-  tunnelMesh(col, a, b, opacity, color = null) {
+  // pick: the tunnel's payload; a tap on its tube or its exit ring then declares it
+  tunnelMesh(col, a, b, opacity, color = null, thick = 1, pick = null) {
     const cells = this.tunnelCells(col, a, b);
     const y = this.surfaceY() + 0.12;
     const curve = new THREE.CatmullRomCurve3(cells.map(p => this.xz(p, y)));
     const c = color || COLORS[col];
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07, 10, false),
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07 * thick, 10, false),
       new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity, roughness: 0.4 }));
     this.tunnelGroup.add(tube);
+    if (pick) {        // wide invisible touch areas: along the tube, and a disc on the exit
+      const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+      const t2 = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.25, 6, false), hitMat);
+      const ex = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.1, 24), hitMat);
+      ex.position.copy(this.xz(cells[cells.length - 1], y));
+      t2.userData.tunnel = ex.userData.tunnel = pick;
+      this.tunnelGroup.add(t2, ex);
+    }
     cells.slice(1, -1).forEach(p => {
       const d = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 0.62, FIELD_R * 0.62, 0.05, 32),
         new THREE.MeshStandardMaterial({ color: "#ffffff", transparent: true, opacity: Math.min(1, opacity + 0.1) }));
@@ -805,6 +853,9 @@ export class Board3D {
       if (d < best) { best = d; die = k; }
     }
     if (die !== null) return { die };
+    // a tunnel drawn for declaring; the exit disc wins where tunnels from one entrance overlap
+    const th = this.raycaster.intersectObjects(this.tunnelGroup.children, false).filter(h => h.object.userData.tunnel);
+    if (th.length) return { tunnel: (th.find(h => h.object.geometry.type === "CylinderGeometry") || th[0]).object.userData.tunnel };
     for (const h of this.raycaster.intersectObjects(this.targetGroup.children, true))
       if (h.object.userData.targetId !== undefined) return { target: h.object.userData.targetId };
     for (const h of this.raycaster.intersectObjects(this.pieceGroup.children, true))

@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, cleanName, isGameId, mayCreate, newGameId } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 
@@ -14,13 +14,31 @@ test("game ids are short and readable", () => {
   assert.ok(!isGameId("../x"));
 });
 
-test("only the admin or a room maker makes games", () => {
-  const us = [{ id: 1, name: "a", canCreate: false }, { id: 2, name: "b", canCreate: true }];
-  assert.ok(mayCreate(true, us, undefined));
-  assert.ok(mayCreate(false, us, 2));
-  assert.ok(!mayCreate(false, us, 1));
-  assert.ok(!mayCreate(false, us, 9));
-  assert.ok(!mayCreate(false, us, undefined));
+test("a seat stays with the connected device until it leaves; the same browser takes it back", () => {
+  const humans = [0, 2, 3];
+  const others = [{ token: "tabletA", seats: [0] }, { token: "phoneB", seats: [] }];
+  assert.deepEqual(claimSeats([0, 2], humans, others, "phoneB"), { seats: [2], taken: [0] });
+  assert.deepEqual(claimSeats([0, 2], humans, others, "tabletA"), { seats: [0, 2], taken: [] });   // reconnecting
+  assert.deepEqual(claimSeats([0], humans, others, null), { seats: [], taken: [0] });              // no token: no way back
+  assert.deepEqual(claimSeats([1, 3, 3, 9], humans, [], "x"), { seats: [3], taken: [] });          // computer and unknown seats
+  // after Exit (or a closed connection) the device is gone from the list: the seat is free
+  assert.deepEqual(claimSeats([0], humans, [{ token: "phoneB", seats: [] }], "phoneB"), { seats: [0], taken: [] });
+});
+
+test("the admin changes who plays: same number keeps the game, another restarts it", () => {
+  const old = checkSetup({ mode: "two", colors: 6, level: "intermediate", seats: twoSeats(1, "ai") }, users);
+  assert.equal(old.level, "intermediate");
+  const swap = editSetup(old, [{ user: 1 }, { user: 3 }], users);
+  assert.ok(swap.keep);
+  assert.deepEqual(swap.setup.players.map(p => p.name), ["user1", "user3"]);
+  const more = editSetup(old, [{ user: 1 }, { ai: true }, { user: 4 }], users);
+  assert.ok(!more.keep);
+  assert.deepEqual(more.setup.players.map(p => p.colors), [[0, 3], [1, 4], [2, 5]]);
+  assert.throws(() => editSetup(old, [{ user: 1 }, { user: 2 }, { user: 3 }, { user: 4 }], users));   // board full
+  // a room keeps its moves when only the players change
+  const room = new Room(old, [], mulberry32(2));
+  const again = new Room(swap.setup, room.events.slice());
+  assert.ok(again.events.length >= room.events.length);
 });
 
 test("names are trimmed and limited", () => {
@@ -57,6 +75,34 @@ test("a room throws the dice, plays the computer, and refuses what is not allowe
   assert.throws(() => room.move(seq, { dice: [6, 6] }, [me]), /dice come from the server/);
   assert.throws(() => room.move(seq, { pick: 999 }, [me]));
   assert.equal(room.events.length, seq);
+});
+
+test("children pick their colors: first come first served, swaps, until a person moves", () => {
+  const one = checkSetup({ mode: "one", colors: 4, seats: [{ user: 1, colors: [0] }, { user: 2, colors: [1] }, { ai: true, colors: [2] }] }, users);
+  let s = pickColors(one, 0, [1]);                                  // seat 1 has not picked: they swap
+  assert.deepEqual(s.players.map(p => p.colors), [[1], [0], [2]]);
+  assert.throws(() => pickColors(s, 1, [1]), /color taken/);         // seat 0 picked it first
+  s = pickColors(s, 1, [2]);                                        // the computer's color: swapped
+  assert.deepEqual(s.players.map(p => p.colors), [[1], [2], [0]]);
+  s = pickColors(s, 0, [3]);                                        // a free color: the old one is free now
+  assert.deepEqual(s.players.map(p => p.colors), [[3], [2], [0]]);
+  assert.throws(() => pickColors(s, 2, [1]), /no such seat/);        // not for the computer
+  assert.throws(() => pickColors(s, 0, [3, 1]), /bad colors/);
+  const two = checkSetup({ mode: "two", colors: 6, seats: twoSeats(1, 2, 3) }, users);
+  const t2 = pickColors(two, 0, [1, 2]);                             // both colors, any two
+  assert.deepEqual(t2.players.map(p => p.colors.slice().sort()), [[1, 2], [0, 4], [3, 5]]);
+
+  const room = new Room(checkSetup({ mode: "two", colors: 6, seats: twoSeats("ai", 1, 2) }, users), [], mulberry32(4));
+  assert.ok(room.colorsOpen());
+  const before = room.events.slice(0, colorsKeep(room.setup, room.events));
+  assert.ok(before.every(ev => ev.dice));                            // only throws before the first move
+  const r2 = room.recolor(1, [0, 1]);
+  assert.deepEqual(r2.setup.players[1].colors, [0, 1]);
+  assert.deepEqual(r2.events.slice(0, before.length), before);
+  const g = r2.table.game;
+  r2.move(r2.events.length, { pick: 0 }, [g.pending.player]);         // a person moves: colors are fixed
+  assert.ok(!r2.colorsOpen());
+  assert.throws(() => r2.recolor(2, [2, 5]), /started/);
 });
 
 test("two humans and a computer play a whole game; a device rebuilds it from the events", () => {
