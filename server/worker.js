@@ -203,7 +203,11 @@ export class GameRoom extends DurableObject {
     await this._report();
   }
 
-  colorsOpen() { const room = this._load(); return !!room && room.colorsOpen(); }
+  // a room that no longer replays (its moves were made under older rules) must not break the
+  // list of rooms: it just offers no color choice
+  colorsOpen() {
+    try { const room = this._load(); return !!room && room.colorsOpen(); } catch { return false; }
+  }
 
   // a seat picks its colors before the first move (Room.recolor): the throws after the first
   // move are made again; the devices in the game start again from the new state

@@ -78,9 +78,11 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
 * **Sum move:** two steps in either order (even with a 6). The middle field must be legal; an
   opponent there is captured.
 * **Six first:** only when an own piece of that color stands on its gate and one die is a 6, and
-  the two dice go to two different pieces of that same color: the 6 is played first. This stops
+  the two dice go to two different pieces of that same color, one of them the piece on the gate:
+  the 6 is played first. This stops
   emptying the gate with the other die and then bringing in a new piece with the 6. It does not
-  apply to two different colors, nor to a sum move, nor when the gate is empty.
+  apply to two different colors, nor to a sum move, nor when the gate is empty, nor when neither
+  of the two pieces stands on the gate.
 
 ### 3.4 Bonus throws
 | Throw | Bonus | Chain |
@@ -441,7 +443,8 @@ npm run build       # dist/supermensch.html
 ## 8. Decision log (why things are the way they are)
 * **Click order:** first die-first only; then piece-first was added because players reach for
   pieces first. Both stay.
-* **Six-first** was first too broad; the owner narrowed it to "an own piece of that color on its gate".
+* **Six-first** was first too broad; the owner narrowed it to "an own piece of that color on its gate",
+  and on 2026-11-01 to "one of the two moving pieces is that piece on the gate".
 * **Single six:** a lone 6 always gives a bonus; a 6 paired with another number never does.
 * **Ranks by points** (15 / 25) instead of capture counts (it started at 4 captures for marshal),
   so captures deep in the corridors count more.

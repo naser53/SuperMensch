@@ -631,14 +631,15 @@ export class Game {
     for (const s of steps) {
       if (s.tun && steps.filter(x => sameMover(x.mover, s.mover)).length > 1) return false;
     }
-    // §4.5 six first: when a piece of that color stands on its own gate at the start of the
+    // §4.5 six first: when one of the two pieces stands on its own gate at the start of the
     // play and the throw has a 6, the 6 is played first (no clearing the gate with the other
-    // die to bring a new piece in with the 6).
+    // die to bring a new piece in with the 6). Two pieces off the gate move in any order
+    // (owner, 2026-11-01).
     if (steps.length === 2 && !breakRoll && st0) {
       const [a, b] = steps;
       if (a.mover[0] === "p" && b.mover[0] === "p" && a.mover[1] === b.mover[1]
           && !sameMover(a.mover, b.mover) && a.die !== b.die && b.die === 6
-          && st0.pos[a.mover[1]].includes(0)) return false;
+          && (st0.pos[a.mover[1]][a.mover[2]] === 0 || st0.pos[b.mover[1]][b.mover[2]] === 0)) return false;
     }
     return true;
   }
