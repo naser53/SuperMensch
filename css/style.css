@@ -219,6 +219,9 @@ label.check.on { color: var(--accent); }
   box-shadow: 0 10px 40px rgba(0,0,0,.25); }
 #info h2 { margin: 0; font-size: 20px; }
 #info h3 { margin: 18px 0 6px; font-size: 15px; }
+#info .log-head { margin: 18px 0 6px; }
+#info .log-head h3 { margin: 0; }
+#info .log-head .btn { padding: 4px 12px; }
 .info-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .info-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .info-table td.pts { text-align: end; font-weight: 700; white-space: nowrap; }
