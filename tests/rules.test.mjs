@@ -82,6 +82,15 @@ test("wall protects; two pieces break it", () => {
   assert.ok(g.playsFor(0, [3, 5]).some(p => p.state.pos[b][0] === YARD && p.state.pos[b][1] === YARD));
 });
 
+test("no wall across the threshold: threshold and gate are not next to each other", () => {
+  const g = make();
+  const b = 1, L = g.L;
+  put(g, b, 0, L - 1); put(g, b, 1, 0);                    // Blue on its threshold and on its gate
+  assert.equal(g.structures(g.state).size, 0);
+  put(g, b, 2, 1);                                          // gate + next field: a wall
+  assert.deepEqual([...g.structures(g.state).keys()].sort((x, y) => x - y), [g.absOf(b, 0), g.absOf(b, 1)].sort((x, y) => x - y));
+});
+
 test("castle: no passing", () => {
   const g = make();
   [20, 21, 22].forEach((a, i) => put(g, 1, i, g.relOf(1, a)));
