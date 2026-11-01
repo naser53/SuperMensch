@@ -322,7 +322,11 @@ Two orders work, and you can switch at any time:
 ### Info
 Scoring tables for the current board (corridor points, gate/threshold extras, breaks, ranks and
 bounties, end bonuses, tunnel costs), a line with the dice level, and the move log. Signed Farsi
-numbers are wrapped in `<bdi dir="ltr">`.
+numbers are wrapped in `<bdi dir="ltr">`. A **Copy** button by the move log copies a game report for
+debugging: version, board, mode, level, players and colors, online room and seats, debug mode, the
+moves in English, and a JSON line with the setup, events and debug edits (`score`/`move` commands).
+`node tools/replay.mjs <file> [N]` rebuilds that game (optionally stopping after N events) and checks
+the fingerprint.
 
 ### Pieces
 * Pawns in color with a number. A **progress line** up the front of the pawn (it turns with the
@@ -376,6 +380,7 @@ numbers are wrapped in `<bdi dir="ltr">`.
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
 | `tools/build.mjs` | Builds `dist/supermensch.html` |
+| `tools/replay.mjs` | Rebuilds a game from the report of the Copy button in Info |
 | `docs/` | Rules (docx, md) and these handoff files |
 | `.github/workflows/ci.yml` | Tests, simulation, build, publish to the `latest` release |
 | `.github/workflows/pages.yml` | GitHub Pages; fails until Pages is enabled |
