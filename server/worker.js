@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, editSetup, isGameId, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, editSetup, isGameId, newGameId, nextName } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -207,11 +207,13 @@ export class Lobby extends DurableObject {
 //   device -> room  { t: "hello", device, token, seats: [0, 2] }   which seats this device plays
 //                   { t: "leave" }                           Exit: free this device's seats
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
+//                   { t: "again" }                           the game is over: play again (new room)
 //   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
 //                   (mine: the seats this device got; taken: wanted seats another device holds)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
+//                   { t: "again", id }                       the next game of this room: go there
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -357,6 +359,7 @@ export class GameRoom extends DurableObject {
       try { ws.close(1000, "left"); } catch { /* closed */ }
       return;
     }
+    if (msg.t === "again") { await this.again(ws); return; }
     if (msg.t === "move") {
       const a = ws.deserializeAttachment() || {};
       let r;
@@ -366,6 +369,28 @@ export class GameRoom extends DurableObject {
       this._all({ t: "events", from: r.from, events: r.events, fp: room.fingerprint(), view: room.view() });
       await this._report();
     }
+  }
+
+  // "Play again" (owner, 2026-11-02): a device that plays in this finished game makes the next
+  // room once, with the same players, colors and settings; every device is sent there
+  async again(ws) {
+    const room = this._load(), a = ws.deserializeAttachment() || {};
+    if (!room.table.game.over || !(a.seats || []).length) {
+      this._send(ws, { t: "refused", reason: "not over", seq: room.events.length });
+      return;
+    }
+    this._againP = this._againP || (async () => {
+      let next = this._meta("next");
+      if (next) return next;
+      const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
+      const name = nextName(this._meta("name")), setup = JSON.parse(JSON.stringify(room.setup));
+      next = await lobby.addGame(name, setup);
+      await this.env.ROOM.get(this.env.ROOM.idFromName(next)).init(next, name, setup);
+      this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('next', ?)`, JSON.stringify(next));
+      return next;
+    })();
+    try { this._all({ t: "again", id: await this._againP }); }
+    catch (e) { this._againP = null; this._send(ws, { t: "refused", reason: String(e.message || e), seq: room.events.length }); }
   }
 
   webSocketClose(ws) {

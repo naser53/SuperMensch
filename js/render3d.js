@@ -1143,25 +1143,29 @@ export class Board3D {
     setTimeout(() => el.remove(), 1000);
   }
 
-  // The winner: a big golden pawn turns slowly in the empty middle of the board, in a glow,
-  // with the name and the total score over it. null takes it away.
-  trophy(text) {
+  // The winner: a pawn in the winner's first color turns slowly in the middle of the board, in a
+  // soft glow, with the name and the total score over it (kept small so the board stays readable;
+  // owner, 2026-11-02). null takes it away.
+  trophy(text, color = "#ffcf3a") {
     if (this.trophyGrp) { this.scene.remove(this.trophyGrp); this.trophyGrp = null; }
     if (text === null) return;
     const grp = new THREE.Group();
-    const gold = new THREE.MeshStandardMaterial({ color: "#ffcf3a", metalness: 0.45, roughness: 0.3, emissive: "#a87800", emissiveIntensity: 0.45 });
+    const base = new THREE.Color(color);
+    const gold = new THREE.MeshStandardMaterial({ color: base, metalness: 0.35, roughness: 0.3,
+      emissive: base.clone().multiplyScalar(0.5), emissiveIntensity: 0.4 });
     const pawn = new THREE.Group();
     for (const geo of this.pawnGeo) { const m = new THREE.Mesh(geo, gold); m.castShadow = true; pawn.add(m); }
-    pawn.scale.setScalar(2.6);
+    pawn.scale.setScalar(1.5);
     const halo = this.haloSprite();
     halo.material.depthTest = true;
-    halo.position.y = 1.6;
-    halo.scale.set(6, 6, 1);
+    halo.material.color = base.clone().lerp(new THREE.Color("#ffffff"), 0.4);
+    halo.position.y = 0.9;
+    halo.scale.set(3.4, 3.4, 1);
     halo.renderOrder = 0;
-    const label = this.textSprite(text, "#b8860b", 1.1);
-    label.position.y = 4.3;
-    const light = new THREE.PointLight("#ffd76a", 2.2, 9);
-    light.position.y = 2.5;
+    const label = this.textSprite(text, "#" + base.clone().multiplyScalar(0.75).getHexString(), 0.75);
+    label.position.y = 2.7;
+    const light = new THREE.PointLight(base, 1.2, 5);
+    light.position.y = 1.6;
     grp.add(halo, pawn, label, light);
     grp.position.set(0, this.surfaceY(), 0.3);
     grp.userData = { pawn, halo, t0: performance.now() };
@@ -1176,7 +1180,7 @@ export class Board3D {
     t.userData.pawn.rotation.y = u * 0.9;
     t.userData.pawn.position.y = 0.15 * Math.sin(u * 2.2);
     t.scale.setScalar(0.2 + 0.8 * (1 - Math.pow(1 - grow, 3)));
-    const s = 6 * (1 + 0.12 * Math.sin(u * 4));
+    const s = 3.4 * (1 + 0.1 * Math.sin(u * 4));
     t.userData.halo.scale.set(s, s, 1);
   }
 
@@ -1412,12 +1416,15 @@ export class Board3D {
   }
 
   // ------------------------------------------------------------ fireworks
-  // The game is over: rockets rise from around the board and burst into colored sparks.
-  fireworks() {
+  // The game is over: rockets rise from around the board and burst into sparks in the winner's
+  // first color (with lighter tints and white); fewer and smaller than before (owner, 2026-11-02).
+  fireworks(color = null) {
     const tex = this.sparkTexture();
     this.fx = this.fx || [];
     const t0 = performance.now(), R = this.n === 4 ? 4 : this.n === 8 ? 7.5 : 6;
-    const colors = ["#ff4d4d", "#ffd84a", "#4dd2ff", "#7dff6a", "#ff7ae6", "#ffffff", "#ffa13d"];
+    const wc = color ? new THREE.Color(color) : null;
+    const colors = wc ? [wc, wc.clone().lerp(new THREE.Color("#ffffff"), 0.35), wc.clone().lerp(new THREE.Color("#ffffff"), 0.6)]
+      .map(c => "#" + c.getHexString()) : ["#ff4d4d", "#ffd84a", "#4dd2ff", "#7dff6a", "#ff7ae6", "#ffffff", "#ffa13d"];
     const add = (base, delay, life, vx, vy, vz, color, gr, size, glow) => {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,
         blending: glow ? THREE.AdditiveBlending : THREE.NormalBlending, color }));   // colors show on the light table
@@ -1425,19 +1432,19 @@ export class Board3D {
       this.scene.add(sp);
       this.fx.push({ sp, base, t0: t0 + delay, life, vx, vy, vz, g: gr, size });
     };
-    for (let b = 0; b < 12; b++) {                // all done within about 4 s
-      const delay = b * 130 + Math.random() * 100, T = 0.7 + Math.random() * 0.2;
-      const a = Math.random() * Math.PI * 2, rr = R * (0.3 + 0.7 * Math.random());
+    for (let b = 0; b < 8; b++) {                 // all done within about 3 s; out by the edge, not over the middle
+      const delay = b * 150 + Math.random() * 100, T = 0.6 + Math.random() * 0.2;
+      const a = Math.random() * Math.PI * 2, rr = R * (0.7 + 0.4 * Math.random());
       const ground = new THREE.Vector3(Math.cos(a) * rr * 1.3, this.surfaceY(), Math.sin(a) * rr * 1.3);
-      const top = new THREE.Vector3(Math.cos(a) * rr, 2.5 + Math.random() * 2, Math.sin(a) * rr);
+      const top = new THREE.Vector3(Math.cos(a) * rr, 2 + Math.random() * 1.2, Math.sin(a) * rr);
       const gr = 0.9, vy = (top.y - ground.y + gr * T * T) / T;
       add(ground, delay, T * 1000, (top.x - ground.x) / T, vy, (top.z - ground.z) / T, "#fff2c0", gr, 0.6, true);
       sound.at(delay, () => sound.rocket(T * 1000));
       const color = colors[b % colors.length];
-      for (let k = 0; k < 46; k++) {
-        const u = Math.random() * 2 - 1, ph = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = 2.2 + Math.random() * 0.8;
+      for (let k = 0; k < 34; k++) {
+        const u = Math.random() * 2 - 1, ph = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = 1.5 + Math.random() * 0.6;
         add(top.clone(), delay + T * 1000, 1100 + Math.random() * 500, s * Math.cos(ph) * v, u * v + 0.4, s * Math.sin(ph) * v,
-          k % 5 ? color : "#ffffff", 0.7, 1.4, !(k % 5));
+          k % 5 ? color : "#ffffff", 0.7, 1.05, !(k % 5));
       }
     }
   }

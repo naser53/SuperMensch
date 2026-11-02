@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, nextName, pickColors } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
@@ -155,4 +155,13 @@ test("the plain page's view lists the options in words", () => {
   const v = new Room(su, [], mulberry32(1)).view();
   assert.ok(v.pending && v.pending.options.length > 0);
   assert.ok(v.pending.options.every(o => typeof o === "string" && o.length));
+});
+
+test("play again names the next game with a counter", () => {
+  assert.equal(nextName("Family"), "Family (2)");
+  assert.equal(nextName("Family (2)"), "Family (3)");
+  assert.equal(nextName(""), "Game (2)");
+  const long = nextName("x".repeat(24));
+  assert.equal(long.length, 24);
+  assert.ok(long.endsWith(" (2)"));
 });
