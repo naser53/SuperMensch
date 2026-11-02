@@ -25,6 +25,15 @@ test("a seat stays with the connected device until it leaves; the same browser t
   assert.deepEqual(claimSeats([0], humans, [{ token: "phoneB", seats: [] }], "phoneB"), { seats: [0], taken: [] });
 });
 
+test("the 8-color board is accepted, with 10 or 14 fields per corridor", () => {
+  const seats = [0, 1, 2, 3].map(i => (i === 0 ? { user: 1, colors: [0, 4] } : { ai: true, colors: [i, i + 4] }));
+  const su = checkSetup({ mode: "two", colors: 8, corridor: 14, seats }, users);
+  assert.equal(su.colors, 8);
+  assert.equal(su.corridor, 14);
+  assert.throws(() => checkSetup({ mode: "two", colors: 8, seats: seats.concat([{ ai: true, colors: [5, 6] }]) }, users));
+  assert.throws(() => checkSetup({ mode: "two", colors: 7, seats }, users));
+});
+
 test("the admin changes who plays: same number keeps the game, another restarts it", () => {
   const old = checkSetup({ mode: "two", colors: 6, level: "intermediate", seats: twoSeats(1, "ai") }, users);
   assert.equal(old.level, "intermediate");

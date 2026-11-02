@@ -3,10 +3,10 @@
 //   move 1 s2R 33     move player 1's Red pawn number 2 to field 33
 //                     (fields 1..L on the track, L+1..L+4 in the nest, y = yard)
 //   dice 6 3 4        the dice: now if they are being set, otherwise for the next throw
-// Color letters: R B G Y P T (Red, Blue, Green, Yellow, Purple, Teal).
+// Color letters: R B G Y P T N K (Red, Blue, Green, Yellow, Purple, Teal, piNk, blacK).
 import { Option, YARD } from "./engine.js";
 
-export const COLOR_LETTERS = "RBGYPT";
+export const COLOR_LETTERS = "RBGYPTNK";
 
 // Returns { key, params } for the reply line; `choose` makes a choice the way the app does.
 export function runCommand(g, text, choose) {

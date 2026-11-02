@@ -22,7 +22,9 @@ everything. The castle-breaker piece and point loans go into later versions.
   Vazirmatn font inlined (esbuild 0.20.2).
 * Boards: **6 colors** (six arms, 60 fields, 10 per corridor; or 84 fields, 14 per corridor, chosen per
   game as `setup.corridor` in admin and offline setup, `Config.CORRIDORS`, geometry `boardFor()` in
-  `js/boards.js`) and **4 colors** (classic cross, 40 fields).
+  `js/boards.js`), **8 colors** (eight arms, 80 fields, or 112 with 14 per corridor; owner, 2026-11-02:
+  every rule of the 6-color board, only more corridors; 2 to 4 players with two colors, 2 to 8 with one)
+  and **4 colors** (classic cross, 40 fields).
 * Modes: **two colors per player** (two dice) or **one color per player** (one die). People at
   the same screen and/or computer players.
 * Languages: English (default), Farsi (right to left), German.
@@ -168,6 +170,10 @@ use a card.
 | A nest is full (a color complete; the nest glows) | +60 | +25 |
 | Finishing first / second | +100 / +50 | +40 / +20 |
 
+The 8-color board scores as the 6-color one, but its eight corridors give 1 / 3 / 6 / 10 / 15 /
+21 / 28 / 36 (the same steps go on, so a piece that has come 50 fields is worth about as much as
+on the 6-color board).
+
 * Hunter captures and capturing a hunter both score; the hunter's corridor counts from its
   complete color.
 * **Ranks come from rank points**, the points a piece wins with its own captures since it last
@@ -205,7 +211,7 @@ use a card.
 Only in the game with several colors per player (`TUNNELS` / `tunnels_on` is off in the one-color
 game: no declarations, no Tunnels button, no info table).
 * Each color has its own tunnels, from the middle (field 5) of one corridor to the middle of a
-  later one. Up to `TUNNEL_MAX_SKIP` corridors (6-color: 3, up to corridor 4, or 5 by setting;
+  later one. Up to `TUNNEL_MAX_SKIP` corridors (6-color: 3, up to corridor 4, or 5 by setting; 8-color: 3, up to corridor 6;
   4-color: 2, pairs 1→2, 1→3, 2→3). Never to the final corridor.
 * Length is a quarter of the real path, rounded down: 1 corridor 10→2 fields, 2 corridors 20→5,
   3 corridors 30→7.
@@ -254,7 +260,7 @@ Same dice for everybody at the table, chosen on the setup screen:
 ## 4. Interface and interaction
 
 ### Setup screen
-Language, board (6 or 4 colors), game type (two colors / one color per player), number of
+Language, board (6, 8 or 4 colors), game type (two colors / one color per player), number of
 players, where a player's two colors sit (opposite / next to each other), seats (click to switch
 human/computer), **player names** typed in, dice level. *Start game*. In the one-color game each
 seat also shows the board's color dots to pick its color.
@@ -325,7 +331,7 @@ Two orders work, and you can switch at any time:
   or *Random*), then *Continue*; the dice are then thrown with those numbers. Computer moves are shown first and wait for *Continue*.
 * **Debug console** (a text box at the bottom left in debug mode, `js/debugcmd.js`; commands defined by
   the owner): `score 1 50` / `score 1 -50` adds or takes points from player 1; `move 1 s2R 33` puts
-  player 1's Red pawn 2 on field 33 (color letters R B G Y P T; fields 1..L on the track, L+1..L+4
+  player 1's Red pawn 2 on field 33 (color letters R B G Y P T, and N K for pink and black on the 8-color board; fields 1..L on the track, L+1..L+4
   in the nest, `y` = yard; a taken field is refused; the current decision is offered again);
   `dice 6 3 4` sets the dice: thrown at once before the roll (three dice use a card), set at once
   while the dice are being set, otherwise kept for the next throw with that many dice (`Game.queuedDice`).
@@ -359,8 +365,9 @@ the fingerprint.
 * Pawns in color with a number. A **progress line** up the front of the pawn (it turns with the
   camera) gets longer with every point the pawn has won itself, from its foot to its head at
   marshal (25); no empty track. Its color stands out on that pawn (light turquoise on red, yellow
-  on blue, light pink on green, navy on yellow, yellow on purple, coral on teal), with a thin dark
-  edge. Rank star
+  on blue, light pink on green, navy on yellow, yellow on purple, coral on teal, light green on pink, light
+  sky blue on black), with a thin dark edge. The 8-color board adds **pink** and **black** (owner's
+  pick, 2026-11-02: both stand apart from the six colors; orange was left out, it read as brown). Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
   gold with a small, soft glow (made smaller at the owner's request). The base ring is silver for a general, gold (with a second ring) for a marshal.
 * The **hunter** is a pawn holding a bow; the arrow points in its running direction (forward or
@@ -406,7 +413,7 @@ the fingerprint.
 | `js/debugcmd.js` | Debug console commands: score, move, dice |
 | `js/table.js` | `Table`: a game plus its event list (`{dice}`, `{pick}`); `Table.replay`, `fingerprint` (v2 online groundwork) |
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
-| `js/boards.js` | Board geometry (six arms, classic cross), name spots, dice rows between yard and corridor |
+| `js/boards.js` | Board geometry (six or eight arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/sound.js` | Sound effects, synthesized (move, capture, knock, gate, fireworks) |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |

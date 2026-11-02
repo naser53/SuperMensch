@@ -107,10 +107,10 @@ export function colorsKeep(setup, events) {
 export function checkSetup(su, users) {
   if (!su || typeof su !== "object") throw new Error("no setup");
   const mode = su.mode === "one" ? "one" : su.mode === "two" ? "two" : null;
-  const colors = su.colors === 4 || su.colors === 6 ? su.colors : null;
+  const colors = Config.BOARDS.includes(su.colors) ? su.colors : null;
   const level = Object.keys(Config.LEVELS).includes(su.level) ? su.level : "beginner";
   if (!mode || !colors) throw new Error("bad mode or board");
-  const corridor = colors === 6 && Config.CORRIDORS.includes(su.corridor) ? su.corridor : 10;
+  const corridor = (colors === 6 || colors === 8) && Config.CORRIDORS.includes(su.corridor) ? su.corridor : 10;
   const seats = Array.isArray(su.seats) ? su.seats : [];
   const max = mode === "two" ? colors / 2 : colors;
   if (seats.length < 2 || seats.length > max) throw new Error("bad number of players");

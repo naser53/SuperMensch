@@ -2,9 +2,9 @@
 // Placeholders in {braces} are filled in by tr() in i18n.js.
 
 export const COLOR_NAMES = {
-  en: ["Red","Blue","Green","Yellow","Purple","Teal"],
-  fa: ["قرمز","آبی","سبز","زرد","بنفش","فیروزه‌ای"],
-  de: ["Rot","Blau","Grün","Gelb","Lila","Türkis"],
+  en: ["Red","Blue","Green","Yellow","Purple","Teal","Pink","Black"],
+  fa: ["قرمز","آبی","سبز","زرد","بنفش","فیروزه‌ای","صورتی","مشکی"],
+  de: ["Rot","Blau","Grün","Gelb","Lila","Türkis","Rosa","Schwarz"],
 };
 
 export const STR = {
@@ -88,6 +88,7 @@ export const STR = {
     by_clicks: "Move by clicking",
     board: "Board",
     board6: "6 colors (six arms, 60 fields)",
+    board8: "8 colors (eight arms, 80 fields)",
     board4: "4 colors (classic cross, 40 fields)",
     piece: "{color} {n}",
     hunter: "{color} hunter",
@@ -302,6 +303,7 @@ export const STR = {
     by_clicks: "حرکت با کلیک",
     board: "صفحه",
     board6: "۶ رنگ (شش بازو، ۶۰ خانه)",
+    board8: "۸ رنگ (هشت بازو، ۸۰ خانه)",
     board4: "۴ رنگ (صلیبی کلاسیک، ۴۰ خانه)",
     piece: "{color} {n}",
     hunter: "شکارچی {color}",
@@ -516,6 +518,7 @@ export const STR = {
     by_clicks: "Mit Klicks ziehen",
     board: "Spielbrett",
     board6: "6 Farben (sechs Arme, 60 Felder)",
+    board8: "8 Farben (acht Arme, 80 Felder)",
     board4: "4 Farben (klassisches Kreuz, 40 Felder)",
     piece: "{color} {n}",
     hunter: "Jäger {color}",

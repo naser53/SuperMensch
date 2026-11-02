@@ -165,6 +165,39 @@ test("4-color board: 40 fields, tunnels skip 1 or 2 corridors, points 1/4/8/10",
   }
 });
 
+test("8-color board: 80 or 112 fields, the 6-color rules, corridor points go on, tunnels up to corridor 6", () => {
+  const c = Config.forBoard(8);
+  assert.equal(c.n_colors, 8);
+  assert.equal(c.track_len, 80);
+  assert.equal(Config.forBoard(8, "beginner", "two", 14).track_len, 112);
+  assert.deepEqual(c.corridor_points, [1, 3, 6, 10, 15, 21, 28, 36]);
+  const t = c.tunnels().map(x => x.join());
+  assert.ok(t.includes("3,6") && t.includes("5,6") && !t.includes("5,7") && !t.includes("1,5") && !t.includes("6,8"));
+  // everything else as on the 6-color board
+  const six = Config.forBoard(6);
+  for (const k of ["color_bonus", "finish_bonus", "gate_bonus", "threshold_bonus", "wall_break", "castle_break",
+    "tunnel_costs", "tunnel_max_skip", "general_points", "marshal_points", "ranks", "walls", "castles", "tunnels_on"])
+    assert.deepEqual(c[k], six[k], k);
+  assert.equal(Config.forBoard(8, "beginner", "one").tunnels_on, false);
+  for (let s = 0; s < 2; s++) {
+    assert.ok(playOne(s, "two", 4, 8).over);
+    assert.ok(playOne(s, "one", 8, 8).over);
+  }
+});
+
+test("8-color board geometry: every field apart, yards and dice clear of the fields", async () => {
+  const { boardFor } = await import("../js/boards.js");
+  for (const cl of [10, 14]) {
+    const b = boardFor(8, cl), f = b.track.concat(b.home.flat());
+    assert.equal(b.track.length, 8 * cl);
+    const D = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+    for (let i = 0; i < f.length; i++) for (let j = i + 1; j < f.length; j++) assert.ok(D(f[i], f[j]) > 0.99);
+    for (const q of b.yard.flat().concat(b.dice.map(d => d.at))) assert.ok(Math.min(...f.map(p => D(p, q))) > 0.9);
+    assert.equal(b.yard.length, 8);
+    assert.equal(b.label.length, 8);
+  }
+});
+
 // ---------------------------------------------------------------- §13 tunnels
 function declare(g, col, i, a, b) {
   g.pending = new Decision("pre_roll", 0, [new Option("t", ["tunnel", col, i, a, b])]);
