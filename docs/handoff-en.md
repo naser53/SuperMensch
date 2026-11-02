@@ -129,7 +129,8 @@ second try. A kept pair earns its bonus. Not for bonus throws. The free stuck tr
 use a card.
 
 ### 3.8 Hunter
-* When one color is complete and the other still has a live piece, the player may bring in a
+* When one color is complete and the other still has a live piece out on the track (not only in
+  the nest or the yard; owner, 2026-11-01), the player may bring in a
   **hunter** in place of the complete color, so both dice are useful again.
 * Enters only with a real 6, on the complete color's gate (not via triple or gift six). One at a time.
 * On each entry the player declares **forward** or **backward**.

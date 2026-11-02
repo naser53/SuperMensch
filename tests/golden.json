@@ -499,17 +499,17 @@
   "mode": "two",
   "n": 2,
   "colors": 4,
-  "decisions": 461,
+  "decisions": 531,
   "places": [
-   0,
-   1
+   1,
+   0
   ],
   "scores": [
-   59,
-   -3
+   -3,
+   87
   ],
-  "rounds": 84,
-  "hash": 2970162423
+  "rounds": 98,
+  "hash": 3035040486
  },
  {
   "seed": 33,
