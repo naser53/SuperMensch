@@ -364,6 +364,9 @@ the fingerprint.
 
 ## 5. Effects and animations
 * **Moves:** pieces hop field by field. Computer players wait for the animations.
+* **Rank look after the move:** the points bar, star, rings and halo of a pawn change only once
+  its move and captures have been shown (`queueLook`/`stepLooks`); a demoted victim loses its look
+  when it lands.
 * **Fireworks:** when the game is over, about 14 rockets rise from around the board and burst into
   colored sparks, all within about four seconds (`fireworks()`).
 * **Captures:** the victim flies back to its yard in a high arc. A demoted general or marshal

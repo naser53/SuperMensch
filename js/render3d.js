@@ -647,19 +647,10 @@ export class Board3D {
     for (const [k, grp] of this.pieceMeshes) {
       const [col, i] = k.split(",").map(Number);
       grp.userData.target = this.piecePos(st, col, i);
-      const kills = st.kills[col][i];
-      const marshal = g.rank(kills) === 2, general = g.rank(kills) >= 1;
-      const u = grp.userData, gp = g.cfg.general_points, mp = g.cfg.marshal_points;
-      const t = marshal ? 1 : general ? (kills - gp) / (mp - gp) : 0;     // silver -> gold
-      u.r1.visible = general;
-      u.r1.material.color.set(marshal ? GOLD : SILVER);
-      u.r2.visible = marshal;
-      u.star.visible = general;
-      u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
-      u.star.scale.setScalar(marshal ? 0.36 : 0.42);
-      u.halo.visible = marshal;
-      u.bar.visible = kills > 0;
-      u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
+      const u = grp.userData;
+      u.wantKills = st.kills[col][i];
+      // while a move is being shown, the rank look changes only once the piece has landed (lookQueue)
+      if (!(u.lookQueue && u.lookQueue.length)) this.applyLook(grp, u.wantKills);
       const sel = highlight && highlight[0] === "p" && highlight[1] === col && highlight[2] === i;
       grp.children[0].material.emissive?.set(sel ? "#664400" : "#000000");
       grp.scale.setScalar(sel ? 1.12 : 1);
@@ -702,6 +693,44 @@ export class Board3D {
       ghost.scale.setScalar(sel ? 1.15 : 1);
     });
     this.drawTunnels(st);
+  }
+
+  // rank look of a pawn from its rank points: rings, star, halo and the points bar
+  applyLook(grp, kills) {
+    const g = this.game, u = grp.userData;
+    const marshal = g.rank(kills) === 2, general = g.rank(kills) >= 1;
+    const gp = g.cfg.general_points, mp = g.cfg.marshal_points;
+    const t = marshal ? 1 : general ? (kills - gp) / (mp - gp) : 0;     // silver -> gold
+    u.r1.visible = general;
+    u.r1.material.color.set(marshal ? GOLD : SILVER);
+    u.r2.visible = marshal;
+    u.star.visible = general;
+    u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
+    u.star.scale.setScalar(marshal ? 0.36 : 0.42);
+    u.halo.visible = marshal;
+    u.bar.visible = kills > 0;
+    u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
+  }
+
+  // a pawn shows the rank look of state "before" now and the one of "after" at time t
+  queueLook(m, before, after, t) {
+    if (m[0] !== "p") return;
+    const [, col, i] = m, grp = this.meshOf(m);
+    if (!grp) return;
+    const u = grp.userData, k0 = before.kills[col][i], k1 = after.kills[col][i];
+    if (k0 === k1 && !(u.lookQueue && u.lookQueue.length)) return;
+    if (!(u.lookQueue && u.lookQueue.length)) { u.lookQueue = []; this.applyLook(grp, k0); }
+    u.lookQueue.push({ t, kills: k1 });
+  }
+
+  // play due rank looks; the last one hands back to the state the board was synced to
+  stepLooks(grp, now) {
+    const q = grp.userData.lookQueue;
+    if (!q || !q.length) return;
+    while (q.length && now >= q[0].t) {
+      const e = q.shift();
+      this.applyLook(grp, q.length ? e.kills : (grp.userData.wantKills ?? e.kills));
+    }
   }
 
   hunterGhost(p, color) {
@@ -933,10 +962,12 @@ export class Board3D {
         if (c.victim[0] !== "p") continue;
         const [, vc, vi] = c.victim, vg = this.meshOf(c.victim);
         if (!vg) continue;
+        this.queueLook(c.victim, before, after, t + 420);      // a demoted piece loses its rank once it has landed
         vg.userData.moves = (vg.userData.moves || []).concat([{ pts: [this.piecePos(before, vc, vi), this.piecePos(after, vc, vi)],
           t0: t, dur: 420, high: true }]);
         t += 220;
       }
+      this.queueLook(step.mover, before, after, t);          // the new rank shows after the move and the capture
     }
     this.animEnd = t + 60;
     return this.animEnd;
@@ -1355,6 +1386,7 @@ export class Board3D {
     const tnow = performance.now() / 1000;
     const now = performance.now();
     for (const grp of this.pieceGroup.children) {
+      if (grp.userData.lookQueue) this.stepLooks(grp, now);
       if (this.playMove(grp, now)) {
         this.turnToAim(grp, k);
         continue;
