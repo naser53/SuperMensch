@@ -673,3 +673,14 @@ test("gift six (two colors): counted per stuck turn without a 6", () => {
   g._attempt = 2; assert.equal(g._countSix(0, [1, 6, 3]), false);      // ... unless the second try throws a 6
   assert.equal(g.noSix[0], 0);
 });
+
+test("hunter enters only while the other color has a piece out on the way", () => {
+  const g = make();
+  const L = g.L;
+  g.state.pos[3] = [L, L + 1, L + 2, L + 3];                // yellow complete
+  g.state.pos[0] = [YARD, L, L + 2, L + 3];                  // red: one in the yard, one free in the nest
+  assert.equal(g.hunterEligible(0, g.state), null);
+  assert.ok(!g.playsFor(0, [6, 2]).some(p => p.steps.some(s => s.mover[0] === "hn")));
+  g.state.pos[0][0] = 5;                                     // a red piece on the track
+  assert.equal(g.hunterEligible(0, g.state), 3);
+});

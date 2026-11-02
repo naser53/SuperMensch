@@ -241,7 +241,10 @@ export class Game {
     if (this.mode !== "two" || st.hunters[p] !== null) return null;
     const cc = this._completedColor(p, st);
     if (cc === null) return null;
-    if (!this.colorHasAlive(st, this._otherColor(p, cc))) return null;
+    // the other color needs a live piece out on the way (track or tunnel), not only in the nest
+    // or the yard (owner, 2026-11-01)
+    const oc = this._otherColor(p, cc);
+    if (!st.pos[oc].some(r => (r >= 0 && r < this.L) || r === TUN)) return null;
     return cc;
   }
 
