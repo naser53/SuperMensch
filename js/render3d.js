@@ -179,8 +179,8 @@ export class Board3D {
     const r = this.n === 4 ? 6.4 * (1 + 0.16 * Math.abs(Math.sin(2 * az))) : this.data.extent;
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.max(r / Math.tan(vfov / 2), r / (Math.tan(vfov / 2) * this.camera.aspect));
-    // a phone held upright: the width decides, and the sphere around the board leaves room to spare
-    const tall = this.camera.aspect < 0.75 ? 0.88 : 1;
+    // a phone held upright: the width decides; the 6-color board has room to spare, the square one needs a little more
+    const tall = this.camera.aspect >= 0.75 ? 1 : this.n === 6 ? 0.88 : this.n === 4 ? 1.08 : 1;
     return fit * tall * (polar > 0.8 ? 0.9 : 1.05 + 0.08 * polar);
   }
 
