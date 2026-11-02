@@ -18,6 +18,9 @@
   .muted { color: var(--muted); font-size: 13px; }
   .err { color: #b00; } .ok { color: #070; }
   code { background: #eee; padding: 0 4px; border-radius: 4px; }
+  .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; }
+  .colors label { display: flex; align-items: center; gap: 6px; }
+  .colors input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -33,6 +36,14 @@
     <section>
       <h2>Players</h2>
       <div id="users"></div>
+    </section>
+
+    <section>
+      <h2>Piece colors</h2>
+      <div class="muted">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
+      <div id="colors" class="colors"></div>
+      <div class="row"><button class="primary" id="colorsBtn">Save colors</button> <button id="colorsReset">All to default</button>
+        <span id="colorsMsg"></span></div>
     </section>
 
     <section>
@@ -81,6 +92,26 @@ async function loadUsers() {
     catch (e) { show("#renMsg", e.message, true); }
   });
 }
+
+// the piece colors of every game (server settings): a color picker each, and a way back to the default
+const COLOR_NAMES = ["Red", "Blue", "Green", "Yellow", "Purple", "Teal", "Pink", "Black"];
+let colorDefaults = [];
+async function loadColors(d) {
+  d = d || await api("settings");
+  colorDefaults = d.defaults;
+  $("#colors").innerHTML = d.defaults.map((def, i) => `<label><input type="color" data-col="${i}" value="${d.colors[i] || def}">
+    ${COLOR_NAMES[i] || "Color " + (i + 1)} <button data-coldef="${i}" title="Back to ${def}">Default</button></label>`).join("");
+  document.querySelectorAll("[data-coldef]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    document.querySelector(`[data-col="${b.dataset.coldef}"]`).value = colorDefaults[+b.dataset.coldef];
+  });
+}
+$("#colorsBtn").onclick = async () => {
+  const colors = [...document.querySelectorAll("[data-col]")].map(x => x.value);
+  try { await loadColors(await api("admin/colors", { colors })); show("#colorsMsg", "Saved. Every game uses these colors now."); }
+  catch (e) { show("#colorsMsg", e.message, true); }
+};
+$("#colorsReset").onclick = () => document.querySelectorAll("[data-col]").forEach(x => { x.value = colorDefaults[+x.dataset.col]; });
 
 // a new seat: the first is the computer (owner, 2026-11-02), the others the players in turn
 const seatDefault = i => (i === 0 ? "ai" : users[i - 1] ? String(users[i - 1].id) : "ai");
@@ -169,6 +200,7 @@ async function open() {
   $("#login").hidden = true;
   $("#panel").hidden = false;
   await loadUsers();
+  await loadColors();
   seatRows();
   await loadRooms();
 }

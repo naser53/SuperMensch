@@ -551,7 +551,13 @@ earlier sketch (browser dice, PINs).
   only, behind the admin key: rename players, make rooms, delete rooms (two presses), and edit a
   room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
   `server/core.js`). The same number of players keeps the moves; another number starts the game
-  again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page. `/play?…`
+  again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
+  **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
+  for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
+  `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`
+  on load and on each room-list refresh (`loadColors` in `js/main.js`, kept in localStorage), and
+  `setColors` in `js/render3d.js` applies them (a changed color's nest fields get a pale tint of it);
+  a board already drawn keeps its colors until the next game. Default yellow is 15% darker (`#cea70d`). `/play?…`
   redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
   else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
@@ -583,7 +589,7 @@ earlier sketch (browser dice, PINs).
   of a seat that has not picked (or of a computer) is swapped. `POST /api/games/<ID>/colors
   {seat, colors}` (`pickColors`, `colorsKeep`, `Room.recolor` in `server/core.js`): the
   throws before the first move stay, the rest is played again; devices in the game get
-  `{t:"recolor"}` and load the new state. The admin page has no color choice.
+  `{t:"recolor"}` and load the new state. The admin page has no per-room color choice (only the server-wide piece colors).
 * Git (owner, 2026-11-01, from v2.1.0): one long-lived branch, `main`. Each piece of work is a
   short branch with a PR into `main`; the branch is deleted after the merge. A push to `main`
   publishes `latest`, makes a release when the version is new, and deploys the server. The old

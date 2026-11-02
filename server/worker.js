@@ -6,7 +6,8 @@
 // players; only the admin key (secret ADMIN_KEY) renames users and makes and deletes rooms.
 
 import { DurableObject } from "cloudflare:workers";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, editSetup, isGameId, newGameId } from "./core.js";
+import { Config } from "../js/config.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanColors, cleanName, editSetup, isGameId, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -33,11 +34,14 @@ async function api(req, env, url) {
   const adminOk = !!env.ADMIN_KEY && req.headers.get("x-admin-key") === env.ADMIN_KEY;
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
+  // the server-wide settings every game page reads: the admin's piece colors (null = default)
+  if (parts[0] === "settings" && req.method === "GET") return json({ colors: await lobby.colors(), defaults: Config.PIECE_COLORS });
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
     if (parts[1] === "games") return json(await lobby.allGames());
+    if (parts[1] === "colors" && body) return json({ colors: await lobby.setColors(cleanColors(body.colors)), defaults: Config.PIECE_COLORS });
     if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
       const old = await lobby.setupOf(body.id);
       if (!old) return fail("no such game", 404);
@@ -96,6 +100,7 @@ export class Lobby extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, name TEXT NOT NULL,
       created INTEGER, updated INTEGER, status TEXT, setup TEXT, result TEXT)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT)`);
     const cols = this.sql.exec(`PRAGMA table_info(users)`).toArray().map(c => c.name);
     if (!cols.includes("can_create")) this.sql.exec(`ALTER TABLE users ADD COLUMN can_create INTEGER NOT NULL DEFAULT 0`);
     if (!this.sql.exec(`SELECT COUNT(*) AS n FROM users`).one().n)
@@ -106,6 +111,18 @@ export class Lobby extends DurableObject {
     return this.sql.exec(`SELECT id, name FROM users ORDER BY id`).toArray().map(u => ({ id: u.id, name: u.name }));
   }
 
+
+  // the admin's piece colors, for every game (cleanColors): [hex or null] per color
+  colors() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'colors'`).toArray();
+    const v = r.length ? JSON.parse(r[0].v) : [];
+    return Config.PIECE_COLORS.map((_, i) => v[i] || null);
+  }
+
+  setColors(colors) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('colors', ?)`, JSON.stringify(colors));
+    return this.colors();
+  }
 
   rename(id, name) {
     name = cleanName(name);
