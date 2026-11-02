@@ -4,7 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
-import { sound } from "./sound.js";
+import { sound, rollLead } from "./sound.js";
 import { Config } from "./config.js";
 
 // the 8-color board adds pink and black (owner, 2026-11-02); the other boards use the first 6 or 4
@@ -1220,8 +1220,8 @@ export class Board3D {
       d.spin = (5 + Math.random() * 3) * Math.PI;
       d.throw = { t0: null, delay: k * 40, t1, hold, t2, from, land };
       // the throw sound once, timed so its first hit meets the first bounce (u = 0.2 in stepDice);
-      // the recording starts with 50 ms of silence
-      if (k === 0) sound.at(Math.max(0, 0.2 * t1 - 50), () => sound.roll());
+      // one recording for a single die, another for several (js/dicesound.js)
+      if (k === 0) sound.at(Math.max(0, 0.2 * t1 - rollLead(n)), () => sound.roll(n));
       d.grp.position.copy(from);
       this.dice.push(d);
     });
