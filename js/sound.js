@@ -107,16 +107,16 @@ class Sound {
   die(v = 1, at = null) {
     const c = this.live(); if (!c) return;
     const t = (at ?? c.currentTime) + 0.003, r = () => 0.9 + Math.random() * 0.2;
-    // the die's corner: a short, bright tick
-    this.noise(t, 0.012, this.filter("highpass", 1800, 0.7, this.env(t, 0.32 * v, 0.0005, 0.007)));
-    this.noise(t, 0.02, this.filter("bandpass", 2600 * r(), 5, this.env(t, 0.3 * v, 0.0006, 0.014)));
-    // the board: a hollow wooden body that rings briefly (three resonances of the wood)
+    // the die's corner: a short, dull tick
+    this.noise(t, 0.012, this.filter("bandpass", 1300, 1.2, this.env(t, 0.22 * v, 0.0005, 0.007)));
+    this.noise(t, 0.02, this.filter("bandpass", 1500 * r(), 5, this.env(t, 0.22 * v, 0.0006, 0.014)));
+    // the board: a hollow wooden body that rings briefly (three low resonances of the wood)
     this.board(t, v);
     // tumbling: quicker and quicker small ticks, each softer
     let tt = t, gap = 0.03 + 0.03 * v, a = 0.5 * v;
     for (let i = 0, n = Math.round(1 + 4 * v); i < n; i++) {
       tt += gap * r(); gap *= 0.62; a *= 0.6;
-      this.noise(tt, 0.012, this.filter("bandpass", 2900 * r(), 4, this.env(tt, 0.3 * a, 0.0005, 0.008)));
+      this.noise(tt, 0.012, this.filter("bandpass", 1700 * r(), 4, this.env(tt, 0.22 * a, 0.0005, 0.008)));
       this.board(tt, a * 0.7);
     }
   }
@@ -125,7 +125,7 @@ class Sound {
   board(t, v) {
     const exc = this.ctx.createGain();
     exc.gain.value = 1;
-    for (const [f, q, g, d] of [[190, 9, 5, 0.12], [440, 14, 3.5, 0.09], [960, 16, 1.8, 0.055]]) {
+    for (const [f, q, g, d] of [[105, 7, 7, 0.16], [240, 10, 5, 0.12], [520, 12, 2.5, 0.07]]) {
       const ff = f * (0.94 + Math.random() * 0.12);
       exc.connect(this.filter("bandpass", ff, q, this.env(t, g * v, 0.001, d)));
     }
