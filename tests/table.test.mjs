@@ -21,7 +21,7 @@ function playTable(su, seed, maxDecisions = 20000) {
 
 const CASES = [["two", 3, 6], ["one", 6, 6], ["two", 2, 4], ["one", 4, 4], ["two", 2, 6, "advanced"]];
 
-test("a table plays exactly like the engine with its own dice", () => {
+test("a table plays exactly like the engine with its own dice; setup and events (through JSON) rebuild it", () => {
   for (const [mode, n, colors, level] of CASES) {
     const su = setup(mode, n, colors, level);
     const t = playTable(su, 5);
@@ -32,6 +32,11 @@ test("a table plays exactly like the engine with its own dice", () => {
     assert.ok(t.game.over, `${mode} ${n} ${colors}: finished`);
     assert.equal(fingerprint(t.game), fingerprint(g));
     assert.deepEqual(t.game.log, g.log);
+    const wire = JSON.parse(JSON.stringify({ su, events: t.events }));
+    const r = Table.replay(wire.su, wire.events);
+    assert.equal(fingerprint(r.game), fingerprint(t.game));
+    assert.deepEqual(r.game.places, t.game.places);
+    assert.deepEqual(r.game.state.scores, t.game.state.scores);
   }
 });
 
@@ -49,18 +54,6 @@ test("the 6-color board with 14 fields per corridor plays whole games", async ()
   const key = p => p.map(v => v.toFixed(3)).join();
   assert.equal(new Set(b.track.map(key)).size, 84);                 // no two fields in one place
   assert.equal(boardFor(6, 10).track.length, 60);
-});
-
-test("setup and events (through JSON) rebuild the same game", () => {
-  for (const [mode, n, colors, level] of CASES) {
-    const su = setup(mode, n, colors, level);
-    const t = playTable(su, 11);
-    const wire = JSON.parse(JSON.stringify({ su, events: t.events }));
-    const r = Table.replay(wire.su, wire.events);
-    assert.equal(fingerprint(r.game), fingerprint(t.game));
-    assert.deepEqual(r.game.places, t.game.places);
-    assert.deepEqual(r.game.state.scores, t.game.state.scores);
-  }
 });
 
 test("a device table waits for the dice and follows the server table step by step", () => {
