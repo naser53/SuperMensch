@@ -1,6 +1,6 @@
 // Sound effects, made with the Web Audio API (no sound files, so the single-file build stays small
 // and works offline). Every sound is synthesized when it plays:
-//   die       dice hitting the board as they tumble, and landing at the yard
+//   die       dice on a wooden board: a tick, the hollow knock of the board, a short rattle
 //   move      a wooden clack, like a chess piece set down on the board
 //   capture   a small blast; a hit general or marshal: a stronger blast with a rumble
 //   knock     three knocks on a door: a triple-dice card is played
@@ -101,14 +101,35 @@ class Sound {
     this.tone(t, "triangle", 210, 150, 0.12, this.env(t, 0.5 * v, 0.003, 0.1));
   }
 
-  // a die hits the board (v: how hard): a hard, bright click with a little rattle
-  die(v = 1) {
+  // a die hits a wooden board (v: how hard; at: a time on the audio clock, for tests): a sharp
+  // tick of the die's corner, the hollow "tok" of the board ringing under it, then a short rattle
+  // while the die tumbles and settles (owner, 2026-11-02: it should sound like dice on a backgammon board)
+  die(v = 1, at = null) {
     const c = this.live(); if (!c) return;
-    const t = c.currentTime + 0.003, f = 3200 + Math.random() * 1500;
-    this.noise(t, 0.03, this.filter("bandpass", f, 4, this.env(t, 0.45 * v, 0.0008, 0.02)));
-    this.tone(t, "sine", 1500 + Math.random() * 400, 1100, 0.04, this.env(t, 0.18 * v, 0.001, 0.035));
-    const t2 = t + 0.025 + Math.random() * 0.03;           // the die tips over: a second, softer tick
-    this.noise(t2, 0.02, this.filter("bandpass", f * 0.8, 4, this.env(t2, 0.2 * v, 0.0008, 0.015)));
+    const t = (at ?? c.currentTime) + 0.003, r = () => 0.9 + Math.random() * 0.2;
+    // the die's corner: a short, bright tick
+    this.noise(t, 0.012, this.filter("highpass", 1800, 0.7, this.env(t, 0.32 * v, 0.0005, 0.007)));
+    this.noise(t, 0.02, this.filter("bandpass", 2600 * r(), 5, this.env(t, 0.3 * v, 0.0006, 0.014)));
+    // the board: a hollow wooden body that rings briefly (three resonances of the wood)
+    this.board(t, v);
+    // tumbling: quicker and quicker small ticks, each softer
+    let tt = t, gap = 0.03 + 0.03 * v, a = 0.5 * v;
+    for (let i = 0, n = Math.round(1 + 4 * v); i < n; i++) {
+      tt += gap * r(); gap *= 0.62; a *= 0.6;
+      this.noise(tt, 0.012, this.filter("bandpass", 2900 * r(), 4, this.env(tt, 0.3 * a, 0.0005, 0.008)));
+      this.board(tt, a * 0.7);
+    }
+  }
+
+  // the wooden board under a hit (part of die)
+  board(t, v) {
+    const exc = this.ctx.createGain();
+    exc.gain.value = 1;
+    for (const [f, q, g, d] of [[190, 9, 5, 0.12], [440, 14, 3.5, 0.09], [960, 16, 1.8, 0.055]]) {
+      const ff = f * (0.94 + Math.random() * 0.12);
+      exc.connect(this.filter("bandpass", ff, q, this.env(t, g * v, 0.001, d)));
+    }
+    this.noise(t, 0.008, exc);
   }
 
   // a blast; big: a general or marshal is hit (louder, deeper, longer, with a rumble)
