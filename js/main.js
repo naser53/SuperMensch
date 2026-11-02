@@ -211,7 +211,8 @@ class App {
       Config.CORRIDORS.map(k => choice(this.T("corridor_n", { n: num(this.lang, k) }), "corridor", k, (s.corridor || 10) === k)).join("") + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
       choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
-      choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") + "</div>";
+      choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") +
+      choice(this.T("level_difficult"), "level", "difficult", s.level === "difficult") + "</div>";
     h += `<h2>${this.T("game_type")}</h2><div class="choices">` +
       choice(this.T("mode_two"), "mode", "two", s.mode === "two") + choice(this.T("mode_one"), "mode", "one", s.mode === "one") + "</div>";
     h += `<h2>${this.T("players")}</h2><div class="choices">`;
@@ -1053,7 +1054,7 @@ class App {
     el.innerHTML = `<div class="info-card"><div class="row between"><h2>${this.T("info_title", { n: N(n) })}</h2>
       <button class="btn" data-act="info_close">${this.T("close")}</button></div>
       <p class="muted small">${this.T("info_lead")}</p>
-      ${table("info_dice", [row(this.T(c.six_chance == null ? "level_beginner" : "level_intermediate"),
+      ${table("info_dice", [row(this.T("level_" + c.level),
         c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
       ${table("info_hits", corr)}${c.walls ? table("info_breaks", brk) : ""}${c.ranks ? table("info_ranks", ranks) : ""}
       ${table("info_end", end)}${c.tunnels_on ? table("info_tunnels", tun) : ""}
