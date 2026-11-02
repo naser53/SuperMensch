@@ -405,8 +405,9 @@ the fingerprint.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
   locked until *Scores* is pressed again.
 * **View menu:** grows out of the button and folds back into it.
-* **Sound effects** (`js/sound.js`, made with the Web Audio API, no sound files): dice clicking
-  on the board at each bounce of the throw and when they land at the yard; a wooden clack
+* **Sound effects** (`js/sound.js`, Web Audio API): the dice throw is a recording the owner chose
+  (`sounds/dice-roll.mp3`, 0.8 s, carried as base64 in `js/dicesound.js`), played once per throw so
+  its first hit meets the first bounce (owner, 2026-11-02); the rest is synthesized: a wooden clack
   like a chess piece when a piece lands; a small blast when a piece is captured, a stronger one
   with a rumble when a general or marshal is hit; three knocks on a door when a triple-dice card is
   played; a rising chime when a piece comes out of the yard onto its gate (also a hunter); a whistle
@@ -425,7 +426,8 @@ the fingerprint.
 | `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six or eight arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
-| `js/sound.js` | Sound effects, synthesized (move, capture, knock, gate, fireworks) |
+| `js/sound.js` | Sound effects: the dice recording, the rest synthesized (move, capture, knock, gate, fireworks) |
+| `js/dicesound.js` | The dice-throw recording (`sounds/dice-roll.mp3`) as base64 |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
