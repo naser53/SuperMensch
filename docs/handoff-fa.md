@@ -488,6 +488,8 @@ npm run build       # dist/supermensch.html
   null یعنی پیش‌فرض `Config.PIECE_COLORS`). هر صفحه‌ی بازی هنگام باز شدن و هر بار تازه شدن فهرست اتاق‌ها
   `GET /api/settings` را می‌خواند (`loadColors` در `js/main.js`) و `setColors` در `js/render3d.js` آن‌ها را
   اعمال می‌کند؛ صفحه‌ای که الان کشیده شده تا بازی بعد همان رنگ‌ها را نگه می‌دارد. زرد پیش‌فرض ۱۵٪ تیره‌تر است (`#cea70d`).
+  رنگ خود صفحه هم (رو و لبه، `Config.BOARD_COLORS`، `cleanBoard`، کلید `board` در تنظیمات؛ صفحه‌ی ۴ رنگ
+  تا وقتی این‌ها پیش‌فرض‌اند همان کرم و قرمز خودش را دارد).
   بازی سرور را با `apiBase()` پیدا می‌کند: روی workers.dev همان میزبان، وگرنه `Config.SERVER_URL`
   (API هدرهای CORS دارد تا فایل دانلودی هم به آن برسد).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (کاربران، بازی‌ها، نتیجه‌ها) و برای هر

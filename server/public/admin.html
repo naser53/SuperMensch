@@ -39,9 +39,12 @@
     </section>
 
     <section>
-      <h2>Piece colors</h2>
+      <h2>Colors</h2>
       <div class="muted">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
+      <div class="row"><b>Pieces</b></div>
       <div id="colors" class="colors"></div>
+      <div class="row"><b>Board</b> <span class="muted">(the 4-color board keeps its cream and red while these are at default)</span></div>
+      <div id="boardColors" class="colors"></div>
       <div class="row"><button class="primary" id="colorsBtn">Save colors</button> <button id="colorsReset">All to default</button>
         <span id="colorsMsg"></span></div>
     </section>
@@ -95,23 +98,26 @@ async function loadUsers() {
 
 // the piece colors of every game (server settings): a color picker each, and a way back to the default
 const COLOR_NAMES = ["Red", "Blue", "Green", "Yellow", "Purple", "Teal", "Pink", "Black"];
-let colorDefaults = [];
+const BOARD_NAMES = ["Surface", "Edge"];
+// one color picker with a Default button; kind "col" (pieces) or "brd" (board)
+const picker = (kind, i, name, value, def) => `<label><input type="color" data-${kind}="${i}" data-def="${def}" value="${value || def}">
+    ${name} <button data-todef title="Back to ${def}">Default</button></label>`;
 async function loadColors(d) {
   d = d || await api("settings");
-  colorDefaults = d.defaults;
-  $("#colors").innerHTML = d.defaults.map((def, i) => `<label><input type="color" data-col="${i}" value="${d.colors[i] || def}">
-    ${COLOR_NAMES[i] || "Color " + (i + 1)} <button data-coldef="${i}" title="Back to ${def}">Default</button></label>`).join("");
-  document.querySelectorAll("[data-coldef]").forEach(b => b.onclick = e => {
+  $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[i] || "Color " + (i + 1), d.colors[i], def)).join("");
+  $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, BOARD_NAMES[i], (d.board || [])[i], def)).join("");
+  document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {
     e.preventDefault();
-    document.querySelector(`[data-col="${b.dataset.coldef}"]`).value = colorDefaults[+b.dataset.coldef];
+    const x = b.parentElement.querySelector("input"); x.value = x.dataset.def;
   });
 }
 $("#colorsBtn").onclick = async () => {
   const colors = [...document.querySelectorAll("[data-col]")].map(x => x.value);
-  try { await loadColors(await api("admin/colors", { colors })); show("#colorsMsg", "Saved. Every game uses these colors now."); }
+  const board = [...document.querySelectorAll("[data-brd]")].map(x => x.value);
+  try { await loadColors(await api("admin/colors", { colors, board })); show("#colorsMsg", "Saved. Every game uses these colors now."); }
   catch (e) { show("#colorsMsg", e.message, true); }
 };
-$("#colorsReset").onclick = () => document.querySelectorAll("[data-col]").forEach(x => { x.value = colorDefaults[+x.dataset.col]; });
+$("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
 
 // a new seat: the first is the computer (owner, 2026-11-02), the others the players in turn
 const seatDefault = i => (i === 0 ? "ai" : users[i - 1] ? String(users[i - 1].id) : "ai");

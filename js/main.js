@@ -1413,7 +1413,10 @@ function wire(app) {
 async function main() {
   try { await Promise.all([document.fonts.load("400 16px Vazirmatn"), document.fonts.load("700 16px Vazirmatn")]); }
   catch { /* fall back to the system font */ }
-  try { setColors(JSON.parse(localStorage.getItem("supermensch-colors") || "null")); } catch { /* none kept */ }
+  try {
+    const kept = JSON.parse(localStorage.getItem("supermensch-colors") || "null");
+    if (Array.isArray(kept)) setColors(kept); else if (kept) setColors(kept.colors, kept.board);
+  } catch { /* none kept */ }
   const app = new App();
   window.superMensch = app;            // handy for testing from the console
   wire(app);
@@ -1424,18 +1427,18 @@ async function main() {
 }
 main();
 
-// The admin's piece colors (server-wide settings). The last ones known apply at once (above);
+// The admin's piece and board colors (server-wide settings). The last ones known apply at once (above);
 // new ones show on the first page now, and on the board from the next game.
 async function loadColors(app) {
   try {
     const r = await fetch(`${apiBase()}/api/settings`, { cache: "no-store" });
     if (!r.ok) return;
-    const { colors } = await r.json();
-    const text = JSON.stringify(colors || null);
+    const { colors, board } = await r.json();
+    const text = JSON.stringify({ colors: colors || null, board: board || null });
     let old = null;
     try { old = localStorage.getItem("supermensch-colors"); localStorage.setItem("supermensch-colors", text); } catch { /* private mode */ }
     if (text === old) return;
-    setColors(colors);
+    setColors(colors, board);
     if (!app.game) app.render();
   } catch { /* offline: the colors kept or the defaults */ }
 }

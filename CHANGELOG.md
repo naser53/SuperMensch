@@ -8,6 +8,7 @@ attached. The `latest` release is always the newest build of `main`.
 
 * **Piece colors in the admin page:** a color picker for each piece color, saved on the server and used by every game (players' pages pick them up on load and when the room list refreshes).
 * Yellow is 15% darker by default (`#cea70d`).
+* **Board colors in the admin page:** the board's surface and edge can be changed the same way, for every game.
 
 ## v2.3.0 (2026-11-02)
 
