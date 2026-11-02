@@ -698,3 +698,23 @@ test("a 6 into the nest may be played alone; the other die burns", () => {
   g.cfg.six_into_nest = false;
   assert.equal(g.playsFor(0, [1, 6]).filter(p => p.steps.length === 1).length, 0);
 });
+
+test("difficult dice: half the 6s and half the pairs of intermediate", () => {
+  const ps = [Player("A", [0, 3]), Player("B", [1, 4]), Player("C", [2, 5])];
+  const g = new Game(ps, "two", Config.forBoard(6, "difficult"), 7);
+  const N = 200000;
+  let six = 0, pair = 0, sixPair = 0;
+  for (let k = 0; k < N; k++) {
+    const [a, b] = g.roll(2);
+    assert.ok(a >= 1 && a <= 6 && b >= 1 && b <= 6);
+    if (a === 6 || b === 6) six++;
+    if (a === b) pair++;
+    if (a === 6 && b === 6) sixPair++;
+  }
+  const t = g.cfg.two_dice;
+  assert.ok(Math.abs(six / N - t.six_any) < 0.004);
+  assert.ok(Math.abs(pair / N - (t.six_pair + 5 * t.pair)) < 0.004);   // 8.6%, half of intermediate's 17.2%
+  assert.ok(Math.abs(sixPair / N - t.six_pair) < 0.001);
+  assert.equal(g.cfg.six_chance, 0.05);                                // a single die
+  assert.equal(Config.forBoard(6, "nonsense").level, "beginner");
+});

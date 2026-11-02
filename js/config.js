@@ -49,6 +49,10 @@ export class Config {
       // Dice level: chance of a 6 on one die. null = fair dice (1/6, beginner);
       // 0.1 = intermediate (a 6 comes one time in ten, the other numbers share the rest)
       six_chance: null,               // SIX_CHANCE
+      // Two dice thrown together on the difficult level (null = two separate dice): chance of at
+      // least one 6, of a 6-6, and of each other pair (1-1 ... 5-5); the other throws share the rest
+      two_dice: null,                 // TWO_DICE
+      level: "beginner",
     }, o);
   }
 
@@ -57,7 +61,8 @@ export class Config {
   // castles (so no castle-break declarations), no generals or marshals and so no nest swap (it only
   // carries rank points back into play). The game where a player has several colors keeps them all.
   static forBoard(n, level = "beginner", mode = "two", corridor = 10) {
-    const dice = { six_chance: Config.LEVELS[level] ?? null };
+    const lv = level in Config.LEVELS ? level : "beginner";
+    const dice = { six_chance: Config.LEVELS[lv], two_dice: Config.TWO_DICE[lv] || null, level: lv };
     const long = n === 6 && Config.CORRIDORS.includes(corridor) ? { corridor_len: corridor } : {};
     const classic = mode === "one"
       ? { ranks: false, nest_swap: false, tunnels_on: false, walls: false, castles: false, break_decl_on: false } : {};
@@ -71,7 +76,10 @@ export class Config {
   }
 
   // dice levels for everybody at the table (same dice for people and computers)
-  static LEVELS = { beginner: null, intermediate: 0.1 };
+  // (chance of a 6 on one die; null = fair). Difficult is half of intermediate (owner, 2026-11-02):
+  // one die 0.05; two dice: at least one 6 9.5% (19% / 2), 6-6 0.5%, each other pair 1.62%.
+  static LEVELS = { beginner: null, intermediate: 0.1, difficult: 0.05 };
+  static TWO_DICE = { difficult: { six_any: 0.095, six_pair: 0.005, pair: 0.0162 } };
   // fields per corridor on the 6-color board (14: every arm two fields longer)
   static CORRIDORS = [10, 14];
   // animation speed in the panel: the pause between moves (ms) times the factor; a piece's

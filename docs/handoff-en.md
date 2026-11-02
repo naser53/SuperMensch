@@ -236,6 +236,10 @@ game: no declarations, no Tunnels button, no info table).
 Same dice for everybody at the table, chosen on the setup screen:
 * **Beginner:** fair dice.
 * **Intermediate:** a 6 comes with chance 0.1, each other number 0.18 (`six_chance`).
+* **Difficult** (owner, 2026-11-02): half of intermediate. Two dice are thrown together from one
+  table (`TWO_DICE`): at least one 6 9.5% (intermediate 19%), 6-6 0.5%, each other pair 1.62%
+  (all pairs 8.6% against 17.2%); the other throws share the rest. A single die (bonus) and three
+  dice use `six_chance` = 0.05. Chosen on the setup screen and in the admin page.
 
 ### 3.13 Not implemented yet (designed, in the rules doc)
 * **Castle-breaker piece:** unlocks at 300 points; a precise strike (exact landing on the first

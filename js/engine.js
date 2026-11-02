@@ -922,7 +922,24 @@ export class Game {
   }
 
   // ------------------------------------------------------------ turn flow
-  roll(n) { return Array.from({ length: n }, () => this._die()); }
+  roll(n) {
+    if (n === 2 && this.cfg.two_dice) return this._twoDice();
+    return Array.from({ length: n }, () => this._die());
+  }
+
+  // Two dice from one table (difficult level): fewer 6s and fewer pairs than two separate dice.
+  _twoDice() {
+    const t = this.cfg.two_dice;
+    const w = (a, b) => a === 6 && b === 6 ? t.six_pair
+      : a === 6 || b === 6 ? (t.six_any - t.six_pair) / 10
+      : a === b ? t.pair : (1 - t.six_any - 5 * t.pair) / 20;
+    let u = this.rng();
+    for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) {
+      u -= w(a, b);
+      if (u < 0) return [a, b];
+    }
+    return [5, 4];                                  // rounding: the last bit of chance
+  }
 
   // one die: fair, or with a smaller chance of a 6 on the harder dice level
   _die() {

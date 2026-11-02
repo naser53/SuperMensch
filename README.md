@@ -35,7 +35,7 @@ Two-color dice play (free split, burnt die, full use of both dice, sum moves, si
 bonus throws for doubles, help for a stuck player (three dice, gift six), triple-dice cards,
 the hunter, walls and castles (with castle-break declarations), scoring and piece ranks
 (soldier, general, marshal; a hit general or marshal drops one rank instead of dying), tunnels
-(declared before the roll, paid with points, with the debt rule at the threshold), and two dice levels (beginner, intermediate).
+(declared before the roll, paid with points, with the debt rule at the threshold), and three dice levels (beginner, intermediate, difficult).
 
 The one-color game is the traditional game: no ranks, no tunnels, no walls and no castles
 (so no castle-break declarations). The game with several colors per player has all of them.
