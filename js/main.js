@@ -259,8 +259,10 @@ class App {
       h += `<div class="room"><h3>${esc(r.name)}</h3><div class="choices">`;
       r.players.forEach((p, i) => {
         if (p.isAi) { h += `<span class="choice ai">${this.T("computer")}</span>`; return; }
+        // a held name stays clickable: the server gives it back to the same browser (after a reload
+        // or a lost connection) and refuses it to another device (online_taken)
         const sel = this.pick.id === r.id && this.pick.seats.includes(i), held = (r.held || []).includes(i);
-        h += `<button class="choice${sel ? " sel" : ""}" data-act="who" data-val="${r.id}:${i}" ${held && !sel ? "disabled" : ""}>` +
+        h += `<button class="choice${sel ? " sel" : ""}" data-act="who" data-val="${r.id}:${i}">` +
           (p.colors || []).map(c => `<span class="dot" style="background:${COLORS[c]}"></span> `).join("") +
           `${esc(p.name)}${held ? ` <span class="muted small">(${this.T("in_play")})</span>` : ""}</button>`;
       });
