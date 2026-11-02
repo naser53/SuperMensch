@@ -6,8 +6,8 @@ import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 import { sound } from "./sound.js";
 
-export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#d08a12", "#6a5ccf", "#159a7a"];
-export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fbefd6", "#e9e6fb", "#d8f2ea"];
+export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#f2c40f", "#6a5ccf", "#159a7a"];
+export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea"];
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
@@ -15,7 +15,7 @@ const GATE_SCALE = 1.12;
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
 // per pawn color (COLORS): light turquoise on red, yellow on blue, light pink on green, navy on
-// orange, yellow on purple, coral on teal
+// yellow, yellow on purple, coral on teal
 const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a"];
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
