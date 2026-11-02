@@ -97,6 +97,7 @@ class App {
     this.cmdBox = cmd;
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
+      if (e.key === "Escape" && this.hudOpen) { this.hudOpen = false; this.render(); return; }
       if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
       if (e.key === "Escape" && this.confirming) { this.askLeave(false); return; }
       if (e.key === "Escape" && this.game) this.askLeave(true);
@@ -477,20 +478,20 @@ class App {
       // the roll-time buttons stay in their places, greyed out until they can be used
       const two = g.mode === "two";
       acts = `<button class="btn rb-roll" ${pre.roll || "disabled"}>${ICON.die}<span>${this.T("roll_short")}</span></button>` +
-        `<button class="btn rb-retry" ${pre.retry || `disabled title="${this.T("retry")}" aria-label="${this.T("retry")}"`}>${ICON.retry}</button>` +
-        (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}"`, this.T("card_short", { n: g.cards[g.turn] }), "pre", ICON.card) : "") +
+        `<button class="btn rb-retry sat" style="--slot:0" ${pre.retry || `disabled title="${this.T("retry")}" aria-label="${this.T("retry")}"`}>${ICON.retry}</button>` +
+        (two ? btn(`${pre.card || "disabled"} data-n="${g.cards[g.turn]}" style="--slot:1"`, this.T("card_short", { n: g.cards[g.turn] }), "pre sat", ICON.card) : "") +
         (two && g.cfg.break_decl_on && SHOW_BREAK_BTN ? btn(pre.brk || "disabled", this.T("break_short"), "pre", ICON.castle) : "") +
-        (g.cfg.tunnels_on ? p.colors.map(c => {
+        (g.cfg.tunnels_on ? p.colors.map((c, k) => {
           const n = pre.tun ? pre.tun[c] || 0 : 0;
-          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]}" title="${esc(this.T("tunnel_menu", { n }))}: ${esc(COLOR_NAMES[this.lang][c])}"`,
-            esc(num(this.lang, n)), `pre tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
+          return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]};--slot:${(two ? 2 : 1) + k}" title="${esc(this.T("tunnel_menu", { n }))}: ${esc(COLOR_NAMES[this.lang][c])}"`,
+            esc(num(this.lang, n)), `pre sat tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
         }).join("") : "") + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     this.shownOpts = opts;
     el.innerHTML = `<div class="rb-players">${this.playersHtml()}</div>
-      <div class="rb-center"><div class="rb-status"><div class="rb-line">${status}</div>${hint ? `<div class="rb-hint">${hint}</div>` : ""}</div>
-      <div class="rb-actions">${acts}</div></div>
+      <div class="rb-status"><div class="rb-line">${status}</div></div>
+      <div class="rb-actions">${acts}</div>
       <div class="rb-tools">${this.toolsHtml()}</div>`;
     drop.innerHTML = list;
     drop.hidden = !list;
@@ -542,6 +543,13 @@ class App {
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
     return this.viewMenuHtml() +
+      `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
+      `<div class="hudpop" ${this.hudOpen ? "" : "hidden"}>` + this.drawerHtml() + "</div>";
+  }
+
+  // the drawer under the menu button: scores, info, debug, language, speed, sound, leave
+  drawerHtml() {
+    return "" +
       `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
       (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
@@ -1288,6 +1296,7 @@ function wire(app) {
       return;
     }
     if (app.viewOpen && !e.target.closest(".viewmenu")) app.openViewMenu(false);   // click elsewhere folds it
+    if (app.hudOpen && !e.target.closest(".hudpop, .hud-btn")) { app.hudOpen = false; app.render(); }
     const b = e.target.closest("[data-act],[data-opt],[data-pay],[data-view]");
     if (!b) return;
     if (b.closest("#setup")) {
@@ -1296,7 +1305,7 @@ function wire(app) {
     }
     const g = app.game;
     if (!g) return;
-    if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound"].includes(b.dataset.act) && b.dataset.view === undefined) return;
+    if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound", "hud"].includes(b.dataset.act) && b.dataset.view === undefined) return;
     if (b.dataset.view !== undefined) { app.view(b.dataset.view); app.openViewMenu(false); return; }
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
@@ -1317,7 +1326,8 @@ function wire(app) {
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "tunnels") { const c = +b.dataset.val; app.tunnelOpen = app.tunnelOpen === c ? null : c; app.render(); }
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
-    else if (act === "menu") app.askLeave(true);
+    else if (act === "menu") { app.hudOpen = false; app.askLeave(true); }
+    else if (act === "hud") { app.hudOpen = !app.hudOpen; app.render(); }
     else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
