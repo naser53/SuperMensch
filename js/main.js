@@ -3,7 +3,7 @@ import { Option, Player } from "./engine.js";
 import { SimpleAI } from "./ai.js";
 import { Table, fingerprint } from "./table.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
-import { Board3D, COLORS } from "./render3d.js";
+import { Board3D, COLORS, setColors } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
 import { Config } from "./config.js";
@@ -116,6 +116,7 @@ class App {
 
   // the open rooms of the server, with their players and the seats in play right now
   async loadRooms() {
+    loadColors(this);                  // the admin may have changed the piece colors
     try {
       const r = await fetch(`${apiBase()}/api/games`, { cache: "no-store" });
       if (!r.ok) throw new Error(r.status);
@@ -1412,15 +1413,32 @@ function wire(app) {
 async function main() {
   try { await Promise.all([document.fonts.load("400 16px Vazirmatn"), document.fonts.load("700 16px Vazirmatn")]); }
   catch { /* fall back to the system font */ }
+  try { setColors(JSON.parse(localStorage.getItem("supermensch-colors") || "null")); } catch { /* none kept */ }
   const app = new App();
   window.superMensch = app;            // handy for testing from the console
   wire(app);
   app.setLang(app.lang);
   const q = new URLSearchParams(location.search);       // an online game: play?game=K7QX-42&seats=0,2
-  if (!app.offline) app.loadRooms();
+  if (!app.offline) app.loadRooms(); else loadColors(app);
   if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
+
+// The admin's piece colors (server-wide settings). The last ones known apply at once (above);
+// new ones show on the first page now, and on the board from the next game.
+async function loadColors(app) {
+  try {
+    const r = await fetch(`${apiBase()}/api/settings`, { cache: "no-store" });
+    if (!r.ok) return;
+    const { colors } = await r.json();
+    const text = JSON.stringify(colors || null);
+    let old = null;
+    try { old = localStorage.getItem("supermensch-colors"); localStorage.setItem("supermensch-colors", text); } catch { /* private mode */ }
+    if (text === old) return;
+    setColors(colors);
+    if (!app.game) app.render();
+  } catch { /* offline: the colors kept or the defaults */ }
+}
 
 // where the online server is: this page's own host when the server serves it, else Config.SERVER_URL
 function apiBase() {

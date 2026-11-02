@@ -1,9 +1,10 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
+import { Config } from "../js/config.js";
 
 const users = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: `user${i + 1}` }));
 const twoSeats = (...who) => who.map((w, i) => (w === "ai" ? { ai: true, colors: [i, i + 3] } : { user: w, colors: [i, i + 3] }));
@@ -48,6 +49,16 @@ test("the admin changes who plays: same number keeps the game, another restarts 
   const room = new Room(old, [], mulberry32(2));
   const again = new Room(swap.setup, room.events.slice());
   assert.ok(again.events.length >= room.events.length);
+});
+
+test("the admin's piece colors: a hex or the default (null) per color", () => {
+  const d = Config.PIECE_COLORS;
+  assert.equal(d[3], "#cea70d");                                   // yellow, 15% darker (owner, 2026-11-02)
+  const list = d.slice(); list[0] = "#ABCDEF"; list[3] = null;
+  assert.deepEqual(cleanColors(list), ["#abcdef", null, null, null, null, null, null, null]);
+  assert.throws(() => cleanColors(d.slice(0, 6)));
+  assert.throws(() => cleanColors(d.map((c, i) => (i ? c : "red"))));
+  assert.throws(() => cleanColors("#ffffff"));
 });
 
 test("names are trimmed and limited", () => {

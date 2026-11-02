@@ -97,6 +97,10 @@ export class Config {
   static HOP_SHARE = 0.22;
   // loudness of the sound effects (js/sound.js), 0..1; players switch them on or off in the ribbon
   static SOUND_VOLUME = 0.7;
+  // piece colors (red, blue, green, yellow, purple, teal, pink, black); the 8-color board uses all,
+  // the others the first 6 or 4. Yellow is 15% darker than before (owner, 2026-11-02). The admin may
+  // change each one for every game (admin page, saved on the server: GET /api/settings).
+  static PIECE_COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#cea70d", "#6a5ccf", "#159a7a", "#ec5fa8", "#2a2a2e"];
   // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 

@@ -42,6 +42,19 @@ export function cryptoRandom() {
   return a[0] / 4294967296;
 }
 
+// The admin's piece colors: one entry per color of Config.PIECE_COLORS, "#rrggbb" or null (the
+// default). A color equal to its default is stored as null, so a later default change reaches it.
+export function cleanColors(list) {
+  const n = Config.PIECE_COLORS.length;
+  if (!Array.isArray(list) || list.length !== n) throw new Error("bad colors");
+  return list.map((c, i) => {
+    if (c === null || c === "") return null;
+    if (typeof c !== "string" || !/^#[0-9a-f]{6}$/i.test(c)) throw new Error("bad colors");
+    c = c.toLowerCase();
+    return c === Config.PIECE_COLORS[i] ? null : c;
+  });
+}
+
 export function cleanName(s) {
   if (typeof s !== "string") return null;
   s = s.replace(/\s+/g, " ").trim().slice(0, NAME_MAX);

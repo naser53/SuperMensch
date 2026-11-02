@@ -5,10 +5,24 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 import { sound } from "./sound.js";
+import { Config } from "./config.js";
 
 // the 8-color board adds pink and black (owner, 2026-11-02); the other boards use the first 6 or 4
-export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#f2c40f", "#6a5ccf", "#159a7a", "#ec5fa8", "#2a2a2e"];
-export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
+export const COLORS = Config.PIECE_COLORS.slice();
+const LIGHT_DEFAULT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
+export const LIGHT = LIGHT_DEFAULT.slice();
+
+// The admin's piece colors (from the server): [hex or null] per color, null = the default. The nest
+// fields of a changed color get a pale tint of it. Takes effect on the next board that is built.
+export function setColors(list) {
+  const mix = (hex, k) => "#" + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k)
+    .toString(16).padStart(2, "0")).join("");
+  for (let i = 0; i < COLORS.length; i++) {
+    const c = Array.isArray(list) && typeof list[i] === "string" && /^#[0-9a-f]{6}$/i.test(list[i]) ? list[i].toLowerCase() : null;
+    COLORS[i] = c || Config.PIECE_COLORS[i];
+    LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
+  }
+}
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
