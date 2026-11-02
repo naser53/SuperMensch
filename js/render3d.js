@@ -12,9 +12,15 @@ export const COLORS = Config.PIECE_COLORS.slice();
 const LIGHT_DEFAULT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
 export const LIGHT = LIGHT_DEFAULT.slice();
 
+// the board's own colors set by the admin: [surface, edge], null = the board's default
+export const BOARD = [null, null];
+
 // The admin's piece colors (from the server): [hex or null] per color, null = the default. The nest
-// fields of a changed color get a pale tint of it. Takes effect on the next board that is built.
-export function setColors(list) {
+// fields of a changed color get a pale tint of it. board: [surface, edge] (hex or null). Takes effect
+// on the next board that is built.
+export function setColors(list, board) {
+  const hex = c => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : null);
+  for (let i = 0; i < BOARD.length; i++) BOARD[i] = hex(Array.isArray(board) ? board[i] : null);
   const mix = (hex, k) => "#" + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k)
     .toString(16).padStart(2, "0")).join("");
   for (let i = 0; i < COLORS.length; i++) {
@@ -419,8 +425,8 @@ export class Board3D {
     const slab = new THREE.Mesh(
       new THREE.ExtrudeGeometry(shape, { depth: 0.55, bevelEnabled: true, bevelThickness: 0.05,
         bevelSize: 0.06, bevelSegments: 3 }),
-      [new THREE.MeshStandardMaterial({ color: n === 4 ? "#f7e8c4" : "#f0e6c8", roughness: 0.85 }),
-       new THREE.MeshStandardMaterial({ color: n === 4 ? "#c83c32" : "#b59c6c", roughness: 0.7 })]);
+      [new THREE.MeshStandardMaterial({ color: BOARD[0] || (n === 4 ? "#f7e8c4" : Config.BOARD_COLORS[0]), roughness: 0.85 }),
+       new THREE.MeshStandardMaterial({ color: BOARD[1] || (n === 4 ? "#c83c32" : Config.BOARD_COLORS[1]), roughness: 0.7 })]);
     slab.rotation.x = -Math.PI / 2;
     slab.position.y = TOP - 0.6;
     slab.castShadow = true;

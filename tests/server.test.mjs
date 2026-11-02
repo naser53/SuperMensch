@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, pickColors } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
@@ -59,6 +59,9 @@ test("the admin's piece colors: a hex or the default (null) per color", () => {
   assert.throws(() => cleanColors(d.slice(0, 6)));
   assert.throws(() => cleanColors(d.map((c, i) => (i ? c : "red"))));
   assert.throws(() => cleanColors("#ffffff"));
+  // the board's own colors: surface and edge
+  assert.deepEqual(cleanBoard(["#112233", Config.BOARD_COLORS[1]]), ["#112233", null]);
+  assert.throws(() => cleanBoard(["#112233"]));
 });
 
 test("names are trimmed and limited", () => {

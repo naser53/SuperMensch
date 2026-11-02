@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanColors, cleanName, editSetup, isGameId, newGameId } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, editSetup, isGameId, newGameId } from "./core.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -34,14 +34,21 @@ async function api(req, env, url) {
   const adminOk = !!env.ADMIN_KEY && req.headers.get("x-admin-key") === env.ADMIN_KEY;
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
-  // the server-wide settings every game page reads: the admin's piece colors (null = default)
-  if (parts[0] === "settings" && req.method === "GET") return json({ colors: await lobby.colors(), defaults: Config.PIECE_COLORS });
+  // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(),
+    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS });
+  if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
     if (parts[1] === "check") return json({ ok: true });
     if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
     if (parts[1] === "games") return json(await lobby.allGames());
-    if (parts[1] === "colors" && body) return json({ colors: await lobby.setColors(cleanColors(body.colors)), defaults: Config.PIECE_COLORS });
+    if (parts[1] === "colors" && body) {
+      const colors = cleanColors(body.colors), board = body.board === undefined ? null : cleanBoard(body.board);
+      await lobby.setColors(colors);
+      if (board) await lobby.setBoard(board);
+      return json(await settings());
+    }
     if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
       const old = await lobby.setupOf(body.id);
       if (!old) return fail("no such game", 404);
@@ -122,6 +129,18 @@ export class Lobby extends DurableObject {
   setColors(colors) {
     this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('colors', ?)`, JSON.stringify(colors));
     return this.colors();
+  }
+
+  // the board's own colors (cleanBoard): [surface, edge], hex or null
+  board() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'board'`).toArray();
+    const v = r.length ? JSON.parse(r[0].v) : [];
+    return Config.BOARD_COLORS.map((_, i) => v[i] || null);
+  }
+
+  setBoard(board) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('board', ?)`, JSON.stringify(board));
+    return this.board();
   }
 
   rename(id, name) {

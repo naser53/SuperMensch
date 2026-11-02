@@ -101,6 +101,9 @@ export class Config {
   // the others the first 6 or 4. Yellow is 15% darker than before (owner, 2026-11-02). The admin may
   // change each one for every game (admin page, saved on the server: GET /api/settings).
   static PIECE_COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#cea70d", "#6a5ccf", "#159a7a", "#ec5fa8", "#2a2a2e"];
+  // the board's own colors on the 6- and 8-color boards: its surface and its edge (the 4-color board
+  // keeps its classic cream and red unless the admin sets them). The admin may change both too.
+  static BOARD_COLORS = ["#f0e6c8", "#b59c6c"];
   // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
 
