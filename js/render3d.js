@@ -583,7 +583,7 @@ export class Board3D {
     return grp;
   }
 
-  // The hunter: a pawn of its color holding a bow; the arrow points the way it runs.
+  // The hunter: a pawn of its color carrying an arrow (no bow) that points the way it runs.
   // Local +x is where the arrow points; the group is turned to face along the track.
   hunterFigure(color, piece, opacity = 1) {
     const grp = new THREE.Group();
@@ -595,13 +595,9 @@ export class Board3D {
       m.userData.piece = piece;
       grp.add(m);
     }
-    const bow = new THREE.Group();
+    // the hunter carries just an arrow at its side, pointing the way it goes (no bow; owner, 2026-11-02)
+    const arrow = new THREE.Group();
     const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
-    const R = 0.36;
-    const arc = new THREE.Mesh(new THREE.TorusGeometry(R, 0.035, 8, 24, Math.PI), wood);
-    arc.rotation.z = -Math.PI / 2;                  // limbs up and down, bulging towards +x
-    const str = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 2 * R, 6),
-      new THREE.MeshBasicMaterial({ color: "#f4efe2", ...see }));
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.78, 6), wood);
     shaft.rotation.z = Math.PI / 2;
     shaft.position.x = 0.2;
@@ -609,11 +605,18 @@ export class Board3D {
       new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3, ...see }));
     tip.rotation.z = -Math.PI / 2;
     tip.position.x = 0.66;
-    bow.add(arc, str, shaft, tip);
-    bow.position.set(0.05, 0.6, 0.32);             // held at the pawn's side, at chest height
-    bow.scale.setScalar(1.35);
-    for (const m of bow.children) m.userData.piece = piece;
-    grp.add(bow);
+    const feather = new THREE.MeshStandardMaterial({ color: "#f4efe2", roughness: 0.8, side: THREE.DoubleSide, ...see });
+    for (const r of [0, Math.PI / 2]) {             // fletching: two crossed vanes at the tail
+      const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.1), feather);
+      vane.position.x = -0.1;
+      vane.rotation.x = r;
+      arrow.add(vane);
+    }
+    arrow.add(shaft, tip);
+    arrow.position.set(0.05, 0.6, 0.32);           // held at the pawn's side, at chest height
+    arrow.scale.setScalar(1.35);
+    for (const m of arrow.children) m.userData.piece = piece;
+    grp.add(arrow);
     grp.userData = { piece, mat: body };
     return grp;
   }
@@ -776,17 +779,24 @@ export class Board3D {
   // §13: tunnels are see-through tubes; the current player's in full, the others' fainter.
   // tunnelCands (set by the app while the Tunnels list is open): the tunnels that can be declared,
   // faint in their piece's color; the one under the mouse (extra) in full, in its color, thicker.
+  // A tunnel declared this turn can still be taken back until the dice are rolled: till then it is
+  // only its line, and its fields' circles come once the roll has made it final (owner, 2026-11-02).
   drawTunnels(st, extra = null) {
     this.tunnelGroup.clear();
     const g = this.game;
-    for (const t of st.tunnels) this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3);
+    const open = g.pending && g.pending.kind === "pre_roll" ? g._declared || [] : [];
+    for (const t of st.tunnels) {
+      const draft = t[0] === g.turn && open.some(d => d[0] === t[1] && d[1] === t[2] && d[2] === t[3] && d[3] === t[4]);
+      this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3, null, 1, null, draft);
+    }
     const same = (a, b) => a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4];
     for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.6, null, 1, c);
     if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7, extra);
   }
 
   // pick: the tunnel's payload; a tap on its tube or its exit ring then declares it
-  tunnelMesh(col, a, b, opacity, color = null, thick = 1, pick = null) {
+  // lineOnly: just the tube, without the circles of its fields and its ends
+  tunnelMesh(col, a, b, opacity, color = null, thick = 1, pick = null, lineOnly = false) {
     const cells = this.tunnelCells(col, a, b);
     const y = this.surfaceY() + 0.12;
     const curve = new THREE.CatmullRomCurve3(cells.map(p => this.xz(p, y)));
@@ -805,6 +815,7 @@ export class Board3D {
       t2.userData.tunnel = ex.userData.tunnel = pick;
       this.tunnelGroup.add(t2, ex);
     }
+    if (lineOnly) return;
     cells.slice(1, -1).forEach(p => {
       const d = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 0.62, FIELD_R * 0.62, 0.05, 32),
         new THREE.MeshStandardMaterial({ color: "#ffffff", transparent: true, opacity: Math.min(1, opacity + 0.1) }));
@@ -1127,6 +1138,54 @@ export class Board3D {
     s.scale.set(size * W / 84, size, 1);
     s.renderOrder = 11;
     return s;
+  }
+
+  // §9 the hunter's way in: a small bubble over the waiting hunter with one button per direction.
+  // Each arrow points, on screen, the way the hunter goes along the track from its gate; the
+  // bubble follows the camera. items: [{k, dir, label}] (k: the option index for data-opt), or
+  // null to take it away.
+  hunterChoice(p, color, items) {
+    const key = items ? JSON.stringify([p, color, items]) : null;
+    if (this.hchoice && this.hchoice.key === key) return;
+    if (this.hchoice) { this.hchoice.el.remove(); this.hchoice = null; }
+    if (!items) return;
+    const el = document.createElement("div");
+    el.className = "hchoice";
+    el.dir = "ltr";                     // the buttons are ordered by where their arrows point
+    el.style.setProperty("--hc", COLORS[color]);
+    const btns = items.map(it => {
+      const b = document.createElement("button");
+      b.className = "hc-btn";
+      b.dataset.opt = it.k;
+      b.innerHTML = `<svg class="hc-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h15M12 5l7 7-7 7"/></svg>`;
+      const s = document.createElement("span");
+      s.textContent = it.label;
+      b.appendChild(s);
+      el.appendChild(b);
+      return { b, dir: it.dir, arrow: b.firstChild };
+    });
+    this.container.appendChild(el);
+    this.hchoice = { key, el, p, color, btns };
+    this.placeHunterChoice();
+  }
+
+  placeHunterChoice() {
+    const hc = this.hchoice;
+    if (!hc || !this.size || !this.game) return;
+    const [w, h] = this.size, L = this.data.track.length, gate = this.game.gate(hc.color);
+    const ghost = this.hunterGhosts && this.hunterGhosts.get(hc.p);
+    const at = ghost ? ghost.position.clone().setY(ghost.position.y + 1.45)
+      : this.xz(this.data.track[gate], this.surfaceY() + 1.2);
+    const v = at.project(this.camera);
+    hc.el.style.left = `${(v.x + 1) / 2 * w}px`;
+    hc.el.style.top = `${(1 - v.y) / 2 * h}px`;
+    const scr = a => { const q = this.xz(this.data.track[a], this.surfaceY()).project(this.camera); return [q.x * w / 2, -q.y * h / 2]; };
+    const s0 = scr(gate);
+    for (const x of hc.btns) {
+      const s1 = scr(((gate + x.dir) % L + L) % L), dx = s1[0] - s0[0], dy = s1[1] - s0[1];
+      x.arrow.style.transform = `rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`;
+      x.b.style.order = dx < 0 ? 0 : 1;          // the arrow pointing left sits on the left
+    }
   }
 
   // Points over a piece's head (+ won, − lost): they pop up, stay a moment and fade (CSS .pop).
@@ -1517,6 +1576,7 @@ export class Board3D {
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);
     for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
+    this.placeHunterChoice();
     let shake = null;
     if (now < (this.shakeUntil || 0)) {        // the board trembles after a blast
       const amp = 0.18 * (this.shakeUntil - now) / 550;

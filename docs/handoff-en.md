@@ -220,7 +220,8 @@ game: no declarations, no Tunnels button, no info table).
 * **Cost** 80 / 120 / 160 for 1 / 2 / 3 corridors. Fully paid, no failure.
 * **Declare** before the roll when the piece is at most 6 fields before the entrance
   (`TUNNEL_DECLARE_RANGE`). Until the dice are rolled that turn it can be taken back with Undo
-  (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. The chosen tunnel is shown; other players' tunnels
+  (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. Until the roll a declared tunnel is drawn as its line only; the circles of
+  its fields appear once the roll has made it final. The chosen tunnel is shown; other players' tunnels
   appear paler.
 * **Tunnels buttons:** one per color of the player, its icon in that color, with that color's count.
   It opens that color's list (each line with a color dot) and draws its tunnels on the board, faint, in
@@ -381,8 +382,11 @@ the fingerprint.
   pick, 2026-11-02: both stand apart from the six colors; orange was left out, it read as brown). Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
   gold with a small, soft glow (made smaller at the owner's request). The base ring is silver for a general, gold (with a second ring) for a marshal.
-* The **hunter** is a pawn holding a bow; the arrow points in its running direction (forward or
-  backward).
+* The **hunter** is a pawn carrying an arrow at its side (no bow, owner 2026-11-02); the arrow points in
+  its running direction (forward or backward).
+* **Hunter's way in:** when the hunter can enter both ways, a small bubble pops up over the waiting
+  hunter on the board (not a list in the panel) with two buttons, Forward and Back; each button's
+  arrow points, on screen, the way the hunter would run from its gate (`Board3D.hunterChoice`).
 
 ## 5. Effects and animations
 * **Moves:** pieces hop field by field. Computer players wait for the animations.

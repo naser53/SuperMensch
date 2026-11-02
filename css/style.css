@@ -391,3 +391,17 @@ label.check.on { color: var(--accent); }
 .pop.loss { background: #c0392b; }
 @keyframes pop { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
   20% { transform: translate(-50%, -50%) scale(1); } 65% { opacity: 1; transform: translate(-50%, -70%); } 100% { opacity: 0; transform: translate(-50%, -110%); } }
+/* §9 the hunter's way in: a small bubble over the waiting hunter, one button per direction;
+   each arrow is turned (in render3d) to point the way the hunter goes along the track */
+.hchoice { position: absolute; z-index: 8; transform: translate(-50%, -100%); display: flex; gap: 6px; padding: 5px;
+  background: rgba(255,255,255,.96); border: 2px solid var(--hc, #888); border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.22);
+  animation: hc-in .18s ease-out; }
+.hchoice::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 12px; height: 12px; background: inherit;
+  border: inherit; border-width: 0 2px 2px 0; transform: translateX(-50%) rotate(45deg); }
+.hc-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 58px; padding: 5px 8px 4px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--btn); cursor: pointer;
+  font: 700 12px/1.1 Vazirmatn, system-ui, sans-serif; color: inherit; }
+.hc-btn:hover, .hc-btn:focus-visible { background: var(--btn-hover); border-color: var(--hc, var(--hi)); outline: none; }
+.hc-arrow { width: 26px; height: 26px; fill: none; stroke: var(--hc, #333); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+@keyframes hc-in { from { opacity: 0; transform: translate(-50%, -85%) scale(.8); } to { opacity: 1; transform: translate(-50%, -100%); } }

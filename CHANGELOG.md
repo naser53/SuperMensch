@@ -6,6 +6,9 @@ attached. The `latest` release is always the newest build of `main`.
 
 ## Unreleased
 
+* **Hunter way in on the board:** the Forward / Back choice is a small bubble over the waiting hunter, with arrows that point the way it would run (no more list in the panel).
+* The hunter carries only an arrow (no bow).
+* A tunnel declared this turn shows only its line until the dice are rolled; its field circles appear once it is final.
 * **Piece colors in the admin page:** a color picker for each piece color, saved on the server and used by every game (players' pages pick them up on load and when the room list refreshes).
 * Yellow is 15% darker by default (`#cea70d`).
 * **Board colors in the admin page:** the board's surface and edge can be changed the same way, for every game.
