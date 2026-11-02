@@ -274,7 +274,8 @@ The board takes the whole screen; the panel floats over it (layout B, *dock*; ow
 * Bottom: a dock with the tunnel buttons and the card on the left, the big round **die button** raised in the middle, then Second try, the other buttons (gift six, continue...) and undo.
 * **Tunnels** (owner, 2026-11-02): a Tunnels button opens no written list; its color's tunnels are drawn on the board with the cost over each exit (−80 / −120 / −160, `Board3D.textSprite`), and a tap on one declares it. A color with none gets a short message at the top for 2 s (`App.flash`, `tun_short_*`).
 * **Points over the pieces** (owner): once a move has landed, what each capturing piece won pops up over its head in green (+), and a hit general or marshal shows its player's loss (the bounty) in red (−); they stay about half a second and fade (`App.scorePops`, `Board3D.popOver`, CSS `.pop`).
-* **Winner** (owner): with the fireworks, a big golden pawn grows in the empty middle of the board, turns slowly in a glow, with the winner's name and total score over it (`Board3D.trophy`; the winner is the first of `places`).
+* **Winner** (owner): with the fireworks, a pawn grows in the empty middle of the board, turns slowly in a glow, with the winner's name and total score over it (`Board3D.trophy`; the winner is the first of `places`). Owner, 2026-11-02: kept small so the middle stays readable, and drawn in the winner's first color (pawn, glow, label and fireworks).
+* **Play again** (owner, 2026-11-02): the game-over panel has "Play again" next to "New game". Offline it starts a new game with the same setup. Online (only a device that holds seats) it sends `{t:"again"}`; the room makes one next game, once, with the same players, colors and settings and the name plus " (2)" (`nextName`), keeps its id in meta `next`, and sends `{t:"again", id}` to every device, which moves there with its own seats.
 
 The notes below are from the ribbon on top; what each part does still holds, only where it sits changed. The code keeps the old names (`#ribbon`, `rb-*`): the ribbon is now a see-through layer.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
@@ -388,8 +389,8 @@ the fingerprint.
 * **Rank look after the move:** the points bar, star, rings and halo of a pawn change only once
   its move and captures have been shown (`queueLook`/`stepLooks`); a demoted victim loses its look
   when it lands.
-* **Fireworks:** when the game is over, about 14 rockets rise from around the board and burst into
-  colored sparks, all within about four seconds (`fireworks()`).
+* **Fireworks:** when the game is over, 8 rockets rise near the edge of the board and burst into
+  sparks in the winner's first color and two lighter tints, all within about three seconds (`fireworks(color)`).
 * **Captures:** the victim flies back to its yard in a high arc. A demoted general or marshal
   flies to its pushed-back field instead.
 * **Ranked hit (blast):** on the capture field an orange flash ball and a shock ring spread

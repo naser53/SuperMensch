@@ -57,6 +57,13 @@ export function cleanColors(list, defaults = Config.PIECE_COLORS) {
 // the board's own colors, [surface, edge], checked the same way (defaults Config.BOARD_COLORS)
 export const cleanBoard = list => cleanColors(list, Config.BOARD_COLORS);
 
+// the name of the next game of a room ("Play again"): "Test" -> "Test (2)" -> "Test (3)"
+export function nextName(name) {
+  const m = /^(.*) \((\d+)\)$/.exec(name || "");
+  const base = m ? m[1] : name || "Game", n = m ? +m[2] + 1 : 2, tail = ` (${n})`;
+  return base.slice(0, NAME_MAX - tail.length) + tail;
+}
+
 export function cleanName(s) {
   if (typeof s !== "string") return null;
   s = s.replace(/\s+/g, " ").trim().slice(0, NAME_MAX);

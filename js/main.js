@@ -414,7 +414,9 @@ class App {
     if (g.over) {
       status = `<b>${this.T("game_over")}</b>`;
       list = `<ol class="ranking">` + g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") + "</ol>";
-      acts = btn('data-act="menu"', this.T("new_game"), "primary");
+      // play again: online, a new room with the same players (the server makes it once); offline, the same setup
+      const again = !this.online || this.online.seats.length;
+      acts = (again ? btn('data-act="again"', this.T("play_again"), "primary") : "") + btn('data-act="menu"', this.T("new_game"), again ? "" : "primary");
     } else {
       const who = t(this.lang, this.online && this.online.remote.has(g.turn) ? "online_other" : p.isAi ? "thinking" : "your_turn");
       status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
@@ -981,9 +983,10 @@ class App {
     this.checkNests(end);
     if (g.over && !this.fireworksDone) {     // the game is over: fireworks once the last move has landed
       this.fireworksDone = true;
-      setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
-      const w = g.places[0];                   // the winner: a golden pawn in the middle with the total score
-      if (w !== undefined) setTimeout(() => this.board.trophy(`${tr(this.lang, g.players[w].name)} · ${num(this.lang, g.state.scores[w])}`),
+      const w = g.places[0];                   // the winner: a pawn in the winner's first color, with the total score
+      const wc = w !== undefined ? COLORS[g.players[w].colors[0]] : null;
+      setTimeout(() => this.board.fireworks(wc), Math.max(0, end - performance.now()) + 400);
+      if (w !== undefined) setTimeout(() => this.board.trophy(`${tr(this.lang, g.players[w].name)} · ${num(this.lang, g.state.scores[w])}`, wc),
         Math.max(0, end - performance.now()) + 600);
     }
     this.nextAi = end + this.delay;
@@ -1174,6 +1177,13 @@ class App {
   // seats and plays every event the server sends, one by one, with the usual animations.
   // Seats played elsewhere (and the computer, which the server plays) count as computer
   // players here, so the panel offers nothing for them.
+  // the game is over: online, ask the server for the next room; offline, start the same setup again
+  playAgain() {
+    const o = this.online;
+    if (!o) { this.startGame(); return; }
+    if (o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify({ t: "again" }));
+  }
+
   startOnline(id, seats) {
     this.online = { id, seats, remote: new Set(), queue: [], sent: null, applying: false, fp: null, ws: null };
     $("#setup").hidden = true;
@@ -1215,6 +1225,10 @@ class App {
       const names = m.taken.map(i => m.setup.players[i].name).join(", ");
       this.showToast(this.T("online_taken", { p: names }), true);
       setTimeout(() => { location.href = location.pathname; }, 4000);
+      return;
+    }
+    if (m.t === "again") {                  // the next game of this room: go there with the same seats
+      location.href = `${location.pathname}?game=${encodeURIComponent(m.id)}&seats=${o.seats.join(",")}`;
       return;
     }
     if (m.t === "recolor") {                // a seat picked its colors before the first move: start again
@@ -1365,6 +1379,7 @@ function wire(app) {
     else if (act === "tunnels") app.openTunnels(+b.dataset.val);
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") { app.hudOpen = false; app.askLeave(true); }
+    else if (act === "again") app.playAgain();
     else if (act === "hud") { app.hudOpen = !app.hudOpen; app.render(); }
     else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
