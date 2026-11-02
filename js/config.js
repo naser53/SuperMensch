@@ -12,6 +12,8 @@ export class Config {
       gift_six_turns: 4,        // GIFT_SIX_TURNS: two-color game, stuck turns without a 6
       triple_dice_cards: 3,     // TRIPLE_DICE_CARDS
       hunter_can_break: false,  // HUNTER_CAN_BREAK
+      six_into_nest: true,      // SIX_INTO_NEST: two-color game, a 6 that takes a piece into its nest may
+                                // be played alone even when the other die then burns (owner, 2026-11-02)
 
       corridor_points: [1, 3, 6, 10, 15, 23],  // CORRIDOR_POINTS
       gate_bonus: 5,            // GATE_BONUS

@@ -699,11 +699,28 @@ export class Game {
         if (has.has(ac)) has.set(ac, true);
       }
     }
-    if (this.mode !== "two" || [...has.values()].every(Boolean)) return p2.length ? p2 : p1;  // §4.3 both dice
+    if (this.mode !== "two" || [...has.values()].every(Boolean)) {
+      if (!p2.length) return p1;
+      return this.cfg.six_into_nest ? p2.concat(this._sixIntoNest(p1, p2, st)) : p2;   // §4.3 both dice
+    }
     const live = colors.filter(c => has.get(c));
     if (!live.length) return [];
     const c = live[0];                                        // §4.2 only one die for that color
     return p1.filter(pl => pl.steps.every(s => this._agent(s.mover, st) === c));
+  }
+
+  // §4.3 exception (owner, 2026-11-02): a 6 that takes a piece from the track into its nest may
+  // be played alone, the other die burns. Only when no two-dice play makes that same step. These
+  // plays come after the two-dice plays, so the option numbers of older games stay the same.
+  _sixIntoNest(p1, p2, st) {
+    const same = (a, b) => sameMover(a.mover, b.mover) && a.die === b.die && JSON.stringify(a.dst) === JSON.stringify(b.dst);
+    return p1.filter(pl => {
+      if (pl.steps.length !== 1) return false;
+      const s = pl.steps[0], m = s.mover;
+      if (s.die !== 6 || m[0] !== "p") return false;
+      if (!(st.pos[m[1]][m[2]] >= 0 && st.pos[m[1]][m[2]] < this.L && pl.state.pos[m[1]][m[2]] >= this.L)) return false;
+      return !p2.some(q => q.steps.some(x => same(x, s)));
+    });
   }
 
   // Color a mover plays for; the hunter plays for its completed color.
@@ -748,16 +765,17 @@ export class Game {
     const legal = new Map(dec.options.map(o => [o.payload.state.key(), o]));
     const first = dec.options[0].payload;
     const isBreak = first.kind === "break";
-    const nd = first.steps.length;
+    const nd = Math.max(...dec.options.map(o => o.payload.steps.length));
+    const lens = new Set(dec.options.map(o => o.payload.steps.length));
     const targets = isBreak ? [...new Set(dec.options.map(o => o.payload.target))] : [null];
     const out = [];
     for (const target of targets) {
       const rec = (cur, used, steps, states, movers) => {
-        if (steps.length === nd) {
+        if (steps.length && lens.has(steps.length)) {
           const o = legal.get(cur.key());
-          if (o && this._valid(p, steps, structs, isBreak, target, st0)) out.push({ steps, states, option: o, dieIdx: used });
-          return;
+          if (o && o.payload.steps.length === steps.length && this._valid(p, steps, structs, isBreak, target, st0)) out.push({ steps, states, option: o, dieIdx: used });
         }
+        if (steps.length === nd) return;
         dec.dice.forEach((d, di) => {
           if (used.includes(di)) return;
           for (const m of this.movers(p, cur)) {
