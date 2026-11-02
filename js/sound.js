@@ -1,6 +1,6 @@
-// Sound effects, made with the Web Audio API (no sound files, so the single-file build stays small
-// and works offline). Every sound is synthesized when it plays:
-//   die       dice on a wooden board: a tick, the hollow knock of the board, a short rattle
+// Sound effects, made with the Web Audio API. The dice sound is a short recording carried inside the
+// code (js/dicesound.js), so the single-file build still works offline; the others are synthesized:
+//   roll      the dice are thrown: a recorded sound (sounds/dice-roll.mp3), once per throw
 //   move      a wooden clack, like a chess piece set down on the board
 //   capture   a small blast; a hit general or marshal: a stronger blast with a rumble
 //   knock     three knocks on a door: a triple-dice card is played
@@ -8,6 +8,7 @@
 //   fireworks a whistle per rocket and a crackling burst, timed with the rockets on the board
 // The browser starts audio only after a click or a key, so the context is made on the first one.
 import { Config } from "./config.js";
+import { DICE_MP3 } from "./dicesound.js";
 
 class Sound {
   constructor() {
@@ -33,6 +34,11 @@ class Sound {
       const n = c.sampleRate * 2, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
       this.noiseBuf = buf;
+      try {                                              // the dice sound, decoded once
+        const bin = atob(DICE_MP3), bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        c.decodeAudioData(bytes.buffer).then(b => { this.diceBuf = b; }, () => {});
+      } catch { /* no dice sound */ }
     }
     if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
     return this.ctx;
@@ -101,35 +107,13 @@ class Sound {
     this.tone(t, "triangle", 210, 150, 0.12, this.env(t, 0.5 * v, 0.003, 0.1));
   }
 
-  // a die hits a wooden board (v: how hard; at: a time on the audio clock, for tests): a sharp
-  // tick of the die's corner, the hollow "tok" of the board ringing under it, then a short rattle
-  // while the die tumbles and settles (owner, 2026-11-02: it should sound like dice on a backgammon board)
-  die(v = 1, at = null) {
-    const c = this.live(); if (!c) return;
-    const t = (at ?? c.currentTime) + 0.003, r = () => 0.9 + Math.random() * 0.2;
-    // the die's corner: a short, dull tick
-    this.noise(t, 0.012, this.filter("bandpass", 1300, 1.2, this.env(t, 0.22 * v, 0.0005, 0.007)));
-    this.noise(t, 0.02, this.filter("bandpass", 1500 * r(), 5, this.env(t, 0.22 * v, 0.0006, 0.014)));
-    // the board: a hollow wooden body that rings briefly (three low resonances of the wood)
-    this.board(t, v);
-    // tumbling: quicker and quicker small ticks, each softer
-    let tt = t, gap = 0.03 + 0.03 * v, a = 0.5 * v;
-    for (let i = 0, n = Math.round(1 + 4 * v); i < n; i++) {
-      tt += gap * r(); gap *= 0.62; a *= 0.6;
-      this.noise(tt, 0.012, this.filter("bandpass", 1700 * r(), 4, this.env(tt, 0.22 * a, 0.0005, 0.008)));
-      this.board(tt, a * 0.7);
-    }
-  }
-
-  // the wooden board under a hit (part of die)
-  board(t, v) {
-    const exc = this.ctx.createGain();
-    exc.gain.value = 1;
-    for (const [f, q, g, d] of [[105, 7, 7, 0.16], [240, 10, 5, 0.12], [520, 12, 2.5, 0.07]]) {
-      const ff = f * (0.94 + Math.random() * 0.12);
-      exc.connect(this.filter("bandpass", ff, q, this.env(t, g * v, 0.001, d)));
-    }
-    this.noise(t, 0.008, exc);
+  // the dice are thrown: the recorded sound (js/dicesound.js), once per throw
+  roll() {
+    const c = this.live(); if (!c || !this.diceBuf) return;
+    const src = c.createBufferSource();
+    src.buffer = this.diceBuf;
+    src.connect(this.master);
+    src.start(c.currentTime + 0.003);
   }
 
   // a blast; big: a general or marshal is hit (louder, deeper, longer, with a rumble)
