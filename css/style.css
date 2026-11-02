@@ -339,11 +339,9 @@ label.check.on { color: var(--accent); }
 .room .choice .dot { width: 12px; height: 12px; vertical-align: -1px; }
 
 /* ---- layout: dock (a thin bar on top, the actions in a dock at the bottom) ---- */
-.rb-players { top: 0; left: 0; right: 0; display: flex; flex-wrap: nowrap; gap: 6px; padding: 6px 10px; padding-inline-end: 110px;
-  overflow-x: auto; scrollbar-width: none; background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  box-shadow: 0 2px 10px rgba(0,0,0,.08); }
-.rb-players .chip { box-shadow: none; flex: none; }
-.rb-tools { top: 5px; inset-inline-end: 10px; }
+.rb-players { top: 8px; inset-inline-start: 10px; inset-inline-end: 110px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.rb-players .chip { flex: none; pointer-events: auto; }
+.rb-tools { top: 8px; inset-inline-end: 10px; }
 .rb-tools .rb-btn, .rb-tools .vm-btn { min-height: 34px; padding: 4px 8px; }
 .rb-status { top: 52px; left: 50%; transform: translateX(-50%); }
 .toast { top: 90px; }
@@ -378,3 +376,18 @@ label.check.on { color: var(--accent); }
   .hint3d { display: none; }
 }
 /* ---- end layout ---- */
+
+/* a short message at the top for 2 s (no tunnel for this color...) */
+.flash { position: absolute; top: 96px; left: 50%; transform: translate(-50%, -6px); z-index: 9; padding: 6px 14px; border-radius: 999px;
+  background: rgba(255,255,255,.95); box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 14px; font-weight: 700; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px; pointer-events: none; opacity: 0; transition: opacity .4s ease, transform .4s ease; }
+.flash.show { opacity: 1; transform: translate(-50%, 0); transition-duration: .15s; }
+.flash .dot { width: 14px; height: 14px; }
+/* points over a piece's head: pop up, stay half a second, fade */
+.pop { position: absolute; z-index: 9; transform: translate(-50%, -50%); pointer-events: none; font: 800 20px/1 Vazirmatn, system-ui, sans-serif;
+  padding: 3px 8px; border-radius: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); box-shadow: 0 3px 10px rgba(0,0,0,.25);
+  animation: pop 1s ease-out forwards; }
+.pop.gain { background: #2e9d48; }
+.pop.loss { background: #c0392b; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  20% { transform: translate(-50%, -50%) scale(1); } 65% { opacity: 1; transform: translate(-50%, -70%); } 100% { opacity: 0; transform: translate(-50%, -110%); } }

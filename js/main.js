@@ -83,6 +83,10 @@ class App {
     hint.className = "hint3d";
     $("#stage").appendChild(hint);
     this.hint = hint;
+    const flash = document.createElement("div");      // a short message for 2 s (no tunnel for this color...)
+    flash.className = "flash";
+    $("#stage").appendChild(flash);
+    this.flashEl = flash;
     const toast = document.createElement("div");      // hints and warnings: shown on the board, then fade
     toast.className = "toast";
     $("#stage").appendChild(toast);
@@ -459,16 +463,6 @@ class App {
         if (g.cfg.tunnels_on) {
           pre.tun = {};
           for (const k of tunnels) { const c = dec.options[k].payload[1]; pre.tun[c] = (pre.tun[c] || 0) + 1; }
-          const c = this.tunnelOpen;
-          if (c !== null && c !== undefined) {
-            const why = g.tunnelBlockers(g.turn);
-            const dot = `<span class="dot" style="background:${COLORS[c]}"></span>`;
-            const off = key => `<div class="opt off">${dot}<div><b>${esc(COLOR_NAMES[this.lang][c])}:</b> ${this.T(key, { n: g.cfg.tunnel_declare_range, m: g.cfg.max_active_tunnels })}</div></div>`;
-            const why1 = why.all || why.colors[c];
-            list = why1 ? off(why1) : `<div class="muted small">${this.T("tun_tap")}</div>` +
-              tunnels.filter(k => dec.options[k].payload[1] === c).map(k =>
-                `<button class="opt tun" data-opt="${k}">${dot}<div>${this.S(dec.options[k].label)}</div></button>`).join("");
-          }
         }
       } else if (human) {
         opts = dec.options;
@@ -870,6 +864,44 @@ class App {
       </div></div>`;
   }
 
+  // A short message at the top for 2 s, then it fades.
+  flash(html) {
+    const el = this.flashEl;
+    clearTimeout(this.flashTimer);
+    el.innerHTML = html;
+    el.classList.remove("show");
+    void el.offsetWidth;
+    el.classList.add("show");
+    this.flashTimer = setTimeout(() => el.classList.remove("show"), 2000);
+  }
+
+  // A Tunnels button: its color's tunnels are drawn on the board (a tap on one declares it,
+  // its cost is written over the exit). A color with none says why in a short message.
+  openTunnels(c) {
+    const g = this.game;
+    this.tunnelOpen = this.tunnelOpen === c ? null : c;
+    if (this.tunnelOpen !== null) {
+      const why = g.tunnelBlockers(g.turn), key = why.all || why.colors[c];
+      if (key) this.flash(`<span class="dot" style="background:${COLORS[c]}"></span> ${this.T(key.replace("tun_why_", "tun_short_"))}`);
+    }
+    this.render();
+  }
+
+  // Points over the pieces' heads once the move has landed: what a capturing piece won (+), and
+  // what a hit general or marshal costs its player (−, the bounty).
+  scorePops(earned, entries, end) {
+    const g = this.game, st = g.state, pops = [];
+    st.earned.forEach((row, col) => row.forEach((v, i) => {
+      const d = v - earned[col][i];
+      if (d > 0) pops.push([["p", col, i], `+${num(this.lang, d)}`, "gain"]);
+    }));
+    for (const { step } of entries || []) for (const c of step.captures) {
+      const b = g.bounty(c.vkills);
+      if (b && c.victim[0] === "p") pops.push([c.victim, `−${num(this.lang, b)}`, "loss"]);
+    }
+    if (pops.length) setTimeout(() => pops.forEach(p => this.board.popOver(...p)), Math.max(0, end - performance.now()));
+  }
+
   // The hint shows on the board when it changes and fades after a few seconds, so a long
   // line never makes the ribbon grow. The scores legend stays while the scores are shown.
   showToast(html, stay) {
@@ -931,6 +963,7 @@ class App {
       this.keptIdx = this.keptDice(dec.dice, opt.payload[1]);
     }
     g.noMove = null;
+    const earned = g.state.earned.map(r => r.slice());
     this.table.choose(opt);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
@@ -943,10 +976,14 @@ class App {
     this.render();
     let end = performance.now();
     if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
+    this.scorePops(earned, entries, end);
     this.checkNests(end);
     if (g.over && !this.fireworksDone) {     // the game is over: fireworks once the last move has landed
       this.fireworksDone = true;
       setTimeout(() => this.board.fireworks(), Math.max(0, end - performance.now()) + 400);
+      const w = g.places[0];                   // the winner: a golden pawn in the middle with the total score
+      if (w !== undefined) setTimeout(() => this.board.trophy(`${tr(this.lang, g.players[w].name)} · ${num(this.lang, g.state.scores[w])}`),
+        Math.max(0, end - performance.now()) + 600);
     }
     this.nextAi = end + this.delay;
     this.moveEnd = entries && entries.length ? end + this.delay : end;   // online: the next throw waits for this
@@ -1324,7 +1361,7 @@ function wire(app) {
     else if (act === "ai_go") app.choose(app.aiPlan[1]);
     else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
     else if (act === "list") { app.sel.list = true; app.render(); }
-    else if (act === "tunnels") { const c = +b.dataset.val; app.tunnelOpen = app.tunnelOpen === c ? null : c; app.render(); }
+    else if (act === "tunnels") app.openTunnels(+b.dataset.val);
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
     else if (act === "menu") { app.hudOpen = false; app.askLeave(true); }
     else if (act === "hud") { app.hudOpen = !app.hudOpen; app.render(); }

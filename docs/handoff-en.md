@@ -267,9 +267,12 @@ seat also shows the board's color dots to pick its color.
 
 ### Panel (floating over the board, v2.3.0)
 The board takes the whole screen; the panel floats over it (layout B, *dock*; owner's trial of three layouts, 2026-11-02).
-* Top: a thin see-through bar with the player chips (it scrolls sideways if they do not fit; on narrow screens only the colors and the score), the camera (View menu) and one **menu button**; its drawer holds Scores, Info, Debug, language, speed, sound and Menu (leave).
-* Under the bar: whose turn, in a pill. Hints show in the fading card under it.
+* Top, floating on the board (owner: no separate bar): the player chips (they wrap; on narrow screens only the colors and the score), the camera (View menu) and one **menu button**; its drawer holds Scores, Info, Debug, language, speed, sound and Menu (leave).
+* Under them: whose turn, in a pill. Hints show in the fading card under it.
 * Bottom: a dock with the tunnel buttons and the card on the left, the big round **die button** raised in the middle, then Second try, the other buttons (gift six, continue...) and undo.
+* **Tunnels** (owner, 2026-11-02): a Tunnels button opens no written list; its color's tunnels are drawn on the board with the cost over each exit (−80 / −120 / −160, `Board3D.textSprite`), and a tap on one declares it. A color with none gets a short message at the top for 2 s (`App.flash`, `tun_short_*`).
+* **Points over the pieces** (owner): once a move has landed, what each capturing piece won pops up over its head in green (+), and a hit general or marshal shows its player's loss (the bounty) in red (−); they stay about half a second and fade (`App.scorePops`, `Board3D.popOver`, CSS `.pop`).
+* **Winner** (owner): with the fireworks, a big golden pawn grows in the empty middle of the board, turns slowly in a glow, with the winner's name and total score over it (`Board3D.trophy`; the winner is the first of `places`).
 
 The notes below are from the ribbon on top; what each part does still holds, only where it sits changed. The code keeps the old names (`#ribbon`, `rb-*`): the ribbon is now a see-through layer.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place

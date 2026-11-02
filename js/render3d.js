@@ -294,6 +294,7 @@ export class Board3D {
     if (this.hunterGhosts) this.hunterGhosts.clear();
     this.diceGroup.clear();
     this.dice = [];
+    this.trophy(null);
     this.buildBoard();
     this.buildPieces();
     this.fitView();
@@ -773,7 +774,10 @@ export class Board3D {
     const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.07 * thick, 10, false),
       new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity, roughness: 0.4 }));
     this.tunnelGroup.add(tube);
-    if (pick) {        // wide invisible touch areas: along the tube, and a disc on the exit
+    if (pick) {        // its cost over the exit, then wide invisible touch areas: along the tube, and a disc on the exit
+      const cost = this.textSprite(`−${this.game.tunnelCost(a, b)}`, c, 0.5);
+      cost.position.copy(this.xz(cells[cells.length - 1], y + 0.75));
+      this.tunnelGroup.add(cost);
       const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
       const t2 = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.25, 6, false), hitMat);
       const ex = new THREE.Mesh(new THREE.CylinderGeometry(FIELD_R * 1.1, FIELD_R * 1.1, 0.1, 24), hitMat);
@@ -1085,6 +1089,75 @@ export class Board3D {
     const right = [Math.cos(az), -Math.sin(az)];
     const sign = s.dir[0] * right[0] + s.dir[1] * right[1] < 0 ? -1 : 1;
     return { at: s.at, dir: [s.dir[0] * sign, s.dir[1] * sign], max: s.max };
+  }
+
+  // A small label that always faces the camera: white text on a rounded tag of this color.
+  textSprite(text, color, size = 0.39) {
+    const W = Math.max(192, 40 + 30 * [...text].length);
+    const tex = canvasTex(W, 84, (g, w, h) => {
+      g.fillStyle = color;
+      g.beginPath(); g.roundRect(6, 6, w - 12, h - 12, 30); g.fill();
+      g.strokeStyle = "#ffffff"; g.lineWidth = 6; g.stroke();
+      g.fillStyle = "#ffffff";
+      g.font = "700 52px Vazirmatn, sans-serif";
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(text, w / 2, h / 2 + 4);
+    });
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+    s.scale.set(size * W / 84, size, 1);
+    s.renderOrder = 11;
+    return s;
+  }
+
+  // Points over a piece's head (+ won, − lost): they pop up, stay a moment and fade (CSS .pop).
+  popOver(m, text, cls) {
+    const grp = this.meshOf(m);
+    if (!grp || !this.size) return;
+    const v = grp.position.clone().setY(grp.position.y + 1.75).project(this.camera);
+    const el = document.createElement("div");
+    el.className = `pop ${cls}`;
+    el.textContent = text;
+    el.style.left = `${(v.x + 1) / 2 * this.size[0]}px`;
+    el.style.top = `${(1 - v.y) / 2 * this.size[1]}px`;
+    this.container.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  // The winner: a big golden pawn turns slowly in the empty middle of the board, in a glow,
+  // with the name and the total score over it. null takes it away.
+  trophy(text) {
+    if (this.trophyGrp) { this.scene.remove(this.trophyGrp); this.trophyGrp = null; }
+    if (text === null) return;
+    const grp = new THREE.Group();
+    const gold = new THREE.MeshStandardMaterial({ color: "#ffcf3a", metalness: 0.45, roughness: 0.3, emissive: "#a87800", emissiveIntensity: 0.45 });
+    const pawn = new THREE.Group();
+    for (const geo of this.pawnGeo) { const m = new THREE.Mesh(geo, gold); m.castShadow = true; pawn.add(m); }
+    pawn.scale.setScalar(2.6);
+    const halo = this.haloSprite();
+    halo.material.depthTest = true;
+    halo.position.y = 1.6;
+    halo.scale.set(6, 6, 1);
+    halo.renderOrder = 0;
+    const label = this.textSprite(text, "#b8860b", 1.1);
+    label.position.y = 4.3;
+    const light = new THREE.PointLight("#ffd76a", 2.2, 9);
+    light.position.y = 2.5;
+    grp.add(halo, pawn, label, light);
+    grp.position.set(0, this.surfaceY(), 0.3);
+    grp.userData = { pawn, halo, t0: performance.now() };
+    this.scene.add(grp);
+    this.trophyGrp = grp;
+  }
+
+  stepTrophy(now) {
+    const t = this.trophyGrp;
+    if (!t) return;
+    const u = (now - t.userData.t0) / 1000, grow = Math.min(1, u / 0.8);
+    t.userData.pawn.rotation.y = u * 0.9;
+    t.userData.pawn.position.y = 0.15 * Math.sin(u * 2.2);
+    t.scale.setScalar(0.2 + 0.8 * (1 - Math.pow(1 - grow, 3)));
+    const s = 6 * (1 + 0.12 * Math.sin(u * 4));
+    t.userData.halo.scale.set(s, s, 1);
   }
 
   // how many pixels one unit is at point p
@@ -1413,6 +1486,7 @@ export class Board3D {
     this.stepDice(now, k);
     this.stepShine(now);
     this.stepBoom(now);
+    this.stepTrophy(now);
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);
     for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();

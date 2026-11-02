@@ -8,9 +8,16 @@ attached. The `latest` release is always the newest build of `main`.
 
 Panel layout **B: dock**. One of three trial layouts (v2.2.0 corners, v2.3.0 dock, v2.4.0 on the board); the owner keeps one.
 * The board takes the whole screen; the panel floats over it.
-* A thin bar on top: the players, the camera and a menu button (scores, info, debug, language, speed, sound and leave are in the menu); whose turn in a pill under it.
+* On top, floating on the board (no bar): the players, the camera and a menu button (scores, info, debug, language, speed, sound and leave are in the menu); whose turn in a pill under them.
 * A dock at the bottom: the tunnels and the card, the big die raised in the middle, Second try, undo and the other buttons.
 * A phone held upright shows the whole board, larger than before.
+* **Tunnels:** a Tunnels button only draws its color's tunnels on the board (no written list); the cost
+  is written over each tunnel's exit (−80, −120, −160). A color with no tunnel gets a short message at
+  the top for 2 s.
+* **Points over the pieces:** after a capture the points the piece won pop up over its head (+) and
+  fade within a second; a hit general or marshal shows what its player loses (−, the bounty).
+* **Winner:** at the end a big golden pawn turns in a glow in the middle of the board, with the
+  winner's name and total score.
 * Tests: 72 -> 63, about twice as fast.
 
 * **8-color board:** eight arms, 80 fields (or 112 with 14 fields per corridor), with every rule of
