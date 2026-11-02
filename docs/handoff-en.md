@@ -75,6 +75,9 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
 * **Burnt die:** if one color cannot move with either die, play one die (free choice) for the
   other color; the other die burns.
 * **Full use:** if any way uses both dice, one of those ways must be chosen.
+  Exception: a 6 that takes a piece from the track into its nest may be played alone; the other
+  die burns (`SIX_INTO_NEST`, owner, 2026-11-02). These options come after the two-dice ones, so
+  the option numbers of games in progress do not change.
 * **Sum move:** two steps in either order (even with a 6). The middle field must be legal; an
   opponent there is captured.
 * **Six first:** only when an own piece of that color stands on its gate and one die is a 6, and

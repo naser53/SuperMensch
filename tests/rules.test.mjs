@@ -684,3 +684,17 @@ test("hunter enters only while the other color has a piece out on the way", () =
   g.state.pos[0][0] = 5;                                     // a red piece on the track
   assert.equal(g.hunterEligible(0, g.state), 3);
 });
+
+test("a 6 into the nest may be played alone; the other die burns", () => {
+  const g = make();
+  const L = g.L;
+  g.state.pos[0] = [L - 3, YARD, YARD, YARD];               // red 1 reaches nest 4 with a 6
+  g.state.pos[3] = [YARD, YARD, YARD, YARD];
+  const plays = g.playsFor(0, [1, 6]);
+  const alone = plays.filter(p => p.steps.length === 1);
+  assert.equal(alone.length, 1);
+  assert.equal(alone[0].state.pos[0][0], L + 3);
+  assert.equal(plays.indexOf(alone[0]), plays.length - 1);    // after the two-dice plays
+  g.cfg.six_into_nest = false;
+  assert.equal(g.playsFor(0, [1, 6]).filter(p => p.steps.length === 1).length, 0);
+});
