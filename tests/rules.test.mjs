@@ -751,3 +751,17 @@ test("difficult dice: half the 6s and half the pairs of intermediate", () => {
   assert.equal(g.cfg.six_chance, 0.05);                                // a single die
   assert.equal(Config.forBoard(6, "nonsense").level, "beginner");
 });
+
+test("six first only when the 6 brings a new piece in from the yard", () => {
+  const g = make();
+  put(g, 0, 0, 0); put(g, 0, 1, 10);              // red 1 on its gate, red 2 on the way
+  // the 3 for red 2 first, then the 6 for red 1 off the gate: same result, so any order
+  assert.ok(g._valid(0, [g.step(g.state, 0, ["p", 0, 1], 3, g.structures(g.state))[1],
+    g.step(g.step(g.state, 0, ["p", 0, 1], 3, g.structures(g.state))[0], 0, ["p", 0, 0], 6, g.structures(g.state))[1]],
+    g.structures(g.state), false, null, g.state));
+  // the 3 clears the gate, then the 6 brings red 3 in: not allowed
+  const s1 = g.step(g.state, 0, ["p", 0, 0], 3, g.structures(g.state));
+  const s2 = g.step(s1[0], 0, ["p", 0, 2], 6, g.structures(g.state));
+  assert.ok(s2[1].entered);
+  assert.ok(!g._valid(0, [s1[1], s2[1]], g.structures(g.state), false, null, g.state));
+});

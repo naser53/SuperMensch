@@ -606,7 +606,7 @@ export class Game {
   }
 
   // ------------------------------------------------------------ sequences
-  _valid(p, steps, structs, breakRoll = false, target = null, st0 = null) {
+  _valid(p, steps, structs, breakRoll = false, target = null, st0 = null, strictSix = false) {
     const own = new Set(this.players[p].colors);
     const prot = new Map();
     for (const s of steps) {
@@ -637,11 +637,13 @@ export class Game {
     // §4.5 six first: when one of the two pieces stands on its own gate at the start of the
     // play and the throw has a 6, the 6 is played first (no clearing the gate with the other
     // die to bring a new piece in with the 6). Two pieces off the gate move in any order
-    // (owner, 2026-11-01).
+    // (owner, 2026-11-01). And only when the 6 brings a new piece in from the yard; otherwise the
+    // order changes nothing (owner, 2026-11-02). strictSix keeps the older rule, so the option
+    // numbers of games in progress stay the same (see playsFor).
     if (steps.length === 2 && !breakRoll && st0) {
       const [a, b] = steps;
       if (a.mover[0] === "p" && b.mover[0] === "p" && a.mover[1] === b.mover[1]
-          && !sameMover(a.mover, b.mover) && a.die !== b.die && b.die === 6
+          && !sameMover(a.mover, b.mover) && a.die !== b.die && b.die === 6 && (strictSix || b.entered)
           && (st0.pos[a.mover[1]][a.mover[2]] === 0 || st0.pos[b.mover[1]][b.mover[2]] === 0)) return false;
     }
     return true;
@@ -672,10 +674,10 @@ export class Game {
     return out;
   }
 
-  _playsFrom(p, seqs, structs, kind = "normal", breakRoll = false, target = null, st0 = null) {
+  _playsFrom(p, seqs, structs, kind = "normal", breakRoll = false, target = null, st0 = null, strictSix = false) {
     const plays = [], seen = new Set();
     for (const [steps, ns] of seqs) {
-      if (!this._valid(p, steps, structs, breakRoll, target, st0)) continue;
+      if (!this._valid(p, steps, structs, breakRoll, target, st0, strictSix)) continue;
       const k = ns.key();
       if (seen.has(k)) continue;
       seen.add(k);
@@ -690,18 +692,24 @@ export class Game {
     const structs = this.structures(st);
     if (dice.length === 1) return this._playsFrom(p, this._gen(p, st, dice, structs), structs, "normal", false, null, st);
     const p1 = this._playsFrom(p, this._gen(p, st, [dice[0]], structs).concat(this._gen(p, st, [dice[1]], structs)), structs, "normal", false, null, st);
-    const p2 = this._playsFrom(p, this._gen(p, st, dice, structs), structs, "normal", false, null, st);
+    // two-dice plays under the older six-first rule first, then the ones the newer rule adds
+    // (after the 6-into-nest plays below), so older games keep their option numbers
+    const seqs2 = this._gen(p, st, dice, structs);
+    const p2 = this._playsFrom(p, seqs2, structs, "normal", false, null, st, true);
+    const keys2 = new Set(p2.map(pl => pl.state.key()));
+    const p2more = this._playsFrom(p, seqs2, structs, "normal", false, null, st).filter(pl => !keys2.has(pl.state.key()));
     const colors = this.players[p].colors;
     const has = new Map(colors.map(c => [c, false]));
-    for (const pl of p1.concat(p2)) {
+    for (const pl of p1.concat(p2, p2more)) {
       for (const s of pl.steps) {
         const ac = this._agent(s.mover, st);
         if (has.has(ac)) has.set(ac, true);
       }
     }
     if (this.mode !== "two" || [...has.values()].every(Boolean)) {
-      if (!p2.length) return p1;
-      return this.cfg.six_into_nest ? p2.concat(this._sixIntoNest(p1, p2, st)) : p2;   // §4.3 both dice
+      if (!p2.length && !p2more.length) return p1;
+      const both = p2.concat(p2more);
+      return p2.concat(this.cfg.six_into_nest ? this._sixIntoNest(p1, both, st) : [], p2more);   // §4.3 both dice
     }
     const live = colors.filter(c => has.get(c));
     if (!live.length) return [];
