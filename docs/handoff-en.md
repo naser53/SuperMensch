@@ -87,7 +87,9 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
   the 6 is played first. This stops
   emptying the gate with the other die and then bringing in a new piece with the 6. It does not
   apply to two different colors, nor to a sum move, nor when the gate is empty, nor when neither
-  of the two pieces stands on the gate.
+  of the two pieces stands on the gate, nor when the 6 does not bring a new piece in from the yard
+  (the order changes nothing then; owner, 2026-11-02). Plays that only this last change allows are
+  listed after the others, so games in progress keep their option numbers.
 
 ### 3.4 Bonus throws
 | Throw | Bonus | Chain |
