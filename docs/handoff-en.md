@@ -352,7 +352,7 @@ the fingerprint.
 * Pawns in color with a number. A **progress line** up the front of the pawn (it turns with the
   camera) gets longer with every point the pawn has won itself, from its foot to its head at
   marshal (25); no empty track. Its color stands out on that pawn (light turquoise on red, yellow
-  on blue, light pink on green, navy on orange, yellow on purple, coral on teal), with a thin dark
+  on blue, light pink on green, navy on yellow, yellow on purple, coral on teal), with a thin dark
   edge. Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
   gold with a small, soft glow (made smaller at the owner's request). The base ring is silver for a general, gold (with a second ring) for a marshal.
