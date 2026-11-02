@@ -4,7 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
-## Unreleased
+## v2.3.0 (2026-11-02)
+
+Panel layout **B: dock**. One of three trial layouts (v2.2.0 corners, v2.3.0 dock, v2.4.0 on the board); the owner keeps one.
+* The board takes the whole screen; the panel floats over it.
+* A thin bar on top: the players, the camera and a menu button (scores, info, debug, language, speed, sound and leave are in the menu); whose turn in a pill under it.
+* A dock at the bottom: the tunnels and the card, the big die raised in the middle, Second try, undo and the other buttons.
+* A phone held upright shows the whole board, larger than before.
+* Tests: 72 -> 63, about twice as fast.
 
 * **8-color board:** eight arms, 80 fields (or 112 with 14 fields per corridor), with every rule of
   the 6-color board. Two new colors, pink and black. 2 to 4 players with two colors each, 2 to 8 with

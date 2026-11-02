@@ -338,37 +338,43 @@ label.check.on { color: var(--accent); }
 .mini-yard text { pointer-events: none; paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: .12; }
 .room .choice .dot { width: 12px; height: 12px; vertical-align: -1px; }
 
-/* ---- layout: corners (players top left, tools top right, the actions under the thumb) ---- */
-.rb-players { top: 10px; inset-inline-start: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; max-height: calc(100% - 120px); }
-.rb-tools { top: 10px; inset-inline-end: 10px; }
-.rb-status { top: 10px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 520px); }
-.toast { top: 56px; }
-#drop { top: 56px; left: 50%; transform: translateX(-50%); inset-inline-start: auto; }
-/* the big die in the corner, its satellites on an arc around it */
-.rb-actions { right: 186px; bottom: 16px; display: flex; flex-direction: row-reverse; flex-wrap: wrap-reverse; gap: 6px; align-items: flex-end;
-  max-width: calc(100% - 190px); pointer-events: none; }
-.rb-actions > * { pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
-.btn.rb-roll { position: fixed; right: 16px; bottom: 16px; width: 80px; height: 80px; min-height: 0; padding: 0; border-radius: 50%; justify-content: center; }
+/* ---- layout: dock (a thin bar on top, the actions in a dock at the bottom) ---- */
+.rb-players { top: 0; left: 0; right: 0; display: flex; flex-wrap: nowrap; gap: 6px; padding: 6px 10px; padding-inline-end: 110px;
+  overflow-x: auto; scrollbar-width: none; background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.rb-players .chip { box-shadow: none; flex: none; }
+.rb-tools { top: 5px; inset-inline-end: 10px; }
+.rb-tools .rb-btn, .rb-tools .vm-btn { min-height: 34px; padding: 4px 8px; }
+.rb-status { top: 52px; left: 50%; transform: translateX(-50%); }
+.toast { top: 90px; }
+#drop { top: 90px; left: 50%; transform: translateX(-50%); inset-inline-start: auto; }
+#stage.has-drop .toast { bottom: 110px; }
+/* the dock: tunnels and card left of the die, Second try and the rest right of it */
+.rb-actions { bottom: 10px; left: 0; right: 0; margin-inline: auto; width: max-content; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 8px 14px;
+  max-width: calc(100% - 16px); border-radius: 22px; background: rgba(255,255,255,.8); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+.rb-actions > * { order: 5; flex: none; }
+.rb-actions .tunc { order: 1; }
+.rb-actions .rb-btn.sat:not(.tunc):not(.rb-retry) { order: 2; }
+.rb-actions .rb-roll { order: 3; }
+.rb-actions .rb-retry { order: 4; }
+.rb-actions .undo { order: 6; }
+.btn.rb-roll { width: 78px; height: 78px; min-height: 0; padding: 0; margin: -30px 4px 0; border-radius: 50%; justify-content: center;
+  border: 4px solid var(--bg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
 .btn.rb-roll > span:last-child { display: none; }
-.btn.rb-roll .cube3d { --s: 38px; }
-.btn.sat { --ang: calc(180deg - var(--slot) * 30deg); position: fixed; width: 52px; height: 52px; min-height: 0; min-width: 0; padding: 0;
-  border-radius: 50%; justify-content: center; right: calc(30px - 114px * cos(var(--ang))); bottom: calc(30px + 114px * sin(var(--ang))); }
-.rb-btn.sat:disabled { background: rgba(250,249,245,.9); opacity: .6; }
+.btn.rb-roll .cube3d { --s: 36px; }
+.btn.sat, .rb-actions .undo { width: 48px; height: 48px; min-height: 0; min-width: 0; padding: 0; border-radius: 50%; justify-content: center; }
 .btn.rb-retry svg { width: 26px; height: 26px; }
-.rb-actions .undo { position: fixed; left: 14px; bottom: 34px; width: 52px; height: 52px; border-radius: 50%; justify-content: center; padding: 0; }
-.rb-actions .undo:disabled { opacity: .45; background: rgba(250,249,245,.9); }
-.hint3d { bottom: 6px; }
+.rb-btn.sat:disabled, .rb-actions .undo:disabled { background: rgba(250,249,245,.9); opacity: .55; }
 @media (max-width: 900px) {
   .rb-players .chip .nm, .rb-players .chip .cards { display: none; }
-  .rb-status { max-width: calc(100% - 210px); font-size: 13px; padding: 4px 10px; }
-  .rb-status .muted.small { display: none; }
+  .rb-status { font-size: 13px; padding: 3px 10px; }
   .rb-turn { font-size: 13px; }
 }
 @media (max-width: 640px) {
-  .btn.rb-roll { width: 72px; height: 72px; min-height: 0; }
-  .btn.sat { width: 48px; height: 48px; min-height: 0; right: calc(28px - 104px * cos(var(--ang))); bottom: calc(28px + 104px * sin(var(--ang))); }
-  .rb-actions { right: 170px; max-width: calc(100% - 180px); }
+  .rb-actions { gap: 5px; padding: 6px 8px; }
+  .btn.sat, .rb-actions .undo { width: 44px; height: 44px; }
+  .btn.rb-roll { width: 70px; height: 70px; min-height: 0; }
   .hint3d { display: none; }
-  .rb-actions .undo { bottom: 16px; }
 }
 /* ---- end layout ---- */

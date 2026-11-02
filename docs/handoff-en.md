@@ -265,8 +265,13 @@ players, where a player's two colors sit (opposite / next to each other), seats 
 human/computer), **player names** typed in, dice level. *Start game*. In the one-color game each
 seat also shows the board's color dots to pick its color.
 
-### Ribbon (top of the screen)
-The old side panel is gone; the board takes the whole screen under a ribbon.
+### Panel (floating over the board, v2.3.0)
+The board takes the whole screen; the panel floats over it (layout B, *dock*; owner's trial of three layouts, 2026-11-02).
+* Top: a thin see-through bar with the player chips (it scrolls sideways if they do not fit; on narrow screens only the colors and the score), the camera (View menu) and one **menu button**; its drawer holds Scores, Info, Debug, language, speed, sound and Menu (leave).
+* Under the bar: whose turn, in a pill. Hints show in the fading card under it.
+* Bottom: a dock with the tunnel buttons and the card on the left, the big round **die button** raised in the middle, then Second try, the other buttons (gift six, continue...) and undo.
+
+The notes below are from the ribbon on top; what each part does still holds, only where it sits changed. The code keeps the old names (`#ribbon`, `rb-*`): the ribbon is now a see-through layer.
 * Row 1: **player chips** (color dots, name, score, cards left, an hourglass when stuck, the place
   when finished; the current player is highlighted) and the **tools**: View, Scores, Info,
   Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), sound on/off, Menu (icons with tooltips; labels on wide screens). Menu (and
