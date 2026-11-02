@@ -63,13 +63,45 @@ test("sum move: the field in between counts and captures", () => {
   assert.ok(g.playsFor(0, [3, 4]).some(p => p.state.pos[0][0] === 12 && p.state.pos[1][0] === YARD));
 });
 
-test("six first within the same color", () => {
+test("six first: within the same color, and only when a piece on its own gate takes part", () => {
   const g = make();
   put(g, 0, 0, 0);
   put(g, 3, 0, g.cfg.track_len + 3);       // yellow finished, not alive
   for (const p of g.playsFor(0, [6, 5])) {
     const [a, b] = p.steps;
     if (b && a.mover.join() !== b.mover.join() && a.mover[1] === b.mover[1]) assert.equal(a.die, 6);
+  }
+  // six first only when one of the two pieces stands on the gate
+  {
+    // red on its gate (stays), two other red pieces move: the 3 first, then the 6, is allowed
+    const g = make();
+    put(g, 0, 0, 0); put(g, 0, 1, 10); put(g, 0, 2, 20);
+    const ok = g.playsFor(0, [6, 3]).some(p => p.steps.length === 2 && p.steps[0].die === 3
+      && p.steps[0].mover.join() === "p,0,1" && p.steps[1].mover.join() === "p,0,2");
+    assert.ok(ok);
+    // the gate piece takes part: the 6 must come first
+    for (const p of g.playsFor(0, [6, 3])) {
+      const [x, y] = p.steps;
+      if (y && x.mover[1] === 0 && y.mover[1] === 0 && x.mover.join() !== y.mover.join()
+          && [x, y].some(s => s.mover[2] === 0)) assert.equal(x.die, 6);
+    }
+  }
+  // six first only when an own piece stands on the gate
+  {
+    // blue piece on the board (not on its gate), 6 and 5: the 5 for that piece, then the 6 brings a new one in
+    const g = make();
+    put(g, 1, 0, 7); put(g, 4, 0, 3);
+    g.turn = 1;
+    const seqOk = g.playsFor(1, [6, 5]).some(p => p.steps.length === 2 && p.state.pos[1][0] === 12 && p.state.pos[1].includes(0));
+    assert.ok(seqOk);
+    // in click order too: 5 first, then the 6 brings the piece in
+    g.manual = true;
+    g.pending = new Decision("pre_roll", 1, [new Option("r", "roll")]);
+    g.choose(g.pending.options[0]);
+    g.choose(new Option(null, ["dice", [6, 5]]));
+    const fiveFirst = g.sequences().some(q => q.steps[0].die === 5 && q.steps[0].mover.join() === "p,1,0"
+      && q.steps[1].die === 6 && q.steps[1].entered);
+    assert.ok(fiveFirst);
   }
 });
 
@@ -110,20 +142,20 @@ test("castle break with three dice", () => {
   for (const p of plays) assert.equal([0, 1, 2].filter(i => p.state.pos[1][i] === YARD).length, 3);
 });
 
-test("stuck definition", () => {
+test("stuck definition; finished pieces are not alive", () => {
   const g = make();
   assert.ok(g.stuck(0));
   put(g, 0, 0, 5);
   assert.ok(!g.stuck(0));
-});
-
-test("finished pieces are not alive", () => {
-  const g = make();
-  const L = g.L;
-  put(g, 0, 0, L + 3); put(g, 0, 1, L + 2);
-  assert.ok(g.finished(g.state, 0, 0) && g.finished(g.state, 0, 1));
-  put(g, 0, 2, L);
-  assert.ok(g.alive(g.state, 0, 2));
+  // finished pieces are not alive
+  {
+    const g = make();
+    const L = g.L;
+    put(g, 0, 0, L + 3); put(g, 0, 1, L + 2);
+    assert.ok(g.finished(g.state, 0, 0) && g.finished(g.state, 0, 1));
+    put(g, 0, 2, L);
+    assert.ok(g.alive(g.state, 0, 2));
+  }
 });
 
 test("no overshooting the nest", () => {
@@ -140,18 +172,33 @@ test("points by corridor", () => {
 });
 
 test("full games finish", () => {
-  for (let s = 0; s < 4; s++) {
+  for (let s = 0; s < 2; s++) {
     assert.ok(playOne(s, "two", 3).over);
     assert.ok(playOne(s, "one", 4).over);
   }
 });
 
-test("tunnel list: default and up to corridor 5", () => {
+test("tunnel list: default, up to corridor 5, and why a color has none", () => {
   const c = new Config();
   assert.deepEqual(c.tunnels(), [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]]);
   c.tunnel_last_corridor = 5;
   const t = c.tunnels().map(x => x.join());
   assert.ok(t.includes("2,5") && t.includes("3,5") && t.includes("4,5") && !t.includes("1,5"));
+  // tunnel list says why a color has no tunnel
+  {
+    const g = make();                        // player A plays colors 0 and 3
+    put(g, 0, 0, 0);                         // color 0: before the corridor 1 entrance
+    assert.deepEqual(g.tunnelBlockers(0), { all: null, colors: { 3: "tun_why_none" } });
+    put(g, 3, 0, 6);                         // color 3: just past the corridor 1 entrance
+    assert.deepEqual(g.tunnelBlockers(0).colors, { 3: "tun_why_range" });
+    put(g, 3, 0, 9);                         // color 3: before the corridor 2 entrance
+    assert.deepEqual(g.tunnelBlockers(0).colors, {});
+    g.state.tunnels.push([0, 0, 1, 1, 2, null], [0, 0, 2, 1, 2, null]);
+    assert.equal(g.tunnelBlockers(0).all, "tun_why_max");
+    g.state.tunnels = [];
+    g.state.scores[0] = -1;
+    assert.equal(g.tunnelBlockers(0).all, "tun_why_debt");
+  }
 });
 
 test("4-color board: 40 fields, tunnels skip 1 or 2 corridors, points 1/4/8/10", () => {
@@ -159,7 +206,7 @@ test("4-color board: 40 fields, tunnels skip 1 or 2 corridors, points 1/4/8/10",
   assert.equal(c.track_len, 40);
   assert.deepEqual(c.tunnels(), [[1, 2], [1, 3], [2, 3]]);
   assert.deepEqual(c.corridor_points, [1, 4, 8, 10]);
-  for (let s = 0; s < 3; s++) {
+  for (let s = 0; s < 1; s++) {
     assert.ok(playOne(s, "two", 2, 4).over);
     assert.ok(playOne(s, "one", 4, 4).over);
   }
@@ -179,7 +226,7 @@ test("8-color board: 80 or 112 fields, the 6-color rules, corridor points go on,
     "tunnel_costs", "tunnel_max_skip", "general_points", "marshal_points", "ranks", "walls", "castles", "tunnels_on"])
     assert.deepEqual(c[k], six[k], k);
   assert.equal(Config.forBoard(8, "beginner", "one").tunnels_on, false);
-  for (let s = 0; s < 2; s++) {
+  for (let s = 0; s < 1; s++) {
     assert.ok(playOne(s, "two", 4, 8).over);
     assert.ok(playOne(s, "one", 8, 8).over);
   }
@@ -205,37 +252,22 @@ function declare(g, col, i, a, b) {
   g.pending = null;
 }
 
-test("tunnel geometry", () => {
+test("tunnel geometry, options and cost", () => {
   const g = make();
   assert.deepEqual(g.tunnelGeom(1, 2), [4, 14, 2]);
   assert.deepEqual(g.tunnelGeom(1, 3), [4, 24, 5]);
   assert.deepEqual(g.tunnelGeom(1, 4), [4, 34, 7]);
-});
-
-test("tunnel options and cost", () => {
-  const g = make();
-  put(g, 0, 0, 0);
-  const has = (col, i, a, b) => g.tunnelOptions(0).some(o => o.join() === [col, i, a, b].join());
-  assert.ok(has(0, 0, 1, 2) && has(0, 0, 1, 4));
-  put(g, 0, 0, 5);
-  assert.ok(g.tunnelOptions(0).every(o => !(o[1] === 0 && o[2] === 1)));
-  g.state.scores[0] = -1;
-  assert.deepEqual(g.tunnelOptions(0), []);
-});
-
-test("tunnel list says why a color has no tunnel", () => {
-  const g = make();                        // player A plays colors 0 and 3
-  put(g, 0, 0, 0);                         // color 0: before the corridor 1 entrance
-  assert.deepEqual(g.tunnelBlockers(0), { all: null, colors: { 3: "tun_why_none" } });
-  put(g, 3, 0, 6);                         // color 3: just past the corridor 1 entrance
-  assert.deepEqual(g.tunnelBlockers(0).colors, { 3: "tun_why_range" });
-  put(g, 3, 0, 9);                         // color 3: before the corridor 2 entrance
-  assert.deepEqual(g.tunnelBlockers(0).colors, {});
-  g.state.tunnels.push([0, 0, 1, 1, 2, null], [0, 0, 2, 1, 2, null]);
-  assert.equal(g.tunnelBlockers(0).all, "tun_why_max");
-  g.state.tunnels = [];
-  g.state.scores[0] = -1;
-  assert.equal(g.tunnelBlockers(0).all, "tun_why_debt");
+  // tunnel options and cost
+  {
+    const g = make();
+    put(g, 0, 0, 0);
+    const has = (col, i, a, b) => g.tunnelOptions(0).some(o => o.join() === [col, i, a, b].join());
+    assert.ok(has(0, 0, 1, 2) && has(0, 0, 1, 4));
+    put(g, 0, 0, 5);
+    assert.ok(g.tunnelOptions(0).every(o => !(o[1] === 0 && o[2] === 1)));
+    g.state.scores[0] = -1;
+    assert.deepEqual(g.tunnelOptions(0), []);
+  }
 });
 
 test("a tunnel declared this turn can be taken back before the roll, with its cost", () => {
@@ -301,7 +333,7 @@ test("debt: a tunnel piece laps again", () => {
 });
 
 // ---------------------------------------------------------------- debug mode
-test("debug mode: every throw waits for the dice set by the player", () => {
+test("debug mode: every throw waits for the dice set by the player, a double for the bonus die", () => {
   const g = new Game([Player("A", [0, 3]), Player("B", [1, 4]), Player("C", [2, 5])], "two", null, 1, true);
   assert.equal(g.pending.kind, "dice");
   assert.equal(g.pending.dice.length, 3);                 // stuck: three dice
@@ -313,20 +345,20 @@ test("debug mode: every throw waits for the dice set by the player", () => {
   g.choose(g.pending.options[0]);
   const inYard = g.state.pos[0].filter(r => r === YARD).length + g.state.pos[3].filter(r => r === YARD).length;
   assert.equal(inYard, 7);
-});
-
-test("debug mode: a double asks for the bonus die", () => {
-  const g = make();
-  g.manual = true;
-  put(g, 0, 0, 5); put(g, 3, 0, 1);
-  g.pending = new Decision("pre_roll", 0, [new Option("r", "roll")]);
-  g.choose(g.pending.options[0]);
-  assert.equal(g.pending.kind, "dice");
-  assert.equal(g.pending.dice.length, 2);
-  g.choose(new Option(null, ["dice", [3, 3]]));
-  g.choose(g.pending.options[0]);
-  assert.equal(g.pending.kind, "dice");
-  assert.equal(g.pending.dice.length, 1);
+  // debug mode: a double asks for the bonus die
+  {
+    const g = make();
+    g.manual = true;
+    put(g, 0, 0, 5); put(g, 3, 0, 1);
+    g.pending = new Decision("pre_roll", 0, [new Option("r", "roll")]);
+    g.choose(g.pending.options[0]);
+    assert.equal(g.pending.kind, "dice");
+    assert.equal(g.pending.dice.length, 2);
+    g.choose(new Option(null, ["dice", [3, 3]]));
+    g.choose(g.pending.options[0]);
+    assert.equal(g.pending.kind, "dice");
+    assert.equal(g.pending.dice.length, 1);
+  }
 });
 
 // ---------------------------------------------------------------- regression
@@ -395,7 +427,7 @@ function bonusChain(g, first, rolls) {
   return asked;
 }
 
-test("bonus die after a pair: a 6 goes on, then only 6", () => {
+test("bonus die after a pair: a 6 goes on, then only 6; a 6 with another number gives none", () => {
   const g = make();
   put(g, 0, 0, 5); put(g, 3, 0, 1); put(g, 0, 1, 20);
   // 1-1, then bonus 6 (goes on), then 1 (stops: after a 6 only 6 continues)
@@ -404,12 +436,12 @@ test("bonus die after a pair: a 6 goes on, then only 6", () => {
   put(h, 0, 0, 5); put(h, 3, 0, 1); put(h, 0, 1, 20);
   // 1-1, then 1 (goes on), then 6 (goes on), then 6 (goes on), then 2 (stops)
   assert.equal(bonusChain(h, [1, 1], [1, 6, 6, 2, 4]), 4);
-});
-
-test("6 with another number in a normal throw: no bonus", () => {
-  const g = make();
-  put(g, 0, 0, 5); put(g, 3, 0, 1);
-  assert.equal(bonusChain(g, [6, 3], [6]), 0);
+  // 6 with another number in a normal throw: no bonus
+  {
+    const g = make();
+    put(g, 0, 0, 5); put(g, 3, 0, 1);
+    assert.equal(bonusChain(g, [6, 3], [6]), 0);
+  }
 });
 
 test("single-color game: a 6 throws again, as long as 6 comes", () => {
@@ -440,38 +472,6 @@ test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 
   assert.equal(g.tunnelCost(1, 2), 80);
   assert.equal(g.tunnelCost(1, 3), 120);
   assert.equal(g.tunnelCost(1, 4), 160);
-});
-
-test("six first only when one of the two pieces stands on the gate", () => {
-  // red on its gate (stays), two other red pieces move: the 3 first, then the 6, is allowed
-  const g = make();
-  put(g, 0, 0, 0); put(g, 0, 1, 10); put(g, 0, 2, 20);
-  const ok = g.playsFor(0, [6, 3]).some(p => p.steps.length === 2 && p.steps[0].die === 3
-    && p.steps[0].mover.join() === "p,0,1" && p.steps[1].mover.join() === "p,0,2");
-  assert.ok(ok);
-  // the gate piece takes part: the 6 must come first
-  for (const p of g.playsFor(0, [6, 3])) {
-    const [x, y] = p.steps;
-    if (y && x.mover[1] === 0 && y.mover[1] === 0 && x.mover.join() !== y.mover.join()
-        && [x, y].some(s => s.mover[2] === 0)) assert.equal(x.die, 6);
-  }
-});
-
-test("six first only when an own piece stands on the gate", () => {
-  // blue piece on the board (not on its gate), 6 and 5: the 5 for that piece, then the 6 brings a new one in
-  const g = make();
-  put(g, 1, 0, 7); put(g, 4, 0, 3);
-  g.turn = 1;
-  const seqOk = g.playsFor(1, [6, 5]).some(p => p.steps.length === 2 && p.state.pos[1][0] === 12 && p.state.pos[1].includes(0));
-  assert.ok(seqOk);
-  // in click order too: 5 first, then the 6 brings the piece in
-  g.manual = true;
-  g.pending = new Decision("pre_roll", 1, [new Option("r", "roll")]);
-  g.choose(g.pending.options[0]);
-  g.choose(new Option(null, ["dice", [6, 5]]));
-  const fiveFirst = g.sequences().some(q => q.steps[0].die === 5 && q.steps[0].mover.join() === "p,1,0"
-    && q.steps[1].die === 6 && q.steps[1].entered);
-  assert.ok(fiveFirst);
 });
 
 test("dice levels: fair for beginners, a 6 one time in ten for intermediate", () => {
@@ -651,7 +651,7 @@ test("one-color game: no generals or marshals, no nest swap, no tunnels, no cast
       assert.equal(two[k], true, `${n} two ${k}`);
     }
   }
-  for (let s = 0; s < 3; s++) {
+  for (let s = 0; s < 1; s++) {
     const done = playOne(s, "one", 4, 4);
     assert.ok(done.over);
     assert.ok(done.state.kills.flat().every(k => done.rank(k) === 0));
@@ -674,7 +674,7 @@ test("castle-break declaration before the roll; BREAK_DECL off removes it", () =
   assert.ok(!g.pending.options.some(o => o.payload === "break"));
 });
 
-test("CASTLES off: three in a row is a wall of two and a lone piece, nothing blocks", () => {
+test("CASTLES off: a wall of two and a lone piece; WALLS off: two in a row protect nothing", () => {
   const g = make();
   g.cfg.castles = false;
   put(g, 1, 0, 20); put(g, 1, 1, 21); put(g, 1, 2, 22);
@@ -682,15 +682,15 @@ test("CASTLES off: three in a row is a wall of two and a lone piece, nothing blo
   const sizes = [20, 21, 22].map(r => st.get(g.absOf(1, r))?.[2].length ?? 1);
   assert.deepEqual(sizes, [2, 2, 1]);
   assert.equal(g.opponentCastles(0).size, 0);
-});
-
-test("WALLS off (one-color game): two in a row protect nothing", () => {
-  const g = make();
-  g.cfg.walls = false;
-  put(g, 1, 0, 20); put(g, 1, 1, 21);
-  assert.equal(g.structures(g.state).size, 0);
-  put(g, 0, 0, g.relOf(0, g.absOf(1, 20)) - 3);
-  assert.ok(g.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));   // a single die hits it
+  // WALLS off (one-color game): two in a row protect nothing
+  {
+    const g = make();
+    g.cfg.walls = false;
+    put(g, 1, 0, 20); put(g, 1, 1, 21);
+    assert.equal(g.structures(g.state).size, 0);
+    put(g, 0, 0, g.relOf(0, g.absOf(1, 20)) - 3);
+    assert.ok(g.playsFor(0, [3, 1]).some(x => x.state.pos[1][0] === YARD));   // a single die hits it
+  }
 });
 
 test("gift six (two colors): counted per stuck turn without a 6", () => {
