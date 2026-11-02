@@ -6,6 +6,10 @@ attached. The `latest` release is always the newest build of `main`.
 
 ## Unreleased
 
+* **8-color board:** eight arms, 80 fields (or 112 with 14 fields per corridor), with every rule of
+  the 6-color board. Two new colors, pink and black. 2 to 4 players with two colors each, 2 to 8 with
+  one. The corridors give 1 / 3 / 6 / 10 / 15 / 21 / 28 / 36; tunnels reach corridor 6. Offline and
+  in the admin page.
 * **Dice sound:** the dice click on the board as they tumble and land.
 * **Sound effects:** a wooden clack when a piece lands (like a chess piece), a small blast for a
   capture and a stronger one for a hit general or marshal, three knocks on a door for a

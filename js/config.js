@@ -42,7 +42,7 @@ export class Config {
       tunnels_on: true,               // TUNNELS; the rules stay
       tunnel_costs: [80, 120, 160],  // TUNNEL_COST_1 / _2 / _3
       tunnel_max_skip: 3,             // TUNNEL_MAX_SKIP
-      tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5
+      tunnel_last_corridor: 4,        // TUNNEL_LAST_CORRIDOR: 4, or 5 to allow corridor 5 (8-color board: 6)
       max_active_tunnels: 2,          // MAX_ACTIVE_TUNNELS
       tunnel_declare_range: 6,        // TUNNEL_DECLARE_RANGE
 
@@ -56,14 +56,16 @@ export class Config {
     }, o);
   }
 
-  // Defaults for the 6-color (six arms) or 4-color (classic cross) board.
+  // Defaults for the 6-color (six arms), 8-color (eight arms) or 4-color (classic cross) board.
+  // The 8-color board keeps every rule of the 6-color board; only the corridors are more: the
+  // corridor points go on in the same steps, and tunnels may reach corridor 6 (two before the final).
   // The one-color game (one color per player) is the traditional game: no tunnels, no walls or
   // castles (so no castle-break declarations), no generals or marshals and so no nest swap (it only
   // carries rank points back into play). The game where a player has several colors keeps them all.
   static forBoard(n, level = "beginner", mode = "two", corridor = 10) {
     const lv = level in Config.LEVELS ? level : "beginner";
     const dice = { six_chance: Config.LEVELS[lv], two_dice: Config.TWO_DICE[lv] || null, level: lv };
-    const long = n === 6 && Config.CORRIDORS.includes(corridor) ? { corridor_len: corridor } : {};
+    const long = (n === 6 || n === 8) && Config.CORRIDORS.includes(corridor) ? { corridor_len: corridor } : {};
     const classic = mode === "one"
       ? { ranks: false, nest_swap: false, tunnels_on: false, walls: false, castles: false, break_decl_on: false } : {};
     if (n === 4) {
@@ -71,6 +73,10 @@ export class Config {
       return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
                           tunnel_max_skip: 2, tunnel_last_corridor: 3,
                           color_bonus: 25, finish_bonus: [40, 20], ...classic, ...dice });
+    }
+    if (n === 8) {
+      return new Config({ n_colors: 8, corridor_points: [1, 3, 6, 10, 15, 21, 28, 36],
+                          tunnel_last_corridor: 6, ...classic, ...dice, ...long });
     }
     return new Config({ n_colors: 6, ...classic, ...dice, ...long });
   }
@@ -80,7 +86,9 @@ export class Config {
   // one die 0.05; two dice: at least one 6 9.5% (19% / 2), 6-6 0.5%, each other pair 1.62%.
   static LEVELS = { beginner: null, intermediate: 0.1, difficult: 0.05 };
   static TWO_DICE = { difficult: { six_any: 0.095, six_pair: 0.005, pair: 0.0162 } };
-  // fields per corridor on the 6-color board (14: every arm two fields longer)
+  // boards (colors on the board) and fields per corridor on the 6- and 8-color boards
+  // (14: every arm two fields longer)
+  static BOARDS = [6, 8, 4];
   static CORRIDORS = [10, 14];
   // animation speed in the panel: the pause between moves (ms) times the factor; a piece's
   // hop takes HOP_SHARE of that pause. "fast" is the speed of version 1.

@@ -15,7 +15,7 @@ export function playOne(seed, mode = "two", n = 3, colors = 6, maxDecisions = 20
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const N = +(process.argv[2] || 10);
-  for (const [colors, mode, n] of [[6, "two", 3], [6, "one", 6], [4, "two", 2], [4, "one", 4]]) {
+  for (const [colors, mode, n] of [[6, "two", 3], [6, "one", 6], [8, "two", 4], [8, "one", 8], [4, "two", 2], [4, "one", 4]]) {
     let rounds = 0, done = 0;
     const wins = {};
     const t0 = Date.now();

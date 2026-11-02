@@ -6,8 +6,9 @@ import { boardFor } from "./boards.js";
 import { TUN, YARD } from "./engine.js";
 import { sound } from "./sound.js";
 
-export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#f2c40f", "#6a5ccf", "#159a7a"];
-export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea"];
+// the 8-color board adds pink and black (owner, 2026-11-02); the other boards use the first 6 or 4
+export const COLORS = ["#d9534f", "#2f7fd0", "#4f9a2a", "#f2c40f", "#6a5ccf", "#159a7a", "#ec5fa8", "#2a2a2e"];
+export const LIGHT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
@@ -15,8 +16,8 @@ const GATE_SCALE = 1.12;
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
 // per pawn color (COLORS): light turquoise on red, yellow on blue, light pink on green, navy on
-// yellow, yellow on purple, coral on teal
-const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a"];
+// yellow, yellow on purple, coral on teal, light green on pink, light sky blue on black
+const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"];
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -1320,7 +1321,7 @@ export class Board3D {
   fireworks() {
     const tex = this.sparkTexture();
     this.fx = this.fx || [];
-    const t0 = performance.now(), R = this.n === 4 ? 4 : 6;
+    const t0 = performance.now(), R = this.n === 4 ? 4 : this.n === 8 ? 7.5 : 6;
     const colors = ["#ff4d4d", "#ffd84a", "#4dd2ff", "#7dff6a", "#ff7ae6", "#ffffff", "#ffa13d"];
     const add = (base, delay, life, vx, vy, vz, color, gr, size, glow) => {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,

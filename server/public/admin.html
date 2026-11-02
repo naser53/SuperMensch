@@ -39,7 +39,7 @@
       <h2>New room</h2>
       <div class="row">Name <input id="gName" placeholder="Friday at grandma's" size="24"></div>
       <div class="row">
-        Board <select id="gColors"><option value="6">6 colors</option><option value="4">4 colors</option></select>
+        Board <select id="gColors"><option value="6">6 colors</option><option value="8">8 colors</option><option value="4">4 colors</option></select>
         Game <select id="gMode"><option value="two">two colors each</option><option value="one">one color each</option></select>
         Fields <select id="gCorr"><option value="10">10 per corridor</option><option value="14">14 per corridor (longer arms)</option></select>
         Dice <select id="gLevel"><option value="beginner">beginner</option><option value="intermediate">intermediate</option><option value="difficult">difficult</option></select>
@@ -93,7 +93,7 @@ function seatRows() {
     `<div class="row">Seat ${i + 1} <select data-seat="${i}">${opts(old[i] || String(users[i] ? users[i].id : "ai"))}</select></div>`).join("");
 }
 for (const id of ["#gColors", "#gMode", "#gN"]) $(id).onchange = seatRows;
-const corrShown = () => { $("#gCorr").disabled = $("#gColors").value !== "6"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
+const corrShown = () => { $("#gCorr").disabled = $("#gColors").value === "4"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
 $("#gColors").addEventListener("change", corrShown);
 
 $("#createBtn").onclick = async () => {

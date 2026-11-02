@@ -60,7 +60,9 @@ class App {
     const st = load();
     this.lang = LANGS.includes(st.lang) ? st.lang : "en";
     this.setup = Object.assign({ colors: 6, mode: "two", n: 3, pairing: "opposite",
-      seats: ["human", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
+      seats: ["human", "ai", "ai", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
+    // up to 8 seats (8-color board); a setup saved before has 6
+    while (this.setup.seats.length < 8) this.setup.seats.push("ai");
     this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
     this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
     this.follow = !!st.follow;
@@ -206,8 +208,8 @@ class App {
     h += `<div class="choices">${choice((this.offline ? "☑ " : "☐ ") + this.T("offline_play"), "offline", "", this.offline)}</div>`;
     if (!this.offline) { el.innerHTML = h + this.roomsHtml() + "</div>"; return; }
     h += `<h2>${this.T("board")}</h2><div class="choices">` +
-      choice(this.T("board6"), "colors", 6, s.colors === 6) + choice(this.T("board4"), "colors", 4, s.colors === 4) + "</div>";
-    if (s.colors === 6) h += `<h2>${this.T("corridor")}</h2><div class="choices">` +
+      Config.BOARDS.map(n => choice(this.T("board" + n), "colors", n, s.colors === n)).join("") + "</div>";
+    if (s.colors !== 4) h += `<h2>${this.T("corridor")}</h2><div class="choices">` +
       Config.CORRIDORS.map(k => choice(this.T("corridor_n", { n: num(this.lang, k) }), "corridor", k, (s.corridor || 10) === k)).join("") + "</div>";
     h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
       choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
@@ -363,7 +365,7 @@ class App {
       const nm = ((s.names && s.names[i]) || "").trim();
       players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
     }
-    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner", corridor: s.colors === 6 ? s.corridor || 10 : 10 }, { autoDice: !this.debug });
+    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner", corridor: s.colors !== 4 ? s.corridor || 10 : 10 }, { autoDice: !this.debug });
     this.game = this.table.game;
     this.ais = {};
     players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
