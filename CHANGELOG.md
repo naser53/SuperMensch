@@ -6,6 +6,7 @@ attached. The `latest` release is always the newest build of `main`.
 
 ## Unreleased
 
+* The hunter's arrow is 20% shorter and thicker, at head height, its tail a little behind the head.
 * **Admin: place pieces** in an online room (a test aid): one line per color; the turn starts again and open pages reload.
 * **Hunter way in on the board:** the Forward / Back choice is a small bubble over the waiting hunter, with arrows that point the way it would run (no more list in the panel).
 * The hunter carries only an arrow (no bow).
