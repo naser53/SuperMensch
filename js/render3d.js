@@ -596,17 +596,18 @@ export class Board3D {
       grp.add(m);
     }
     // the hunter carries just an arrow at its side, pointing the way it goes (no bow; owner,
-    // 2026-11-02). Shorter and thicker, at head height, its tail a little behind the head (2026-11-03).
+    // 2026-11-02). Short and thick, at head height, through the middle of the pawn with as much
+    // of it on either side (owner, 2026-11-03).
     const arrow = new THREE.Group();
     const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
-    const tail = -0.27, len = 0.84;                 // world units; the head is a ball of 0.19 at y 0.79
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, len, 10), wood);
+    const len = 0.84, tipLen = 0.22, tail = -(len + tipLen) / 2;   // world units; the head is a ball of 0.19 at y 0.79
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, len, 12), wood);
     shaft.rotation.z = Math.PI / 2;
     shaft.position.x = tail + len / 2;
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12),
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.11, tipLen, 14),
       new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3, ...see }));
     tip.rotation.z = -Math.PI / 2;
-    tip.position.x = tail + len + 0.1;
+    tip.position.x = tail + len + tipLen / 2;
     const feather = new THREE.MeshStandardMaterial({ color: "#f4efe2", roughness: 0.8, side: THREE.DoubleSide, ...see });
     for (const r of [0, Math.PI / 2]) {             // fletching: two crossed vanes at the tail
       const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.15), feather);
@@ -615,7 +616,7 @@ export class Board3D {
       arrow.add(vane);
     }
     arrow.add(shaft, tip);
-    arrow.position.set(0, 0.8, 0.24);               // along the side of the head
+    arrow.position.set(0, 0.8, 0);                  // through the middle of the head
     for (const m of arrow.children) { m.userData.piece = piece; m.castShadow = opacity === 1; }
     grp.add(arrow);
     grp.userData = { piece, mat: body };

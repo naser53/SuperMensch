@@ -382,8 +382,8 @@ the fingerprint.
   pick, 2026-11-02: both stand apart from the six colors; orange was left out, it read as brown). Rank star
   over the pawn: a general's is silver and turns gold as it nears marshal; a marshal's is bright
   gold with a small, soft glow (made smaller at the owner's request). The base ring is silver for a general, gold (with a second ring) for a marshal.
-* The **hunter** is a pawn carrying an arrow at its side (no bow, owner 2026-11-02; short and thick, at head height, the tail a
-  little behind the head, 2026-11-03); the arrow points in
+* The **hunter** is a pawn carrying an arrow at its side (no bow, owner 2026-11-02; short and thick, at head height, through the
+  middle of the pawn with equal length on both sides, 2026-11-03); the arrow points in
   its running direction (forward or backward).
 * **Hunter's way in:** when the hunter can enter both ways, a small bubble pops up over the waiting
   hunter on the board (not a list in the panel) with two buttons, Forward and Back; each button's
