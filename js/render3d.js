@@ -600,7 +600,9 @@ export class Board3D {
     // of it on either side (owner, 2026-11-03).
     const arrow = new THREE.Group();
     const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
-    const len = 0.84, tipLen = 0.22, tail = -(len + tipLen) / 2;   // world units; the head is a ball of 0.19 at y 0.79
+    // world units; the head is a ball of 0.19 at y 0.79. The arrow is centred on the pawn, then moved
+    // 5% of its length towards its tip, so the tip stands a little clear of the head (owner, 2026-11-03).
+    const len = 0.84, tipLen = 0.22, tail = -(len + tipLen) / 2 + 0.05 * (len + tipLen);
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, len, 12), wood);
     shaft.rotation.z = Math.PI / 2;
     shaft.position.x = tail + len / 2;
