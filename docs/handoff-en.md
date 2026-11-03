@@ -563,6 +563,9 @@ earlier sketch (browser dice, PINs).
   room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
   `server/core.js`). The same number of players keeps the moves; another number starts the game
   again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
+  **Hunter weapon** (owner, 2026-11-03): the admin page chooses what the hunter carries, Arrow or
+  Sword, for the whole server (`POST /api/admin/hunter`, Lobby `settings` key `hunter`, sent with
+  `/api/settings` as `hunter`; `setHunterWeapon` / `Board3D.hunterWeapon` in `js/render3d.js`).
   **Place pieces** (owner, 2026-11-03; a test aid): a room's pieces can be put anywhere from the admin
   page, one line per color (`R: 4 y y y`, fields as in the debug command `move`: 1..L track, L+1.. nest,
   y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the

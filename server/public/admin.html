@@ -39,6 +39,14 @@
     </section>
 
     <section>
+      <h2>Hunter</h2>
+      <div class="muted">What the hunter carries, in every game on this server. Games started after saving use it.</div>
+      <div class="row"><label><input type="radio" name="hunter" value="arrow" checked> Arrow</label>
+        <label><input type="radio" name="hunter" value="sword"> Sword</label>
+        <button class="primary" id="hunterBtn">Save</button> <span id="hunterMsg"></span></div>
+    </section>
+
+    <section>
       <h2>Colors</h2>
       <div class="muted">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
       <div class="row"><b>Pieces</b></div>
@@ -104,6 +112,7 @@ const picker = (kind, i, name, value, def) => `<label><input type="color" data-$
     ${name} <button data-todef title="Back to ${def}">Default</button></label>`;
 async function loadColors(d) {
   d = d || await api("settings");
+  showHunter(d);
   $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[i] || "Color " + (i + 1), d.colors[i], def)).join("");
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, BOARD_NAMES[i], (d.board || [])[i], def)).join("");
   document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {
@@ -116,6 +125,11 @@ $("#colorsBtn").onclick = async () => {
   const board = [...document.querySelectorAll("[data-brd]")].map(x => x.value);
   try { await loadColors(await api("admin/colors", { colors, board })); show("#colorsMsg", "Saved. Every game uses these colors now."); }
   catch (e) { show("#colorsMsg", e.message, true); }
+};
+const showHunter = d => { const x = document.querySelector(`[name=hunter][value=${d.hunter === "sword" ? "sword" : "arrow"}]`); x.checked = true; };
+$("#hunterBtn").onclick = async () => {
+  try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", "Saved."); }
+  catch (e) { show("#hunterMsg", e.message, true); }
 };
 $("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
 

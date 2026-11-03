@@ -29,6 +29,9 @@ export function setColors(list, board) {
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
 }
+// what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
+let HUNTER_WEAPON = "arrow";
+export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
@@ -583,7 +586,7 @@ export class Board3D {
     return grp;
   }
 
-  // The hunter: a pawn of its color carrying an arrow (no bow) that points the way it runs.
+  // The hunter: a pawn of its color carrying an arrow or a sword that points the way it runs.
   // Local +x is where the arrow points; the group is turned to face along the track.
   hunterFigure(color, piece, opacity = 1) {
     const grp = new THREE.Group();
@@ -595,34 +598,42 @@ export class Board3D {
       m.userData.piece = piece;
       grp.add(m);
     }
-    // the hunter carries just an arrow at its side, pointing the way it goes (no bow; owner,
-    // 2026-11-02). Short and thick, at head height, through the middle of the pawn with as much
-    // of it on either side (owner, 2026-11-03).
-    const arrow = new THREE.Group();
-    const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
-    // world units; the head is a ball of 0.19 at y 0.79. The arrow is centred on the pawn, then moved
-    // 5% of its length towards its tip, so the tip stands a little clear of the head (owner, 2026-11-03).
-    const len = 0.84, tipLen = 0.22, tail = -(len + tipLen) / 2 + 0.05 * (len + tipLen);
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, len, 12), wood);
-    shaft.rotation.z = Math.PI / 2;
-    shaft.position.x = tail + len / 2;
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.11, tipLen, 14),
-      new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3, ...see }));
-    tip.rotation.z = -Math.PI / 2;
-    tip.position.x = tail + len + tipLen / 2;
-    const feather = new THREE.MeshStandardMaterial({ color: "#f4efe2", roughness: 0.8, side: THREE.DoubleSide, ...see });
-    for (const r of [0, Math.PI / 2]) {             // fletching: two crossed vanes at the tail
-      const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.15), feather);
-      vane.position.x = tail + 0.1;
-      vane.rotation.x = r;
-      arrow.add(vane);
-    }
-    arrow.add(shaft, tip);
-    arrow.position.set(0, 0.8, 0);                  // through the middle of the head
-    for (const m of arrow.children) { m.userData.piece = piece; m.castShadow = opacity === 1; }
-    grp.add(arrow);
+    grp.add(this.hunterWeapon(piece, see, opacity === 1));
     grp.userData = { piece, mat: body };
     return grp;
+  }
+
+  // What the hunter carries (HUNTER_WEAPON), pointing along local +x: an arrow (no bow; owner,
+  // 2026-11-02) or a sword (2026-11-03). Short and thick, at head height, through the middle of the
+  // pawn and moved 5% of its length towards its point, so the point stands clear of the head.
+  hunterWeapon(piece, see, shadow) {
+    const w = new THREE.Group();
+    const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, ...extra, ...see });
+    const gold = mat("#d4a017", { metalness: 0.6, roughness: 0.3 });
+    const total = 1.06, tail = -total / 2 + 0.05 * total;   // world units; the head is a ball of 0.19 at y 0.79
+    const add = (geo, m, x, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.x = tail + x; o.rotation.z = rz; w.add(o); return o; };
+    if (HUNTER_WEAPON === "sword") {
+      const steel = mat("#e6eaf0", { metalness: 0.35, roughness: 0.3 });
+      add(new THREE.SphereGeometry(0.055, 14, 10), gold, 0.05);                                  // pommel
+      add(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 12), mat("#5a3412"), 0.18, Math.PI / 2);    // grip
+      add(new THREE.BoxGeometry(0.06, 0.34, 0.07), gold, 0.3);                                   // cross-guard
+      add(new THREE.BoxGeometry(0.62, 0.11, 0.03), steel, 0.64);                                 // blade, flat side to the viewer
+      const pt = add(new THREE.ConeGeometry(0.078, 0.14, 4), steel, 0.95 + 0.07, -Math.PI / 2);  // point
+      pt.rotation.x = Math.PI / 4;
+      pt.scale.set(1, 1, 0.27);
+    } else {
+      const len = 0.84, tipLen = 0.22, wood = mat("#7a4a1d", { roughness: 0.6 });
+      add(new THREE.CylinderGeometry(0.046, 0.046, len, 12), wood, len / 2, Math.PI / 2);         // shaft
+      add(new THREE.ConeGeometry(0.11, tipLen, 14), gold, len + tipLen / 2, -Math.PI / 2);        // head
+      const feather = mat("#f4efe2", { roughness: 0.8, side: THREE.DoubleSide });
+      for (const r of [0, Math.PI / 2]) {                                                        // fletching
+        const vane = add(new THREE.PlaneGeometry(0.2, 0.15), feather, 0.1);
+        vane.rotation.x = r;
+      }
+    }
+    w.position.set(0, 0.8, 0);
+    for (const m of w.children) { m.userData.piece = piece; m.castShadow = shadow; }
+    return w;
   }
 
   // turn a hunter figure so that its arrow points along the track in direction dir
