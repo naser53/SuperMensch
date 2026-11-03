@@ -3,7 +3,7 @@ import { Option, Player } from "./engine.js";
 import { SimpleAI } from "./ai.js";
 import { Table, fingerprint } from "./table.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
-import { Board3D, COLORS, setColors, setHunterWeapon } from "./render3d.js";
+import { Board3D, COLORS, setColors, setHunterWeapon, setPointsLook } from "./render3d.js";
 import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
 import { Config } from "./config.js";
@@ -1451,7 +1451,7 @@ async function main() {
   catch { /* fall back to the system font */ }
   try {
     const kept = JSON.parse(localStorage.getItem("supermensch-colors") || "null");
-    if (Array.isArray(kept)) setColors(kept); else if (kept) { setColors(kept.colors, kept.board); setHunterWeapon(kept.hunter); }
+    if (Array.isArray(kept)) setColors(kept); else if (kept) { setColors(kept.colors, kept.board); setHunterWeapon(kept.hunter); setPointsLook(kept.points); }
   } catch { /* none kept */ }
   const app = new App();
   window.superMensch = app;            // handy for testing from the console
@@ -1469,13 +1469,14 @@ async function loadColors(app) {
   try {
     const r = await fetch(`${apiBase()}/api/settings`, { cache: "no-store" });
     if (!r.ok) return;
-    const { colors, board, hunter } = await r.json();
-    const text = JSON.stringify({ colors: colors || null, board: board || null, hunter: hunter || null });
+    const { colors, board, hunter, points } = await r.json();
+    const text = JSON.stringify({ colors: colors || null, board: board || null, hunter: hunter || null, points: points || null });
     let old = null;
     try { old = localStorage.getItem("supermensch-colors"); localStorage.setItem("supermensch-colors", text); } catch { /* private mode */ }
     if (text === old) return;
     setColors(colors, board);
     setHunterWeapon(hunter);
+    setPointsLook(points);
     if (!app.game) app.render();
   } catch { /* offline: the colors kept or the defaults */ }
 }
