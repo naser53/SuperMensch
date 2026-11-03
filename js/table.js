@@ -5,6 +5,8 @@
 // (a device in the online game, the server's throw). Every answer is one event:
 //   { dice: [3, 6] }   the dice of a throw
 //   { pick: 2 }        option 2 of the pending decision (the engine lists options in a fixed order)
+//   { place: [[..]] }  a test aid of the admin: the pieces are put on these fields (Game.place)
+//                      and the turn starts again
 // The engine is deterministic, so the setup and the events rebuild the same game anywhere:
 // on the server, on every device, and later from the stored game.
 
@@ -39,6 +41,12 @@ export class Table {
   apply(ev) {
     const g = this.game, dec = g.pending;
     if (!dec || g.over) throw new Error("the game has no pending decision");
+    if (ev.place !== undefined) {
+      g.place(ev.place);
+      this.events.push({ place: ev.place.map(a => a.slice()) });
+      this._settle();
+      return;
+    }
     let opt;
     if (dec.kind === "dice") {
       if (!Array.isArray(ev.dice) || ev.dice.length !== dec.dice.length || ev.dice.some(v => !(v >= 1 && v <= 6 && v % 1 === 0)))

@@ -562,6 +562,11 @@ earlier sketch (browser dice, PINs).
   room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
   `server/core.js`). The same number of players keeps the moves; another number starts the game
   again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
+  **Place pieces** (owner, 2026-11-03; a test aid): a room's pieces can be put anywhere from the admin
+  page, one line per color (`R: 4 y y y`, fields as in the debug command `move`: 1..L track, L+1.. nest,
+  y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
+  event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
+  pages load the game again.
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
   for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
   `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`
