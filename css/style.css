@@ -288,6 +288,12 @@ label.check.on { color: var(--accent); }
   padding: 18px 26px 14px; box-shadow: 0 12px 40px rgba(0,0,0,.28); text-align: center;
   animation: cardfly 2s ease-in-out forwards; }
 .card-fx-dice { display: flex; gap: 10px; justify-content: center; }
+.card-fx-card.quick { animation: quickfx 1s ease-out forwards; padding: 14px 22px 12px; }
+.card-fx-dots { display: flex; gap: 6px; justify-content: center; }
+.card-fx-dots .dot { width: 18px; height: 18px; }
+.card-fx-card.quick .card-fx-dots + .card-fx-text { margin-top: 8px; }
+@keyframes quickfx { 0% { opacity: 0; transform: scale(.7); } 15% { opacity: 1; transform: scale(1.05); }
+  25% { transform: scale(1); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(.95); } }
 .card-fx-text { margin-top: 10px; font-weight: 700; font-size: 18px; color: #7a5200; }
 @keyframes cardfly { 0% { opacity: 0; transform: translateY(40px) rotate(-12deg) scale(.6); }
   18% { opacity: 1; transform: translateY(0) rotate(3deg) scale(1.08); }

@@ -409,6 +409,11 @@ the fingerprint.
   three dice. Code: `Board3D.throwDice()`, `stepDice()`.
 * **Triple-dice card:** a card with the three dice flies in over the board, and the three dice on
   the board glow for 2 s.
+* **Short messages** (owner, 2026-11-03; `flashBanner`, CSS `.card-fx-card.quick`): a smaller card of
+  the same look pops up and fades within 1 s, blocking nothing. On every device: a stuck player's
+  three dice ("Naser is stuck: three dice!" with the dice) and the gift six (`throwBanners`, from the
+  new `log_stuck` / `log_gift` entries of a move). A tap on a player chip at the top shows that
+  player's colors and name the same way. The Info page names the online game (name and code).
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is

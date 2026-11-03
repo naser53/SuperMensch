@@ -540,7 +540,7 @@ class App {
       if (place >= 0) tags.push(`<span class="tag">${this.T("place", { n: place + 1 })}</span>`);
       if (g.mode === "two") tags.push(`<span class="cards" title="${this.T("cards", { n: g.cards[i] })}">${ICON.cardSmall}${num(this.lang, g.cards[i])}</span>`);
       if (g.stuck(i) && place < 0) tags.push(`<span class="stuck" title="${this.T("stuck")}">${ICON.stuck}</span>`);
-      return `<div class="chip${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}">` +
+      return `<div class="chip${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}" data-act="chip" data-val="${i}">` +
         pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
         `<span class="nm">${this.S(pl.name)}</span><b class="pts" title="${this.T("score", { n: g.state.scores[i] })}">${esc(num(this.lang, g.state.scores[i]))}</b>${tags.join("")}</div>`;
     }).join("");
@@ -666,6 +666,29 @@ class App {
     $("#stage").appendChild(fx);
     setTimeout(() => fx.remove(), 2000);
     setTimeout(() => this.render(), 2050);              // end of the dice glow
+  }
+
+  // A short message card over the board (like the triple-dice card): it pops up and fades within
+  // about a second. Everyone sees it, it blocks nothing. dice: dice to show; colors: color dots.
+  flashBanner(text, dice = null, colors = null) {
+    const fx = document.createElement("div");
+    fx.className = "card-fx";
+    fx.innerHTML = `<div class="card-fx-card quick">${dice ? `<div class="card-fx-dice">${dice.map(v => dieHtml(v, "", "")).join("")}</div>` : ""}
+      ${colors ? `<div class="card-fx-dots">${colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")}</div>` : ""}
+      <div class="card-fx-text" dir="${this.rtl ? "rtl" : "ltr"}">${text}</div></div>`;
+    $("#stage").appendChild(fx);
+    setTimeout(() => fx.remove(), 1000);
+  }
+
+  // a stuck player's three dice and the gift six get a short message, so every player sees why
+  throwBanners(from) {
+    const g = this.game;
+    for (const e of g.log.slice(from)) {
+      if (!e || (e.key !== "log_stuck" && e.key !== "log_gift")) continue;
+      const q = e.params, name = shape(tr(this.lang, q.p));
+      if (e.key === "log_stuck") this.flashBanner(this.T("stuck_fx", { p: name }), [q.a, q.b, q.c], null);
+      else this.flashBanner(this.T("gift_fx", { p: name }), [6], null);
+    }
   }
 
   // The dice live on the board. A new throw lands in the middle and settles at the player's
@@ -975,8 +998,9 @@ class App {
       this.keptIdx = this.keptDice(dec.dice, opt.payload[1]);
     }
     g.noMove = null;
-    const earned = g.state.earned.map(r => r.slice());
+    const earned = g.state.earned.map(r => r.slice()), logFrom = g.log.length;
     this.table.choose(opt);
+    this.throwBanners(logFrom);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
     if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
@@ -1124,6 +1148,7 @@ class App {
     el.dir = this.rtl ? "rtl" : "ltr";
     el.innerHTML = `<div class="info-card"><div class="row between"><h2>${this.T("info_title", { n: N(n) })}</h2>
       <button class="btn" data-act="info_close">${this.T("close")}</button></div>
+      ${this.online ? `<p class="small"><b>${this.T("info_game")}</b> <bdi>${esc(this.online.name || "")}</bdi> · <code dir="ltr">${esc(this.online.id)}</code></p>` : ""}
       <p class="muted small">${this.T("info_lead")}</p>
       ${table("info_dice", [row(this.T("level_" + c.level),
         c.six_chance == null ? P("", "1/6") : P("", "1/" + Math.round(1 / c.six_chance)))])}
@@ -1281,6 +1306,7 @@ class App {
   // the first state: replay the game so far without animations
   openOnline(m) {
     const o = this.online;
+    o.name = m.name;
     const players = m.setup.players.map((p, i) => ({ ...p, isAi: p.isAi || !o.seats.includes(i) }));
     m.setup.players.forEach((p, i) => { if (!p.isAi && !o.seats.includes(i)) o.remote.add(i); });
     this.table = new Table({ ...m.setup, players }, { autoDice: false });
@@ -1405,6 +1431,7 @@ function wire(app) {
     else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
+    else if (act === "chip") app.flashBanner(app.S(g.players[+b.dataset.val].name), null, g.players[+b.dataset.val].colors);
     else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
     else if (act === "copy_log") app.copyLog();
