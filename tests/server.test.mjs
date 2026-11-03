@@ -165,3 +165,19 @@ test("play again names the next game with a counter", () => {
   assert.equal(long.length, 24);
   assert.ok(long.endsWith(" (2)"));
 });
+
+test("the admin can place the pieces (a test aid): the turn starts again and devices replay it", () => {
+  const setup = { players: [{ name: "C", colors: [0, 2], isAi: true }, { name: "N", colors: [1, 3], isAi: false, user: 1 }],
+    mode: "two", colors: 4, level: "beginner" };
+  const room = new Room(setup, [], mulberry32(5));
+  room.place("B: 41 42 43 44\nY: 34 y y y\nR: 4 y y y\nG: y y y y");
+  const g = room.table.game;
+  assert.equal(room.placeText(), "R: 4 y y y\nB: 41 42 43 44\nG: y y y y\nY: 34 y y y");
+  assert.equal(g.hunterEligible(1, g.state), 1);                  // blue is home: the hunter may come in
+  assert.equal(fingerprint(Table.replay(setup, room.events).game), room.fingerprint());
+  const n = room.events.length;
+  assert.throws(() => room.place("R: 4 4 y y"), /two pieces/);
+  assert.throws(() => room.place("B: 41 42"), /needs 4/);
+  assert.throws(() => room.place("Q: 1 y y y"), /no such color/);
+  assert.equal(room.events.length, n);                             // a refused place changes nothing
+});

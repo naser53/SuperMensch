@@ -56,6 +56,10 @@ async function api(req, env, url) {
       await env.ROOM.get(env.ROOM.idFromName(body.id)).edit(setup, keep);
       return json(await lobby.setSetup(body.id, setup));
     }
+    if (parts[1] === "place" && body && isGameId(body.id)) {       // put the pieces somewhere (a test aid); no text: just show them
+      const room = env.ROOM.get(env.ROOM.idFromName(body.id));
+      return json({ text: await room.place(typeof body.text === "string" && body.text.trim() ? body.text : null) });
+    }
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
       return json(await lobby.removeGame(body.id));
@@ -262,6 +266,20 @@ export class GameRoom extends DurableObject {
     this._all({ t: "recolor" });
     await this._report();
     return next.setup;
+  }
+
+  // the admin puts the pieces somewhere else (Room.place); every device loads the game again.
+  // Returns the pieces as text (also when text is null: then nothing changes).
+  async place(text) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    if (text !== null) {
+      const r = room.place(text);
+      this._save(r.from);
+      this._all({ t: "events", from: r.from, events: r.events, fp: room.fingerprint(), view: room.view() });
+      await this._report();
+    }
+    return room.placeText();
   }
 
   // the admin deletes the game: close the devices' connections and forget everything

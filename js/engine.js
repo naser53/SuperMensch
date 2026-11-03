@@ -957,6 +957,35 @@ export class Game {
     return u < six ? 6 : 1 + Math.floor((u - six) / (1 - six) * 5);
   }
 
+  // Test aid (the admin's "place" in an online room): put every piece where pos says
+  // (pos[color][i]: relative field, YARD, 0..L-1 on the track, L.. in the nest) and start the
+  // current turn again. Throws, changing nothing, if pos does not fit the board.
+  place(pos) {
+    const st = this.state, L = this.L;
+    if (!Array.isArray(pos) || pos.length !== st.pos.length) throw new Error("one list of fields per color");
+    const seen = new Set();
+    pos.forEach((a, col) => {
+      if (!Array.isArray(a) || a.length !== st.pos[col].length) throw new Error("every color needs all its pieces");
+      for (const r of a) {
+        if (!Number.isInteger(r) || r < YARD || r >= L + a.length) throw new Error("no such field");
+        if (r === YARD) continue;
+        const k = r < L ? "t" + this.absOf(col, r) : "n" + col + "," + r;
+        if (seen.has(k)) throw new Error("two pieces on one field");
+        seen.add(k);
+      }
+    });
+    st.pos.forEach((a, col) => a.forEach((r, i) => {
+      const n = pos[col][i];
+      if (n === r) return;
+      a[i] = n;
+      if (n === YARD) st.kills[col][i] = 0;
+      st.tmark[col][i] = false;
+      st.tunnels = st.tunnels.filter(t => !(t[1] === col && t[2] === i));
+    }));
+    this.queuedDice = null;
+    this._startTurn();
+  }
+
   // Roll n dice and continue with them; in manual (debug) mode ask for the values.
   _withDice(n, cont) {
     const q = this.queuedDice;                // set with the debug command "dice"

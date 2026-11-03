@@ -155,6 +155,34 @@ export function checkSetup(su, users) {
 }
 
 // One online game. The setup and the events are all that is stored.
+// The admin's "place" (a test aid): the pieces as text, one line per color, e.g.
+//   R: 5 y y y        B: 41 42 43 44
+// A field is written as in the debug command "move": 1..L on the track, L+1.. in the nest, y = yard.
+const LETTERS = "RBGYPTNK";
+export function placeText(g) {
+  const L = g.L;
+  return g.state.pos.map((a, col) => `${LETTERS[col]}: ` + a.map(r => (r === -1 ? "y" : r >= L ? String(r + 1) : String(g.absOf(col, r) + 1))).join(" ")).join("\n");
+}
+
+export function parsePlace(text, g) {
+  const L = g.L, pos = g.state.pos.map(a => a.slice());
+  for (const line of String(text || "").split(/[\n;]+/)) {
+    if (!line.trim()) continue;
+    const m = /^\s*([a-z])\s*:?\s*(.*)$/i.exec(line);
+    const col = m ? LETTERS.indexOf(m[1].toUpperCase()) : -1;
+    if (col < 0 || col >= pos.length) throw new Error(`no such color: ${line.trim()}`);
+    const ws = m[2].trim().split(/[\s,]+/).filter(Boolean);
+    if (ws.length !== pos[col].length) throw new Error(`${LETTERS[col]} needs ${pos[col].length} fields`);
+    pos[col] = ws.map(w => {
+      if (/^y$/i.test(w) || w === "0") return -1;
+      const n = Number(w);
+      if (!Number.isInteger(n) || n < 1 || n > L + pos[col].length) throw new Error(`no such field: ${w}`);
+      return n <= L ? g.relOf(col, n - 1) : n - 1;
+    });
+  }
+  return pos;
+}
+
 export class Room {
   constructor(setup, events = [], rng = cryptoRandom) {
     this.setup = setup;
@@ -192,6 +220,16 @@ export class Room {
     this._advance();
     return { from, events: this.events.slice(from) };
   }
+
+  // the admin puts the pieces somewhere else (text as in parsePlace); the turn starts again
+  place(text) {
+    const from = this.events.length;
+    this.table.apply({ place: parsePlace(text, this.table.game) });
+    this._advance();
+    return { from, events: this.events.slice(from) };
+  }
+
+  placeText() { return placeText(this.table.game); }
 
   // the computer players move at once; the devices show their moves one by one
   _advance() {

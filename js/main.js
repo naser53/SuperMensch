@@ -1308,6 +1308,7 @@ class App {
     const o = this.online, g = this.game;
     if (!g || !o.queue.length || this.busy()) return;
     const ev = o.queue[0], dec = g.pending;
+    if (ev.place) { location.reload(); return; }     // the admin has put the pieces somewhere else: load the game again
     const mine = dec && o.seats.includes(dec.player);
     if (!ev.dice && !mine && performance.now() < this.nextAi) return;
     if (ev.dice && performance.now() < (this.moveEnd || 0)) return;    // let the last move land before the next throw

@@ -155,9 +155,10 @@ async function loadRooms(list) {
   const gs = list || await api("admin/games", {});
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.setup.corridor ? g.setup.corridor + " fields · " : ""}${g.status} · ${new Date(g.updated).toLocaleString()}</span>
-    <button data-edit="${g.id}">Edit players</button> <button data-del="${g.id}">Delete</button></div>
+    <button data-edit="${g.id}">Edit players</button> <button data-place="${g.id}">Place pieces</button> <button data-del="${g.id}">Delete</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
+  document.querySelectorAll("[data-place]").forEach(b => b.onclick = () => placeRoom(gs.find(g => g.id === b.dataset.place)));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }
     try { await loadRooms(await api("admin/delete", { id: b.dataset.del })); }
@@ -197,6 +198,28 @@ function editRoom(g) {
     };
   };
   draw();
+}
+
+// put the pieces of a room somewhere (a test aid): one line per color, fields as in the debug
+// command "move" (1..L on the track, L+1.. in the nest, y = yard). The turn starts again.
+async function placeRoom(g) {
+  const box = $("#edit-" + g.id);
+  let text;
+  try { text = (await api("admin/place", { id: g.id })).text; }
+  catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+  box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">One line per color (R B G Y P T N K): track fields 1..${g.setup.colors * (g.setup.corridor || 10)},
+    the nest after them, y = yard. Saving starts the current turn again; the players' pages load the game again.</div>
+    <textarea data-pt rows="${text.split("\n").length}" cols="40" style="font-family:monospace">${esc(text)}</textarea>
+    <div class="row"><button class="primary" data-psave>Place</button> <button data-pcancel>Cancel</button></div><div data-msg></div></section>`;
+  box.querySelector("[data-pcancel]").onclick = () => { box.innerHTML = ""; };
+  box.querySelector("[data-psave]").onclick = async () => {
+    const msg = box.querySelector("[data-msg]");
+    try {
+      const r = await api("admin/place", { id: g.id, text: box.querySelector("[data-pt]").value });
+      box.querySelector("[data-pt]").value = r.text;
+      msg.className = "ok"; msg.textContent = "Placed.";
+    } catch (e) { msg.className = "err"; msg.textContent = e.message; }
+  };
 }
 
 async function open() {
