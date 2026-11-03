@@ -1243,7 +1243,7 @@ class App {
       location.href = `${location.pathname}?game=${encodeURIComponent(m.id)}&seats=${o.seats.join(",")}`;
       return;
     }
-    if (m.t === "recolor") {                // a seat picked its colors before the first move: start again
+    if (m.t === "recolor") {                // colors picked before the first move, or the admin went back: start again
       this.table = null;
       o.queue = [];
       o.sent = null;

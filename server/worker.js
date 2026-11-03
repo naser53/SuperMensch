@@ -64,6 +64,10 @@ async function api(req, env, url) {
       const room = env.ROOM.get(env.ROOM.idFromName(body.id));
       return json({ text: await room.place(typeof body.text === "string" && body.text.trim() ? body.text : null) });
     }
+    if (parts[1] === "debug" && body && isGameId(body.id)) {       // go drop N · drop dice 3,6 (a test aid); no text: the dice turns
+      const room = env.ROOM.get(env.ROOM.idFromName(body.id));
+      return json(await room.debug(typeof body.text === "string" && body.text.trim() ? body.text : null));
+    }
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
       return json(await lobby.removeGame(body.id));
@@ -295,6 +299,27 @@ export class GameRoom extends DurableObject {
       await this._report();
     }
     return room.placeText();
+  }
+
+  // the admin's debug command (Room.debug): the game goes back to a dice turn and throws it
+  // again; every device starts again from the new state. Returns the dice turns as text.
+  async debug(text) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    let turn = null;
+    if (text !== null) {
+      const r = room.debug(text);
+      const next = r.room;
+      let same = 0;                                   // the events that stay as they were
+      while (same < next.events.length && JSON.stringify(next.events[same]) === JSON.stringify(room.events[same])) same++;
+      this.sql.exec(`DELETE FROM events WHERE seq >= ?`, same);
+      this.room = next;
+      this._save(same);
+      this._all({ t: "recolor" });                    // the devices load the game again
+      await this._report();
+      turn = r.turn;
+    }
+    return { turn, turns: this.room.turnsText(), view: this.room.view() };
   }
 
   // the admin deletes the game: close the devices' connections and forget everything

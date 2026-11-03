@@ -169,10 +169,11 @@ async function loadRooms(list) {
   const gs = list || await api("admin/games", {});
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.setup.corridor ? g.setup.corridor + " fields · " : ""}${g.status} · ${new Date(g.updated).toLocaleString()}</span>
-    <button data-edit="${g.id}">Edit players</button> <button data-place="${g.id}">Place pieces</button> <button data-del="${g.id}">Delete</button></div>
+    <button data-edit="${g.id}">Edit players</button> <button data-place="${g.id}">Place pieces</button> <button data-dbg="${g.id}">Debug</button> <button data-del="${g.id}">Delete</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
   document.querySelectorAll("[data-place]").forEach(b => b.onclick = () => placeRoom(gs.find(g => g.id === b.dataset.place)));
+  document.querySelectorAll("[data-dbg]").forEach(b => b.onclick = () => debugRoom(gs.find(g => g.id === b.dataset.dbg)));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }
     try { await loadRooms(await api("admin/delete", { id: b.dataset.del })); }
@@ -234,6 +235,36 @@ async function placeRoom(g) {
       msg.className = "ok"; msg.textContent = "Placed.";
     } catch (e) { msg.className = "err"; msg.textContent = e.message; }
   };
+}
+
+// debug commands for a room (a test aid), on the dice turns (a second try belongs to its turn):
+//   go drop N      back to dice turn N (0 = first, -1 = the one before the last), same dice
+//   drop dice 3,6  the last dice turn again with these dice
+async function debugRoom(g) {
+  const box = $("#edit-" + g.id);
+  const draw = r => {
+    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">go drop N: back to dice turn N (0 = the first, -1 = one before the last), thrown again with the same dice.
+      drop dice 3,6 or drop dice 4,2,5: the last dice turn again with these dice (as many as it had). The players' pages load the game again.</div>
+      <div class="row"><input data-dc size="24" placeholder="go drop -1"> <button class="primary" data-drun>Run</button> <button data-dclose>Close</button></div>
+      <div data-msg></div>
+      <pre data-dt style="max-height:16em;overflow:auto;font-size:12px">${esc(r.turns || "No dice yet.")}</pre></section>`;
+    box.querySelector("[data-dclose]").onclick = () => { box.innerHTML = ""; };
+    const run = async () => {
+      const msg = box.querySelector("[data-msg]");
+      try {
+        const r2 = await api("admin/debug", { id: g.id, text: box.querySelector("[data-dc]").value });
+        draw(r2);
+        const m2 = box.querySelector("[data-msg]");
+        m2.className = "ok"; m2.textContent = `Back to dice turn #${r2.turn}.`;
+      } catch (e) { msg.className = "err"; msg.textContent = e.message; }
+    };
+    box.querySelector("[data-drun]").onclick = run;
+    box.querySelector("[data-dc]").onkeydown = e => { if (e.key === "Enter") run(); };
+    const pre = box.querySelector("[data-dt]");
+    pre.scrollTop = pre.scrollHeight;
+  };
+  try { draw(await api("admin/debug", { id: g.id })); }
+  catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
 }
 
 async function open() {

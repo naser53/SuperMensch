@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, nextName, pickColors } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
@@ -180,4 +180,45 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   assert.throws(() => room.place("B: 41 42"), /needs 4/);
   assert.throws(() => room.place("Q: 1 y y y"), /no such color/);
   assert.equal(room.events.length, n);                             // a refused place changes nothing
+});
+
+test("admin debug: go drop N and drop dice go back to a dice turn and throw it again", () => {
+  assert.deepEqual(parseDebug("Go drop -1"), { go: -1 });
+  assert.deepEqual(parseDebug("drop dice 4,2, 5"), { dice: [4, 2, 5] });
+  assert.throws(() => parseDebug("drop dice 7,1"));
+  const su = checkSetup({ mode: "two", colors: 6, seats: twoSeats(1, "ai") }, users);
+  const room = new Room(su, [], mulberry32(7));
+  const pick = mulberry32(8);
+  for (let k = 0; k < 300 && !room.table.game.over; k++) {
+    const d = room.table.game.pending;
+    room.move(room.events.length, { pick: Math.floor(pick() * d.options.length) }, [0]);
+  }
+  const turns = diceTurns(su, room.events);
+  const throws = room.events.filter(e => e.dice).length;
+  // a second try belongs to the turn of the first throw
+  const retries = room.events.filter((e, i) => e.dice && i > 0 && turns.every(t => t.at !== i)).length;
+  assert.equal(turns.length + retries, throws);
+  assert.ok(turns.length > 20);
+  // go drop 0: the first throw again with the same dice
+  const r0 = room.debug("go drop 0");
+  assert.equal(r0.turn, 0);
+  assert.deepEqual(r0.room.events.slice(0, turns[0].at + 1), room.events.slice(0, turns[0].at + 1));
+  // go drop 10 and -1: the events before that turn stay; the throw has the same dice
+  for (const [cmd, k] of [["go drop 10", 10], ["go drop -1", turns.length - 2]]) {
+    const r = room.debug(cmd);
+    assert.equal(r.turn, k);
+    assert.deepEqual(r.room.events.slice(0, turns[k].at + 1), room.events.slice(0, turns[k].at + 1));
+    assert.deepEqual(diceTurns(su, r.room.events).length >= k + 1, true);
+  }
+  // drop dice: the last turn with the given dice; the number of dice must fit
+  const last = turns[turns.length - 1], n = last.dice[0].length;
+  const dice = n === 3 ? [4, 2, 5] : n === 2 ? [3, 6] : [5];
+  const rd = room.debug(`drop dice ${dice.join(",")}`);
+  assert.deepEqual(rd.room.events[last.at], { dice });
+  assert.deepEqual(rd.room.events.slice(0, last.at), room.events.slice(0, last.at));
+  assert.throws(() => room.debug(`drop dice ${[1, 2, 3, 4].slice(0, n === 2 ? 3 : 2).join(",")}`), /dice/);
+  assert.throws(() => room.debug("go drop 9999"), /no dice turn/);
+  // a device rebuilds the new game from its events
+  const device = Table.replay(su, rd.room.events);
+  assert.equal(fingerprint(device.game), rd.room.fingerprint());
 });
