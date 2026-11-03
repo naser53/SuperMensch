@@ -185,6 +185,8 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
 test("admin debug: go drop N and drop dice go back to a dice turn and throw it again", () => {
   assert.deepEqual(parseDebug("Go drop -1"), { go: -1 });
   assert.deepEqual(parseDebug("drop dice 4,2, 5"), { dice: [4, 2, 5] });
+  assert.deepEqual(parseDebug("Roll dice 3 6"), { dice: [3, 6] });
+  assert.deepEqual(parseDebug(" reset "), { reset: true });
   assert.throws(() => parseDebug("drop dice 7,1"));
   const su = checkSetup({ mode: "two", colors: 6, seats: twoSeats(1, "ai") }, users);
   const room = new Room(su, [], mulberry32(7));
@@ -213,11 +215,16 @@ test("admin debug: go drop N and drop dice go back to a dice turn and throw it a
   // drop dice: the last turn with the given dice; the number of dice must fit
   const last = turns[turns.length - 1], n = last.dice[0].length;
   const dice = n === 3 ? [4, 2, 5] : n === 2 ? [3, 6] : [5];
-  const rd = room.debug(`drop dice ${dice.join(",")}`);
+  const rd = room.debug(`roll dice ${dice.join(",")}`);
   assert.deepEqual(rd.room.events[last.at], { dice });
   assert.deepEqual(rd.room.events.slice(0, last.at), room.events.slice(0, last.at));
   assert.throws(() => room.debug(`drop dice ${[1, 2, 3, 4].slice(0, n === 2 ? 3 : 2).join(",")}`), /dice/);
   assert.throws(() => room.debug("go drop 9999"), /no dice turn/);
+  // reset: the game from the beginning, with the same players
+  const rs = room.debug("reset");
+  assert.equal(rs.turn, null);
+  assert.deepEqual(rs.room.setup, su);
+  assert.ok(diceTurns(su, rs.room.events).length <= 2);
   // a device rebuilds the new game from its events
   const device = Table.replay(su, rd.room.events);
   assert.equal(fingerprint(device.game), rd.room.fingerprint());
