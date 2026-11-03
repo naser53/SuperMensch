@@ -32,6 +32,10 @@ export function setColors(list, board) {
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
 export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
+// how a pawn shows its own points: "bar" (a line up the body) or "ring" (a ring that climbs the
+// body to general, again to marshal; a marshal glows instead); an admin setting like the hunter
+let POINTS_LOOK = "bar";
+export function setPointsLook(w) { POINTS_LOOK = w === "ring" ? "ring" : "bar"; }
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
@@ -63,11 +67,22 @@ function canvasTex(w, h, draw, rotation = 0) {
 }
 
 // A classic "Mensch" pawn: round foot, slim body, ball head.
+const PAWN_PROFILE = [
+  [0, 0], [0.36, 0], [0.38, 0.05], [0.33, 0.12], [0.2, 0.2], [0.15, 0.35],
+  [0.12, 0.52], [0.2, 0.58], [0.2, 0.61], [0.1, 0.64],
+];
+// the pawn body's radius at height y (along its outline)
+function pawnRadius(y) {
+  const p = PAWN_PROFILE;
+  for (let k = 1; k < p.length; k++)
+    if (y <= p[k][1]) { const [x0, y0] = p[k - 1], [x1, y1] = p[k]; return y1 === y0 ? Math.max(x0, x1) : x0 + (x1 - x0) * (y - y0) / (y1 - y0); }
+  return p[p.length - 1][0];
+}
+// the points ring climbs from just above the foot to two thirds of the pawn's height
+const RING_Y0 = 0.1, RING_Y1 = 0.62, RING_TUBE = 0.028;
+
 function pawnGeometry() {
-  const pts = [
-    [0, 0], [0.36, 0], [0.38, 0.05], [0.33, 0.12], [0.2, 0.2], [0.15, 0.35],
-    [0.12, 0.52], [0.2, 0.58], [0.2, 0.61], [0.1, 0.64],
-  ].map(([x, y]) => new THREE.Vector2(x, y));
+  const pts = PAWN_PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
   const body = new THREE.LatheGeometry(pts, 40);
   const head = new THREE.SphereGeometry(0.19, 32, 20);
   head.translate(0, 0.79, 0);
@@ -520,8 +535,11 @@ export class Board3D {
         star.position.y = halo.position.y = 1.52;
         star.visible = halo.visible = false;
         const bar = this.progressBar(col);
-        grp.add(r1, r2, star, halo, bar);
-        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, hop: 0 };
+        const pring = new THREE.Mesh(new THREE.TorusGeometry(0.3, RING_TUBE, 12, 48),
+          new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
+        pring.rotation.x = Math.PI / 2; pring.visible = false;
+        grp.add(r1, r2, star, halo, bar, pring);
+        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, mat, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -750,8 +768,28 @@ export class Board3D {
     u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
     u.star.scale.setScalar(marshal ? 0.36 : 0.42);
     u.halo.visible = marshal;
-    u.bar.visible = kills > 0;
+    const ring = POINTS_LOOK === "ring";
+    u.bar.visible = !ring && kills > 0;
     u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
+    // the points ring: up the body to general, then from the foot again to marshal
+    const f = marshal ? 0 : general ? (kills - gp) / (mp - gp) : kills / gp;
+    u.pring.visible = ring && f > 0;
+    if (u.pring.visible) {
+      // a thin round ring that touches the body all round (not a band): its tube sits on the outline
+      const y = RING_Y0 + (RING_Y1 - RING_Y0) * Math.min(1, f), r = +(pawnRadius(y) + RING_TUBE * 0.7).toFixed(3);
+      u.pring.position.y = y;
+      if (u.pring.userData.r !== r) {
+        u.pring.geometry.dispose();
+        u.pring.geometry = new THREE.TorusGeometry(r, RING_TUBE, 12, 48);
+        u.pring.userData.r = r;
+      }
+    }
+    // a marshal glows more when the ring is the points look
+    u.halo.scale.setScalar(ring && marshal ? 1.0 : 0.6);
+    if (u.mat) {
+      u.mat.emissive.set(ring && marshal ? GOLD_BRIGHT : "#000000");
+      u.mat.emissiveIntensity = ring && marshal ? 0.28 : 1;
+    }
   }
 
   // a pawn shows the rank look of state "before" now and the one of "after" at time t

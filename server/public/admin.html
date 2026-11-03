@@ -39,6 +39,15 @@
     </section>
 
     <section>
+      <h2>Points on a pawn</h2>
+      <div class="muted">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
+        Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
+      <div class="row"><label><input type="radio" name="points" value="bar" checked> Bar</label>
+        <label><input type="radio" name="points" value="ring"> Ring</label>
+        <button class="primary" id="pointsBtn">Save</button> <span id="pointsMsg"></span></div>
+    </section>
+
+    <section>
       <h2>Hunter</h2>
       <div class="muted">What the hunter carries, in every game on this server. Games started after saving use it.</div>
       <div class="row"><label><input type="radio" name="hunter" value="arrow" checked> Arrow</label>
@@ -113,6 +122,7 @@ const picker = (kind, i, name, value, def) => `<label><input type="color" data-$
 async function loadColors(d) {
   d = d || await api("settings");
   showHunter(d);
+  showPoints(d);
   $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[i] || "Color " + (i + 1), d.colors[i], def)).join("");
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, BOARD_NAMES[i], (d.board || [])[i], def)).join("");
   document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {
@@ -130,6 +140,11 @@ const showHunter = d => { const x = document.querySelector(`[name=hunter][value=
 $("#hunterBtn").onclick = async () => {
   try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", "Saved."); }
   catch (e) { show("#hunterMsg", e.message, true); }
+};
+const showPoints = d => { document.querySelector(`[name=points][value=${d.points === "ring" ? "ring" : "bar"}]`).checked = true; };
+$("#pointsBtn").onclick = async () => {
+  try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value })); show("#pointsMsg", "Saved."); }
+  catch (e) { show("#pointsMsg", e.message, true); }
 };
 $("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
 

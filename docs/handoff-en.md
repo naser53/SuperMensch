@@ -572,6 +572,12 @@ earlier sketch (browser dice, PINs).
   **Hunter weapon** (owner, 2026-11-03): the admin page chooses what the hunter carries, Arrow or
   Sword, for the whole server (`POST /api/admin/hunter`, Lobby `settings` key `hunter`, sent with
   `/api/settings` as `hunter`; `setHunterWeapon` / `Board3D.hunterWeapon` in `js/render3d.js`).
+  **Points look** (owner, 2026-11-03): the admin page chooses how a pawn shows its own points, for the
+  whole server: Bar (default, `progressBar`) or Ring (a thin ring that touches the body all round, the
+  owner wants no band; it climbs from the foot to two thirds of the pawn's height up to general,
+  then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
+  glow). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
+  `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **Place pieces** (owner, 2026-11-03; a test aid): a room's pieces can be put anywhere from the admin
   page, one line per color (`R: 4 y y y`, fields as in the debug command `move`: 1..L track, L+1.. nest,
   y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
