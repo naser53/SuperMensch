@@ -576,6 +576,13 @@ earlier sketch (browser dice, PINs).
   y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
   event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
   pages load the game again.
+  **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
+  (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
+  `go drop N` (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
+  same dice, and the computers play on as before up to the next decision of a person) or
+  `drop dice 3,6` / `drop dice 4,2,5` (the last dice turn again with these dice, as many as it had).
+  The events after that are dropped; open pages load the game again (`{t:"recolor"}`).
+  `parseDebug`/`diceTurns`/`Room.debug` in `server/core.js`, `POST /api/admin/debug`.
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
   for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
   `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`

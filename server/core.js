@@ -183,6 +183,38 @@ export function parsePlace(text, g) {
   return pos;
 }
 
+// The admin's debug commands for a room (a test aid), on the dice turns of the game. A dice turn
+// is one turn of throwing: a second try (retry) belongs to the turn of the first throw.
+//   go drop N        the game goes back to dice turn N (0 = the first) and throws it again with
+//                    the same dice (a computer keeps its moves with them); N < 0 counts back
+//                    from the last turn (-1: the one before it)
+//   drop dice 3,6    the last dice turn is thrown again with these dice (as many as it had)
+export function parseDebug(text) {
+  const s = String(text || "").trim().toLowerCase();
+  let m = /^go\s+drop\s+(-?\d+)$/.exec(s);
+  if (m) return { go: +m[1] };
+  m = /^drop\s+dice\s+([1-6](?:[\s,]+[1-6])*)$/.exec(s);
+  if (m) return { dice: m[1].split(/[\s,]+/).map(Number) };
+  throw new Error("commands: go drop N · drop dice 3,6");
+}
+
+// the dice turns of a game: [{ at, player, dice }], at = index of the turn's first throw event
+export function diceTurns(setup, events) {
+  const t = new Table(setup, { autoDice: false }), out = [];
+  let retry = false;
+  for (const ev of events) {
+    const g = t.game;
+    if (ev.dice) {
+      if (retry && out.length) out[out.length - 1].dice.push(ev.dice.slice());
+      else out.push({ at: t.events.length, player: g.pending.player, dice: [ev.dice.slice()] });
+      retry = false;
+    } else if (ev.pick !== undefined) retry = g.pending.options[ev.pick].payload === "retry";
+    else retry = false;
+    t.apply(ev);
+  }
+  return out;
+}
+
 export class Room {
   constructor(setup, events = [], rng = cryptoRandom) {
     this.setup = setup;
@@ -230,6 +262,34 @@ export class Room {
   }
 
   placeText() { return placeText(this.table.game); }
+
+  // the admin's debug command (parseDebug): a new room from the events before that dice turn
+  // and the turn's throw again (the same dice, or the given ones)
+  debug(text) {
+    const cmd = parseDebug(text), turns = diceTurns(this.setup, this.events);
+    if (!turns.length) throw new Error("no dice thrown yet");
+    const k = cmd.dice ? turns.length - 1 : cmd.go < 0 ? turns.length - 1 + cmd.go : cmd.go;
+    if (k < 0 || k >= turns.length) throw new Error(`no dice turn ${cmd.go} (0..${turns.length - 1})`);
+    const first = turns[k].dice[0];
+    if (cmd.dice && cmd.dice.length !== first.length) throw new Error(`this throw has ${first.length} dice`);
+    let events = this.events.slice(0, turns[k].at).concat([{ dice: cmd.dice || first.slice() }]);
+    if (!cmd.dice) {             // the same dice: the computers play on as before, up to a person
+      const t = Table.replay(this.setup, events);
+      for (let j = events.length; j < this.events.length; j++) {
+        const ev = this.events[j], g = t.game;
+        if ((ev.pick === undefined && !ev.dice) || !g.pending || !this.setup.players[g.pending.player].isAi) break;
+        t.apply(ev);
+      }
+      events = t.events;
+    }
+    return { turn: k, room: new Room(this.setup, events, this.table.game.rng) };
+  }
+
+  // the dice turns as text, one per line: "#3 Naser 6 2 / 5 5" (a second try after the slash)
+  turnsText() {
+    return diceTurns(this.setup, this.events).map((t, i) =>
+      `#${i} ${this.setup.players[t.player].name} ${t.dice.map(d => d.join(" ")).join(" / ")}`).join("\n");
+  }
 
   // the computer players move at once; the devices show their moves one by one
   _advance() {
