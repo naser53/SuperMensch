@@ -14,6 +14,8 @@ export class Config {
       hunter_can_break: false,  // HUNTER_CAN_BREAK
       six_into_nest: true,      // SIX_INTO_NEST: two-color game, a 6 that takes a piece into its nest may
                                 // be played alone even when the other die then burns (owner, 2026-11-02)
+      six_prize: true,          // SIX_PRIZE: two-color game, a 6 never burns when it can be played, and with
+                                // a 6 a color that alone can move plays both dice when it can (owner, 2026-11-03)
 
       corridor_points: [1, 3, 6, 10, 15, 23],  // CORRIDOR_POINTS
       gate_bonus: 5,            // GATE_BONUS
