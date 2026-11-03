@@ -595,27 +595,28 @@ export class Board3D {
       m.userData.piece = piece;
       grp.add(m);
     }
-    // the hunter carries just an arrow at its side, pointing the way it goes (no bow; owner, 2026-11-02)
+    // the hunter carries just an arrow at its side, pointing the way it goes (no bow; owner,
+    // 2026-11-02). Shorter and thicker, at head height, its tail a little behind the head (2026-11-03).
     const arrow = new THREE.Group();
     const wood = new THREE.MeshStandardMaterial({ color: "#7a4a1d", roughness: 0.6, ...see });
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.78, 6), wood);
+    const tail = -0.27, len = 0.84;                 // world units; the head is a ball of 0.19 at y 0.79
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, len, 10), wood);
     shaft.rotation.z = Math.PI / 2;
-    shaft.position.x = 0.2;
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 10),
+    shaft.position.x = tail + len / 2;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12),
       new THREE.MeshStandardMaterial({ color: "#d4a017", metalness: 0.6, roughness: 0.3, ...see }));
     tip.rotation.z = -Math.PI / 2;
-    tip.position.x = 0.66;
+    tip.position.x = tail + len + 0.1;
     const feather = new THREE.MeshStandardMaterial({ color: "#f4efe2", roughness: 0.8, side: THREE.DoubleSide, ...see });
     for (const r of [0, Math.PI / 2]) {             // fletching: two crossed vanes at the tail
-      const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.1), feather);
-      vane.position.x = -0.1;
+      const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.15), feather);
+      vane.position.x = tail + 0.1;
       vane.rotation.x = r;
       arrow.add(vane);
     }
     arrow.add(shaft, tip);
-    arrow.position.set(0.05, 0.6, 0.32);           // held at the pawn's side, at chest height
-    arrow.scale.setScalar(1.35);
-    for (const m of arrow.children) m.userData.piece = piece;
+    arrow.position.set(0, 0.8, 0.24);               // along the side of the head
+    for (const m of arrow.children) { m.userData.piece = piece; m.castShadow = opacity === 1; }
     grp.add(arrow);
     grp.userData = { piece, mat: body };
     return grp;
