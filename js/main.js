@@ -617,6 +617,9 @@ class App {
     const done = this.matching().filter(q => q.steps.length === sel.picks.length);
     if (done.length) { this.choose(done[0].option, entry); return; }
     this.autoDie();
+    // the piece just moved stays selected while it can go on: its next field shows in yellow
+    const m = c.step.mover;
+    if (m[0] === "p" && this.pieceDice(m).size) sel.piece = m;
     this.render();
     this.board.animateSteps(entry, this.hop());
   }
