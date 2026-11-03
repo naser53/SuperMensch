@@ -413,7 +413,7 @@ the fingerprint.
   the same look pops up and fades within 1 s, blocking nothing. On every device: a stuck player's
   three dice ("Naser is stuck: three dice!" with the dice) and the gift six (`throwBanners`, from the
   new `log_stuck` / `log_gift` entries of a move). A tap on a player chip at the top shows that
-  player's colors and name the same way. The Info page names the online game (name and code).
+  player's colors and name in a small card right under that chip, for 1.5 s. The Info page names the online game (name and code).
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
