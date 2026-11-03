@@ -779,19 +779,15 @@ export class Board3D {
   // §13: tunnels are see-through tubes; the current player's in full, the others' fainter.
   // tunnelCands (set by the app while the Tunnels list is open): the tunnels that can be declared,
   // faint in their piece's color; the one under the mouse (extra) in full, in its color, thicker.
-  // A tunnel declared this turn can still be taken back until the dice are rolled: till then it is
-  // only its line, and its fields' circles come once the roll has made it final (owner, 2026-11-02).
+  // While the player is still choosing, the tunnels on offer are lines only; a declared tunnel
+  // shows its line with the circles of its fields and ends (owner, 2026-11-03).
   drawTunnels(st, extra = null) {
     this.tunnelGroup.clear();
     const g = this.game;
-    const open = g.pending && g.pending.kind === "pre_roll" ? g._declared || [] : [];
-    for (const t of st.tunnels) {
-      const draft = t[0] === g.turn && open.some(d => d[0] === t[1] && d[1] === t[2] && d[2] === t[3] && d[3] === t[4]);
-      this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3, null, 1, null, draft);
-    }
+    for (const t of st.tunnels) this.tunnelMesh(t[1], t[3], t[4], t[0] === g.turn ? 0.75 : 0.3);
     const same = (a, b) => a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4];
-    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.6, null, 1, c);
-    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7, extra);
+    for (const c of this.tunnelCands || []) if (!(extra && same(c, extra))) this.tunnelMesh(c[1], c[3], c[4], 0.6, null, 1, c, true);
+    if (extra) this.tunnelMesh(extra[1], extra[3], extra[4], 0.95, null, 1.7, extra, true);
   }
 
   // pick: the tunnel's payload; a tap on its tube or its exit ring then declares it
