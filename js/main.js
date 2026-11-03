@@ -403,7 +403,7 @@ class App {
     const dec = g.pending, p = g.players[g.turn];
     const human = dec && !p.isAi && !g.over;
     if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = null; }
-    let status, hint = "", acts = "", list = "", opts = [], shown = g.state;
+    let status, hint = "", acts = "", list = "", opts = [], shown = g.state, hunterPick = null;
     const pre = {};                     // the roll-time buttons: roll, card, castle break, tunnels
     const btn = (attrs, label, cls = "", icon = "") =>
       `<button class="btn rb-btn ${cls}" ${attrs}>${icon}<span>${label}</span></button>`;
@@ -434,10 +434,17 @@ class App {
       } else if (human && dec.kind === "play" && !this.sel.list) {
         const sel = this.sel;
         shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
-        hint = this.T(sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece" : (sel.die === null ? "pick_die" : "pick_piece"));
+        // the hunter's two ways in are asked on the board, in a bubble over the hunter (owner, 2026-11-02)
+        const hunterAmbig = sel.ambig && sel.ambig.every(c => c.cand.step.mover[0] === "hn");
+        hint = this.T(hunterAmbig ? "pick_hunter_dir" : sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece" : (sel.die === null ? "pick_die" : "pick_piece"));
         if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) hint += ` <span class="muted">${this.T("hunter_ready")}</span>`;
         if (sel.picks.length) hint += `<div class="muted small">${sel.picks.map(x => this.S(g.describe({ steps: [x.step] })[0])).join(" · ")}</div>`;
-        if (sel.ambig) { opts = sel.ambig; list = opts.map((c, k) => `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join(""); }
+        if (hunterAmbig) {
+          opts = sel.ambig;
+          const pl = opts[0].cand.step.mover[1];
+          hunterPick = [pl, g.hunterEligible(pl, shown), opts.map((c, k) => ({ k, dir: c.cand.step.mover[2],
+            label: t(this.lang, c.cand.step.mover[2] === 1 ? "hunter_go_fwd" : "hunter_go_back") }))];
+        } else if (sel.ambig) { opts = sel.ambig; list = opts.map((c, k) => `<button class="opt" data-opt="${k}">${this.S(c.label)}</button>`).join(""); }
         acts = btn(`data-act="undo" ${sel.picks.length ? "" : "disabled"} title="${this.T("undo_hint")}"`, this.T("undo"), "undo", ICON.undo);   // the all-moves list button is hidden for now (the owner will decide later)
       } else if (human && dec.kind === "keep") {
         if (dec.options.some(o => Array.isArray(o.payload))) hint = this.T("pick_keep");
@@ -496,6 +503,8 @@ class App {
     this.cmdBox.hidden = !this.debug;
     this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
+    if (hunterPick) this.board.hunterChoice(...hunterPick);
+    else this.board.hunterChoice(null);
     // with the Tunnels list open, every tunnel that can be declared is drawn in its piece's color
     this.board.tunnelCands = human && dec.kind === "pre_roll" && this.tunnelOpen !== null && this.tunnelOpen !== undefined
       ? dec.options.map(o => o.payload).filter(pl => Array.isArray(pl) && pl[0] === "tunnel" && pl[1] === this.tunnelOpen) : [];
