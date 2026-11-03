@@ -289,6 +289,10 @@ label.check.on { color: var(--accent); }
   animation: cardfly 2s ease-in-out forwards; }
 .card-fx-dice { display: flex; gap: 10px; justify-content: center; }
 .card-fx-card.quick { animation: quickfx 1s ease-out forwards; padding: 14px 22px 12px; }
+.card-fx.near { position: fixed; inset: auto; z-index: 60; display: block; }
+.card-fx.near .card-fx-card { padding: 10px 16px 8px; transform-origin: top center; animation-name: nearfx; }
+@keyframes nearfx { 0% { opacity: 0; transform: scale(.8); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+.card-fx.near .card-fx-text { font-size: 16px; white-space: nowrap; }
 .card-fx-dots { display: flex; gap: 6px; justify-content: center; }
 .card-fx-dots .dot { width: 18px; height: 18px; }
 .card-fx-card.quick .card-fx-dots + .card-fx-text { margin-top: 8px; }

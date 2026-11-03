@@ -670,14 +670,24 @@ class App {
 
   // A short message card over the board (like the triple-dice card): it pops up and fades within
   // about a second. Everyone sees it, it blocks nothing. dice: dice to show; colors: color dots.
-  flashBanner(text, dice = null, colors = null) {
+  // at: an element to show the card next to (a player chip) instead of over the board;
+  // ms: how long it stays.
+  flashBanner(text, dice = null, colors = null, at = null, ms = 1000) {
     const fx = document.createElement("div");
-    fx.className = "card-fx";
+    fx.className = at ? "card-fx near" : "card-fx";
     fx.innerHTML = `<div class="card-fx-card quick">${dice ? `<div class="card-fx-dice">${dice.map(v => dieHtml(v, "", "")).join("")}</div>` : ""}
       ${colors ? `<div class="card-fx-dots">${colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")}</div>` : ""}
       <div class="card-fx-text" dir="${this.rtl ? "rtl" : "ltr"}">${text}</div></div>`;
-    $("#stage").appendChild(fx);
-    setTimeout(() => fx.remove(), 1000);
+    fx.firstElementChild.style.animationDuration = ms + "ms";
+    if (at) {
+      const r = at.getBoundingClientRect();
+      fx.style.left = Math.round(r.left + r.width / 2) + "px";
+      fx.style.top = Math.round(r.bottom + 6) + "px";
+      document.body.appendChild(fx);
+      const w = fx.offsetWidth, x = r.left + r.width / 2 - w / 2;      // keep it on the screen
+      fx.style.left = Math.round(Math.max(6, Math.min(innerWidth - w - 6, x))) + "px";
+    } else $("#stage").appendChild(fx);
+    setTimeout(() => fx.remove(), ms);
   }
 
   // a stuck player's three dice and the gift six get a short message, so every player sees why
@@ -1431,7 +1441,11 @@ function wire(app) {
     else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
     else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
-    else if (act === "chip") app.flashBanner(app.S(g.players[+b.dataset.val].name), null, g.players[+b.dataset.val].colors);
+    else if (act === "chip") {
+      const p = g.players[+b.dataset.val];
+      document.querySelectorAll(".card-fx.near").forEach(e => e.remove());
+      app.flashBanner(app.S(p.name), null, p.colors, b, 1500);
+    }
     else if (act === "scores") app.toggleScores();
     else if (act === "info_close") app.showInfo(false);
     else if (act === "copy_log") app.copyLog();
