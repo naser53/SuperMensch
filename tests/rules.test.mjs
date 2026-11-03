@@ -49,11 +49,11 @@ test("both dice must be used when possible", () => {
   assert.ok(plays.length && plays.every(p => p.steps.length === 2));
 });
 
-test("six prize: a color that alone can move plays both dice when it can", () => {
+test("burnt die: without a 6, a color that alone can move plays one die only", () => {
   const g = make();
   put(g, 0, 0, 5);                         // color 3 (also player A's) is all in the yard
   const plays = g.playsFor(0, [3, 2]);
-  assert.ok(plays.length && plays.every(p => p.steps.length === 2));
+  assert.ok(plays.length && plays.every(p => p.steps.length === 1));
 });
 
 test("six prize: a piece that enters with the 6 goes on with the other die (DUXJ-83 turn 187)", () => {

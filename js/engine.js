@@ -706,9 +706,10 @@ export class Game {
         if (has.has(ac)) has.set(ac, true);
       }
     }
-    // SIX_PRIZE (owner, 2026-11-03): no burnt-die rule of its own any more; a color that alone can
-    // move plays both dice when it can, and a die burns only when no play uses both.
-    if (this.mode !== "two" || this.cfg.six_prize || [...has.values()].every(Boolean)) {
+    // SIX_PRIZE (owner, 2026-11-03): when the throw has a 6, a color that alone can move plays both
+    // dice when it can (a piece that enters with the 6 goes on with the other die). Without a 6 the
+    // burnt-die rule below stays: one die only.
+    if (this.mode !== "two" || (this.cfg.six_prize && dice.includes(6)) || [...has.values()].every(Boolean)) {
       if (!p2.length && !p2more.length) return this._sixPrize(p1, dice);
       const both = p2.concat(p2more);
       return this._sixPrize(p2.concat(this.cfg.six_into_nest ? this._sixIntoNest(p1, both, st) : [], p2more), dice);   // §4.3 both dice
@@ -716,7 +717,7 @@ export class Game {
     const live = colors.filter(c => has.get(c));
     if (!live.length) return [];
     const c = live[0];                                        // §4.2 only one die for that color
-    return p1.filter(pl => pl.steps.every(s => this._agent(s.mover, st) === c));
+    return this._sixPrize(p1.filter(pl => pl.steps.every(s => this._agent(s.mover, st) === c)), dice);
   }
 
   // SIX_PRIZE (owner, 2026-11-03): a 6 is the player's prize and never burns. When a throw has a 6

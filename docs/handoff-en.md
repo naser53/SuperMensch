@@ -74,10 +74,10 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
 ### 3.3 Dice in the two-color game
 * Two dice per turn; use both if at all possible.
 * **Free split:** give each die to a color, both dice to two pieces of one color, or the sum to one piece.
-* **Burnt die:** a die burns only when no play uses both dice. A color that alone can move
-  plays both dice when it can (a piece that entered with the 6 goes on with the other die).
-  When only one die can be played, the choice is free, except for a 6 (`SIX_PRIZE`, owner,
-  2026-11-03; it used to be: one color without a move = one die only).
+* **Burnt die:** if one color cannot move with either die, the other color plays one die (free
+  choice) and the other die burns. Exception (`SIX_PRIZE`, owner, 2026-11-03): when the throw
+  has a 6, that color plays both dice when it can (a piece that entered with the 6 goes on with
+  the other die). When only one die can be played, the choice is free, except for a 6.
 * **Six prize:** a 6 never burns when it can be played; then only the plays that use the 6 stay
   (`Game._sixPrize`, applied to every two-dice list in `playsFor`).
 * **Full use:** if any way uses both dice, one of those ways must be chosen.
