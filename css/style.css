@@ -35,8 +35,7 @@ button, select, input { font: inherit; color: inherit; }
 .rb-status { padding: 4px 14px; border-radius: 999px; box-shadow: 0 2px 10px rgba(0,0,0,.14); max-width: calc(100% - 24px); }
 .rb-players .chip { box-shadow: 0 1px 6px rgba(0,0,0,.12); }
 .rb-tools { display: flex; gap: 6px; align-items: flex-start; }
-.rb-tools .rb-btn, .rb-tools .vm-btn { box-shadow: 0 2px 8px rgba(0,0,0,.16); background: rgba(255,255,255,.92); }
-.rb-tools .viewpop { width: min(300px, calc(100vw - 24px)); inset-inline-end: 0; max-height: calc(100dvh - 80px); }
+.rb-tools .rb-btn { box-shadow: 0 2px 8px rgba(0,0,0,.16); background: rgba(255,255,255,.92); }
 /* the drawer under the menu button */
 .hudpop { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; z-index: 16; display: flex; flex-direction: column;
   align-items: stretch; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
@@ -114,8 +113,8 @@ button, select, input { font: inherit; color: inherit; }
 #drop[hidden] { display: none; }
 /* narrow screens: icons only for the tools */
 @media (max-width: 1500px) {
-  .rb-tools .rb-btn.icon span, .rb-tools .vm-btn span { display: none; }
-  .rb-tools .rb-btn.icon, .rb-tools .vm-btn { padding: 6px 9px; }
+  .rb-tools .rb-btn.icon span span { display: none; }
+  .rb-tools .rb-btn.icon { padding: 6px 9px; }
 }
 @media (max-width: 640px) {
   .rb-tools { gap: 4px; }
@@ -304,26 +303,6 @@ label.check.on { color: var(--accent); }
   28% { transform: rotate(0) scale(1); } 80% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: translateY(-30px) scale(.9); } }
 
-/* view menu in the ribbon */
-/* the menu opens against the ribbon, not the button, so it stays on a narrow screen */
-.viewmenu { position: static; }
-.vm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; min-height: 38px; font-size: 13.5px; }
-.vm-btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
-.vm-btn.open { border-color: var(--accent); }
-.vm-btn.pulse { animation: vmpulse .45s ease-out; }
-@keyframes vmpulse { 0% { box-shadow: 0 0 0 0 rgba(255,196,0,.8); } 100% { box-shadow: 0 0 0 10px rgba(255,196,0,0); } }
-.viewpop { position: absolute; top: calc(100% + 6px); inset-inline-end: 8px; width: min(300px, calc(100% - 16px)); z-index: 15;
-  max-height: calc(100vh - 100% - 20px); overflow-y: auto; box-sizing: border-box;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 10px;
-  transform-origin: var(--vm-origin, 50%) 0; transform: scale(.12); opacity: 0;
-  transition: transform .24s cubic-bezier(.2,.8,.3,1.2), opacity .2s ease; }
-.viewpop.open { transform: scale(1); opacity: 1; }
-.viewpop .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.viewpop .btn { padding: 6px 8px; font-size: 13px; }
-.viewpop .btn.wide { width: 100%; }
-.viewpop .btn.on { background: var(--hi); border-color: var(--accent); font-weight: 700; }
-
 @media (max-width: 520px) {
   body { font-size: 14px; }
   #setup .card { padding: 20px 16px 32px; }
@@ -352,7 +331,7 @@ label.check.on { color: var(--accent); }
 .rb-players { top: 8px; inset-inline-start: 10px; inset-inline-end: 110px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
 .rb-players .chip { flex: none; pointer-events: auto; }
 .rb-tools { top: 8px; inset-inline-end: 10px; }
-.rb-tools .rb-btn, .rb-tools .vm-btn { min-height: 34px; padding: 4px 8px; }
+.rb-tools .rb-btn { min-height: 34px; padding: 4px 8px; }
 .rb-status { top: 52px; left: 50%; transform: translateX(-50%); }
 .toast { top: 90px; }
 #drop { top: 90px; left: 50%; transform: translateX(-50%); inset-inline-start: auto; }
@@ -415,3 +394,17 @@ label.check.on { color: var(--accent); }
 .hc-arrow { width: 26px; height: 26px; fill: none; stroke: var(--hc, #333); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
   filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
 @keyframes hc-in { from { opacity: 0; transform: translate(-50%, -85%) scale(.8); } to { opacity: 1; transform: translate(-50%, -100%); } }
+
+/* online debug replay: back / forward over the dock (five taps on the turn pill) */
+.rb-replay { bottom: 108px; left: 0; right: 0; margin-inline: auto; width: max-content; display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border-radius: 18px; background: rgba(255,244,214,.92); border: 2px dashed #d08a00; box-shadow: 0 4px 14px rgba(0,0,0,.16); }
+.rb-replay .rb-btn { width: 48px; height: 48px; min-height: 0; padding: 0; justify-content: center; font-size: 20px; border-radius: 50%; }
+.rb-replay .rp-at { min-width: 120px; text-align: center; font-size: 14px; }
+.rb-replay .rp-last { display: flex; align-items: center; gap: 4px; justify-content: center; font-size: 12px; color: var(--muted); min-height: 18px; }
+.rb-replay .rp-last .die { width: 20px; height: 20px; padding: 2px; gap: 0; border-radius: 4px; }
+.rb-replay .rp-last .die i { width: 4px; height: 4px; }
+.rb-dbg { color: #b06d00; }
+.rb-status { cursor: default; user-select: none; -webkit-user-select: none; }
+@media (max-width: 640px) { .rb-replay { bottom: 96px; } }
+.rb-replay .rp-last .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.rb-replay .rp-dice { display: inline-flex; gap: 2px; margin-inline-start: 4px; }

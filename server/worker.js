@@ -246,12 +246,15 @@ export class Lobby extends DurableObject {
 //                   { t: "leave" }                           Exit: free this device's seats
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
 //                   { t: "again" }                           the game is over: play again (new room)
+//                   { t: "debug", on }                       replay (debug) mode on / off on this device
 //   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
 //                   (mine: the seats this device got; taken: wanted seats another device holds)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
 //                   { t: "again", id }                       the next game of this room: go there
+//                   { t: "debug", by: [name] }               who else is in replay mode; while anyone
+//                                                            is, every move is refused ("debug")
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -420,22 +423,30 @@ export class GameRoom extends DurableObject {
       const { seats, taken } = claimSeats(Array.isArray(msg.seats) ? msg.seats : [], humans, others, token);
       for (const o of others)
         if (token && o.token === token && (o.seats || []).some(s => seats.includes(s)))
-          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)) });
-      ws.serializeAttachment({ device, token, seats });
-      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken });
+          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)), debug: !!o.debug });
+      ws.serializeAttachment({ device, token, seats, debug: !!msg.debug });
+      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken, debug: this._debugBy(ws) });
       this._all({ t: "seats", seats: this._seats() });
+      this._debugAll();
       return;
     }
     if (msg.t === "leave") {
       ws.serializeAttachment({ device: "?", seats: [] });
       this._all({ t: "seats", seats: this._seats() });
+      this._debugAll();
       try { ws.close(1000, "left"); } catch { /* closed */ }
+      return;
+    }
+    if (msg.t === "debug") {
+      ws.serializeAttachment({ ...(ws.deserializeAttachment() || {}), debug: !!msg.on });
+      this._debugAll();
       return;
     }
     if (msg.t === "again") { await this.again(ws); return; }
     if (msg.t === "move") {
       const a = ws.deserializeAttachment() || {};
       let r;
+      if (this._debugBy(null).length) { this._send(ws, { t: "refused", reason: "debug", seq: room.events.length }); return; }
       try { r = room.move(msg.seq, msg.ev, a.seats || []); }
       catch (e) { this._send(ws, { t: "refused", reason: String(e.message || e), seq: room.events.length }); return; }
       this._save(r.from);
@@ -469,7 +480,22 @@ export class GameRoom extends DurableObject {
   webSocketClose(ws) {
     ws.serializeAttachment({ device: "?", seats: [] });
     this._all({ t: "seats", seats: this._seats() });
+    this._debugAll();
   }
+
+  // Replay (debug) mode (owner, 2026-11-03): any device may turn it on; while one is in it the
+  // others are locked and told who. A device is named by the players of its seats.
+  _debugBy(except) {
+    const players = this._load().setup.players, out = [];
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment() || {};
+      if (ws === except || !a.debug) continue;
+      out.push((a.seats || []).length ? a.seats.map(s => players[s].name).join(" / ") : "?");
+    }
+    return out;
+  }
+
+  _debugAll() { for (const ws of this.ctx.getWebSockets()) this._send(ws, { t: "debug", by: this._debugBy(ws) }); }
 
   async _report() {
     if (!this._meta("id")) return;

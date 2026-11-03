@@ -6,6 +6,8 @@ attached. The `latest` release is always the newest build of `main`.
 
 ## Unreleased
 
+* **Replay mode for debugging online games:** five quick taps on the turn pill; arrows over the dock step one whole turn back or forward; the other devices are locked and see who is debugging. Five more taps go back to the live game.
+* The View (camera) button and its menu are gone; the board still turns by dragging and zooms.
 * **Admin: hunter weapon:** Arrow or Sword for every game on the server; the sword is drawn like the arrow, through the pawn at head height.
 * The hunter's arrow is 20% shorter and thicker, at head height, through the middle of the pawn, moved 5% of its length towards the tip.
 * **Admin: place pieces** in an online room (a test aid): one line per color; the turn starts again and open pages reload.

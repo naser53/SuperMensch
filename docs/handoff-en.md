@@ -270,7 +270,7 @@ seat also shows the board's color dots to pick its color.
 
 ### Panel (floating over the board, v2.3.0)
 The board takes the whole screen; the panel floats over it (layout B, *dock*; owner's trial of three layouts, 2026-11-02).
-* Top, floating on the board (owner: no separate bar): the player chips (they wrap; on narrow screens only the colors and the score), the camera (View menu) and one **menu button**; its drawer holds Scores, Info, Debug, language, speed, sound and Menu (leave).
+* Top, floating on the board (owner: no separate bar): the player chips (they wrap; on narrow screens only the colors and the score), and one **menu button**; its drawer holds Scores, Info, Debug, language, speed, sound and Menu (leave).
 * Under them: whose turn, in a pill. Hints show in the fading card under it.
 * Bottom: a dock with the tunnel buttons and the card on the left, the big round **die button** raised in the middle, then Second try, the other buttons (gift six, continue...) and undo.
 * **Tunnels** (owner, 2026-11-02): a Tunnels button opens no written list; its color's tunnels are drawn on the board with the cost over each exit (−80 / −120 / −160, `Board3D.textSprite`), and a tap on one declares it. A color with none gets a short message at the top for 2 s (`App.flash`, `tun_short_*`).
@@ -301,8 +301,7 @@ The notes below are from the ribbon on top; what each part does still holds, onl
   of the board, under the ribbon (at the bottom while a list card is open), when they change, and
   fade after a few seconds (longer for longer text), so the ribbon never grows or scrolls on a
   phone. The card lets clicks through. The scores legend stays while the scores are shown.
-* The rows wrap on narrow screens (phones get more rows). The View menu opens against the ribbon
-  and is never wider than the screen.
+* The rows wrap on narrow screens (phones get more rows).
 * The dice are on the board (below). The move log is at the end of **Info** (scrollable).
 
 ### Dice on the board
@@ -353,9 +352,8 @@ Two orders work, and you can switch at any time:
 * Every legal option is reachable by clicks (verified on 10,000 decisions).
 
 ### View
-* **View** button in the ribbon opens a menu that grows out of the button and folds
-  back into it. Presets: Top, Angled, Low, Turn left, Turn right, My side, Turn the board to the
-  player (follow).
+* The **View** button (camera icon) and its menu of presets were removed (owner, 2026-11-03).
+  The board turns by dragging a free spot and zooms with the wheel or a pinch.
 * Board rotation and zoom work fully in **Turn the board** mode, so clicking a piece never turns
   the board by accident. Pieces and dice cannot be clicked in that mode. Outside it, a drag that
   starts on a free spot (anything but a die, a piece or a target field, `freeSpot`) turns the
@@ -418,7 +416,6 @@ the fingerprint.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
   locked until *Scores* is pressed again.
-* **View menu:** grows out of the button and folds back into it.
 * **Sound effects** (`js/sound.js`, Web Audio API): the dice throw is a recording the owner chose,
   one for a single die (`sounds/dice-one.mp3`, 0.8 s) and one for two or three dice
   (`sounds/dice-many.mp3`, 1.25 s), carried as base64 in `js/dicesound.js` and played once per
@@ -597,6 +594,15 @@ earlier sketch (browser dice, PINs).
   Reset game button, pressed twice).
   The events after that are dropped; open pages load the game again (`{t:"recolor"}`).
   `parseDebug`/`diceTurns`/`Room.debug` in `server/core.js`, `POST /api/admin/debug`.
+  **Replay mode** (owner, 2026-11-03; a test aid for any player): five quick taps on the turn pill
+  switch it on, five more switch it off. The page rebuilds the game from the events it has
+  (`Table.replay`) and shows arrows over the dock: back jumps to the start of the turn before, forward
+  plays the next whole turn with the usual animations; between them "Turn n of m", the player of
+  the turn just shown and its dice. Nothing can be played there and nothing is sent but
+  `{t:"debug", on}`; the room then refuses every move ("debug") and tells the other devices
+  `{t:"debug", by:[names]}`, which show "X is debugging" in the pill and are locked. A device that
+  closes leaves the mode. `App.enterReplay` / `replayStep` / `replayTick` in `js/main.js`,
+  `GameRoom._debugBy` in `server/worker.js`.
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
   for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
   `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`
