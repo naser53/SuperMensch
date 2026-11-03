@@ -35,7 +35,7 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), hunter: await lobby.hunter(),
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
@@ -47,6 +47,10 @@ async function api(req, env, url) {
       const colors = cleanColors(body.colors), board = body.board === undefined ? null : cleanBoard(body.board);
       await lobby.setColors(colors);
       if (board) await lobby.setBoard(board);
+      return json(await settings());
+    }
+    if (parts[1] === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"
+      await lobby.setHunter(body.hunter);
       return json(await settings());
     }
     if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
@@ -145,6 +149,17 @@ export class Lobby extends DurableObject {
   setBoard(board) {
     this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('board', ?)`, JSON.stringify(board));
     return this.board();
+  }
+
+  // what the hunter carries in every game: "arrow" (default) or "sword"
+  hunter() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'hunter'`).toArray();
+    return r.length && JSON.parse(r[0].v) === "sword" ? "sword" : "arrow";
+  }
+
+  setHunter(w) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('hunter', ?)`, JSON.stringify(w === "sword" ? "sword" : "arrow"));
+    return this.hunter();
   }
 
   rename(id, name) {
