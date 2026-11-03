@@ -65,7 +65,6 @@ class App {
     while (this.setup.seats.length < 8) this.setup.seats.push("ai");
     this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
     this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
-    this.follow = !!st.follow;
     this.sound = st.sound !== false;   // sound effects (js/sound.js), on unless switched off
     sound.setOn(this.sound);
     this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
@@ -101,6 +100,7 @@ class App {
     this.cmdBox = cmd;
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
+      if (this.rp && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { this.replayStep(e.key === "ArrowLeft" ? -1 : 1); return; }
       if (e.key === "Escape" && this.hudOpen) { this.hudOpen = false; this.render(); return; }
       if (e.key === "Escape" && !$("#info").hidden) { this.showInfo(false); return; }
       if (e.key === "Escape" && this.confirming) { this.askLeave(false); return; }
@@ -112,7 +112,7 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, sound: this.sound, follow: this.follow, offline: this.offline }); }
+  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, sound: this.sound, offline: this.offline }); }
 
   // the open rooms of the server, with their players and the seats in play right now
   async loadRooms() {
@@ -401,7 +401,8 @@ class App {
     el.dir = drop.dir = this.rtl ? "rtl" : "ltr";
     this.hint.textContent = t(this.lang, this.board.viewMode ? "view_hint" : "view_hint_off");
     const dec = g.pending, p = g.players[g.turn];
-    const human = dec && !p.isAi && !g.over;
+    const locked = this.online && !this.rp && this.online.debugBy && this.online.debugBy.length ? this.online.debugBy : null;
+    const human = dec && !p.isAi && !g.over && !this.rp && !locked;     // replay (debug) mode: view only
     if (dec !== (this.sel && this.sel.dec)) { this.resetSelection(dec); this.tunnelOpen = null; }
     let status, hint = "", acts = "", list = "", opts = [], shown = g.state, hunterPick = null;
     const pre = {};                     // the roll-time buttons: roll, card, castle break, tunnels
@@ -492,10 +493,12 @@ class App {
         }).join("") : "") + acts;
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
+    if (locked && !g.over) { status = `<b class="rb-dbg">${this.T("replay_locked", { p: locked.map(x => x === "?" ? this.T("replay_someone") : this.S(x)).join("، ") })}</b>`; hint = ""; list = ""; }
+    if (this.rp) { status = `<b class="rb-dbg">${this.T("replay_on")}</b> ${status}`; hint = ""; list = ""; }
     this.shownOpts = opts;
     el.innerHTML = `<div class="rb-players">${this.playersHtml()}</div>
       <div class="rb-status"><div class="rb-line">${status}</div></div>
-      <div class="rb-actions">${acts}</div>
+      <div class="rb-actions">${acts}</div>${this.replayBarHtml()}
       <div class="rb-tools">${this.toolsHtml()}</div>`;
     drop.innerHTML = list;
     drop.hidden = !list;
@@ -517,11 +520,6 @@ class App {
     this.syncDice(dec, human);
     this.board.sync(shown, this.sel && this.sel.piece);
     this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
-    if (dec !== this.followedDec) {          // turn the board towards the player whose move it is
-      this.followedDec = dec;
-      if (this.follow && dec && !p.isAi && this.lastFollow !== g.turn) this.board.setView({ side: p.colors[0] });
-      this.lastFollow = dec && !p.isAi ? g.turn : this.lastFollow;
-    }
     if (dec && p.isAi && this.debug && this.aiPlan) {
       const pl = this.aiPlan[1].payload;
       this.board.preview(pl && pl.steps ? pl : null, Array.isArray(pl) && pl[0] === "tunnel" ? pl : null);
@@ -548,8 +546,7 @@ class App {
 
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
-    return this.viewMenuHtml() +
-      `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
+    return `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
       `<div class="hudpop" ${this.hudOpen ? "" : "hidden"}>` + this.drawerHtml() + "</div>";
   }
 
@@ -889,26 +886,6 @@ class App {
     this.board.forbid(ev);
   }
 
-  // The view menu: a button at the top of the panel; it opens a small panel of views
-  // and folds back into the button when a view is chosen.
-  viewMenuHtml() {
-    const on = this.board.viewMode;
-    const cam = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
-    return `<div class="viewmenu"><button class="btn vm-btn${on ? " on" : ""}${this.viewOpen ? " open" : ""}" data-act="viewmenu"
-      aria-expanded="${this.viewOpen ? "true" : "false"}">${cam}<span>${this.T(on ? "view_free_done" : "view_menu")}</span></button>
-      <div class="viewpop${this.viewOpen && !this.viewOpening ? " open" : ""}" ${this.viewOpen ? "" : "hidden"}>
-      <div class="views">
-      <button class="btn" data-view="top">${this.T("view_top")}</button>
-      <button class="btn" data-view="angled">${this.T("view_angled")}</button>
-      <button class="btn" data-view="low">${this.T("view_low")}</button>
-      <button class="btn" data-view="left" title="${this.T("view_left")}">&#8634;</button>
-      <button class="btn" data-view="right" title="${this.T("view_right")}">&#8635;</button>
-      <button class="btn" data-view="mine">${this.T("view_mine")}</button></div>
-      <button class="btn wide${on ? " on" : ""}" data-view="free" title="${this.T("view_free_hint")}">${this.T(on ? "view_free_done" : "view_free")}</button>
-      <label class="check small"><input type="checkbox" data-act="follow" ${this.follow ? "checked" : ""}>${this.T("view_follow")}</label>
-      </div></div>`;
-  }
-
   // A short message at the top for 2 s, then it fades.
   flash(html) {
     const el = this.flashEl;
@@ -964,36 +941,6 @@ class App {
       const ms = Math.min(TOAST_MAX_MS, TOAST_MS + TOAST_MS_PER_CHAR * el.textContent.length);
       this.toastTimer = setTimeout(() => el.classList.remove("show"), ms);
     }
-  }
-
-  openViewMenu(open) {
-    const pop = document.querySelector("#ribbon .viewpop");
-    if (open) {
-      this.viewOpen = true;
-      this.viewOpening = true;
-      this.render();
-      setTimeout(() => {                                   // next tick: let the panel start folded, then grow
-        this.viewOpening = false;
-        const p = document.querySelector("#ribbon .viewpop");
-        const btn = document.querySelector("#ribbon .vm-btn");
-        if (p && btn) {                                    // grow out of the button, fold back into it
-          const r = btn.getBoundingClientRect(), q = p.getBoundingClientRect();
-          p.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
-        }
-        if (p) { void p.offsetWidth; p.classList.add("open"); }
-      }, 20);
-      return;
-    }
-    if (!this.viewOpen) return;
-    this.viewOpen = false;
-    const btn = document.querySelector("#ribbon .vm-btn");
-    if (pop && btn) {
-      const r = btn.getBoundingClientRect(), q = pop.getBoundingClientRect();
-      pop.style.setProperty("--vm-origin", `${r.left + r.width / 2 - q.left}px`);
-    }
-    if (pop) pop.classList.remove("open");                 // folds back into the button
-    if (btn) { btn.classList.remove("open"); btn.classList.add("pulse"); }
-    setTimeout(() => this.render(), 260);
   }
 
   // ------------------------------------------------------------ actions
@@ -1071,7 +1018,7 @@ class App {
   // The hunter enters by clicking the gate of its completed color (then: which direction).
   boardClick(hit, ev) {
     const g = this.game, sel = this.sel;
-    if (this.busy()) return;
+    if (this.busy() || this.rp || (this.online && this.online.debugBy && this.online.debugBy.length)) return;
     if (g && hit && hit.die !== undefined) { this.dieClick(hit, ev); return; }
     if (g && hit && hit.tunnel && g.pending && g.pending.kind === "pre_roll" && !g.players[g.turn].isAi) {   // a tap on a drawn tunnel declares it
       const o = g.pending.options.find(o => Array.isArray(o.payload) && o.payload.join() === hit.tunnel.join());
@@ -1210,23 +1157,6 @@ class App {
     this.showToast(this.T(ok ? "copy_log_done" : "copy_log_failed"));
   }
 
-  // Board views, as in chess programs: from above, angled, low; turn by one seat; my side.
-  view(name) {
-    const g = this.game;
-    if (!g) return;
-    if (name === "free") {                   // view mode on / off
-      this.board.setViewMode(!this.board.viewMode);
-      this.render();
-      return;
-    }
-    const step = 360 / g.cfg.n_colors;
-    if (name === "left" || name === "right") this.board.setView({ turn: name === "left" ? -step : step });
-    else if (name === "mine") {
-      const hum = g.players[g.turn].isAi ? g.players.find(x => !x.isAi) : g.players[g.turn];
-      this.board.setView({ side: (hum || g.players[0]).colors[0] });
-    } else this.board.setView({ tilt: name });
-  }
-
   // ------------------------------------------------------------ online game (v2)
   // The server throws the dice and checks the moves. This device sends the moves of its own
   // seats and plays every event the server sends, one by one, with the usual animations.
@@ -1268,7 +1198,7 @@ class App {
   hello() {
     const o = this.online;
     o.ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer",
-      token: deviceToken(), seats: o.seats }));
+      token: deviceToken(), seats: o.seats, debug: !!this.rp }));
   }
 
   onServer(m) {
@@ -1287,6 +1217,7 @@ class App {
       return;
     }
     if (m.t === "recolor") {                // colors picked before the first move, or the admin went back: start again
+      this.rp = null;
       this.table = null;
       o.queue = [];
       o.sent = null;
@@ -1294,20 +1225,25 @@ class App {
       return;
     }
     if (m.t === "state") {
+      o.debugBy = m.debug || [];
       if (!this.table) { this.openOnline(m); return; }
-      const have = this.table.events.length + o.queue.length;
+      const have = this.liveTable().events.length + o.queue.length;
       if (m.events.length < have) { location.reload(); return; }     // should not happen: start again from the server
       o.queue.push(...m.events.slice(have));
       o.fp = m.fp;
     } else if (m.t === "events") {
       if (!this.table) return;                 // the new state is on its way
-      const have = this.table.events.length + o.queue.length;
+      const have = this.liveTable().events.length + o.queue.length;
       if (m.from !== have) { this.hello(); return; }   // missed some: ask again
       o.queue.push(...m.events);
       o.fp = m.fp;
+      if (this.rp) this.render();             // the replay bar counts the new events too
+    } else if (m.t === "debug") {
+      o.debugBy = m.by || [];
+      this.render();
     } else if (m.t === "refused") {
       o.sent = null;
-      this.showToast(esc(m.reason), true);
+      this.showToast(m.reason === "debug" ? this.T("replay_locked_short") : esc(m.reason), true);
       if (m.reason === "stale") this.hello();
       this.render();
     }
@@ -1342,7 +1278,7 @@ class App {
   // a move of this device: send it, and show it when the server sends it back to everybody
   sendMove(opt, entries) {
     const o = this.online, g = this.game;
-    if (o.sent || o.queue.length || !g.pending || !o.seats.includes(g.pending.player)) return;
+    if (this.rp || (o.debugBy && o.debugBy.length) || o.sent || o.queue.length || !g.pending || !o.seats.includes(g.pending.player)) return;
     let ev;
     try { ev = this.table.eventFor(opt); } catch { return; }
     if (ev.dice) return;
@@ -1353,7 +1289,7 @@ class App {
   // play the next event from the server once the board is free; others' moves keep the usual pace
   nextEvent() {
     const o = this.online, g = this.game;
-    if (!g || !o.queue.length || this.busy()) return;
+    if (!g || this.rp || !o.queue.length || this.busy()) return;
     const ev = o.queue[0], dec = g.pending;
     if (ev.place) { location.reload(); return; }     // the admin has put the pieces somewhere else: load the game again
     const mine = dec && o.seats.includes(dec.player);
@@ -1374,6 +1310,132 @@ class App {
     if (!o.queue.length && o.fp && fingerprint(g) !== o.fp) location.reload();
   }
 
+  // ------------------------------------------------------------ replay (online debug mode)
+  // Five quick taps on the turn pill switch it on and off (owner, 2026-11-03). Any player may
+  // do it. The game is rebuilt on this device from the events the server sent, and the arrows
+  // over the dock step one whole turn back (at once) or forward (played as in the game). The
+  // server locks the other devices meanwhile and tells them who is debugging. Off: the live game.
+  liveTable() { return this.rp ? this.rp.live.table : this.table; }
+  replayEvents() { return this.rp.live.table.events.concat(this.online.queue); }
+
+  // where each turn starts in the events: [{ at, player }], and the end of the list
+  replayTurns() {
+    const all = this.replayEvents(), rp = this.rp;
+    if (rp.turns && rp.turnsFor === all.length) return rp.turns;
+    const t = Table.replay(rp.live.table.setup, []), out = [{ at: 0, player: t.game.turn }];
+    all.forEach((ev, k) => {
+      const before = t.game.turn;
+      t.apply(ev);
+      if (t.game.turn !== before || ev.place || k === all.length - 1) out.push({ at: k + 1, player: t.game.turn });
+    });
+    rp.turns = out;
+    rp.turnsFor = all.length;
+    return out;
+  }
+
+  tapStatus() {
+    if (!this.online || !this.table) return;
+    const now = performance.now();
+    this.statusTaps = (this.statusTaps || []).filter(x => now - x < 2500);
+    this.statusTaps.push(now);
+    if (this.statusTaps.length < 5) return;
+    this.statusTaps = [];
+    if (this.rp) this.exitReplay(); else this.enterReplay();
+  }
+
+  sendDebug(on) {
+    const ws = this.online.ws;
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "debug", on }));
+  }
+
+  enterReplay() {
+    const n = this.table.events.length + this.online.queue.length;
+    this.rp = { live: { table: this.table, game: this.game }, at: n, target: n };
+    this.sendDebug(true);
+    this.replayGoto(n);
+    this.flash(this.T("replay_on"));
+  }
+
+  exitReplay() {
+    const live = this.rp.live;
+    this.rp = null;
+    this.sendDebug(false);
+    this.showTable(live.table);
+    this.nextAi = performance.now() + this.delay;
+    this.flash(this.T("replay_off"));
+  }
+
+  // show a table on the board (the camera stays) and start the dice afresh
+  showTable(table) {
+    this.table = table;
+    this.game = table.game;
+    this.board.game = table.game;
+    this.sel = null;
+    this.aiPlan = null;
+    this.hold = null;
+    this.diceRef = null;
+    this.seenLast = null;
+    this.keptFrom = null;
+    this.usedFrom = null;
+    this.prevTurn = undefined;
+    this.board.clearDice();
+    this.render();
+  }
+
+  // the game after the first n events, at once
+  replayGoto(n) {
+    const all = this.replayEvents();
+    n = Math.max(0, Math.min(all.length, n));
+    const t = Table.replay(this.rp.live.table.setup, all.slice(0, n));
+    this.rp.at = this.rp.target = n;
+    this.showTable(t);
+  }
+
+  // back: to the start of the turn before (at once); forward: play up to the start of the next turn
+  replayStep(d) {
+    const rp = this.rp, turns = this.replayTurns();
+    if (d < 0) {
+      const prev = turns.filter(x => x.at < rp.target).pop();
+      if (prev) this.replayGoto(prev.at);
+      return;
+    }
+    const next = turns.find(x => x.at > rp.target);
+    if (next) { rp.target = next.at; this.render(); }
+  }
+
+  // forward steps are played one event at a time, at the pace of the game (from tick)
+  replayTick() {
+    const rp = this.rp;
+    if (rp.at >= rp.target || this.busy()) return;
+    const ev = this.replayEvents()[rp.at], dec = this.game.pending, now = performance.now();
+    if (ev.dice ? now < (this.moveEnd || 0) : now < this.nextAi) return;
+    if (ev.place || !dec) { const tg = rp.target; this.replayGoto(rp.at + 1); rp.target = tg; return; }
+    rp.at++;
+    const o = this.online;
+    o.applying = true;
+    try { this.choose(ev.dice ? new Option(null, ["dice", ev.dice.slice()]) : dec.options[ev.pick]); }
+    catch { const tg = rp.target; this.replayGoto(rp.at); rp.target = tg; }
+    finally { o.applying = false; }
+    if (rp.at >= rp.target) this.render();
+  }
+
+  // the arrows over the dock; between them the turn's number, its player and its dice
+  replayBarHtml() {
+    if (!this.rp) return "";
+    const rp = this.rp, turns = this.replayTurns(), all = this.replayEvents();
+    const k = turns.filter(x => x.at <= rp.target).length - 1, prev = turns[k - 1];
+    let last = "";
+    if (prev) {
+      const pl = this.game.players[prev.player], dice = all.slice(prev.at, rp.target).filter(ev => ev.dice);
+      last = pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
+        `<span>${this.S(pl.name)}</span>` + dice.map(ev => `<span class="rp-dice">${ev.dice.map(v => dieHtml(v, "", "")).join("")}</span>`).join("");
+    }
+    return `<div class="rb-replay" dir="ltr">` +
+      `<button class="btn rb-btn" data-act="rp_back" ${rp.target > 0 ? "" : "disabled"} title="${this.T("replay_back")}">◀</button>` +
+      `<div class="rp-at"><b>${this.T("replay_turn", { n: num(this.lang, k), m: num(this.lang, turns.length - 1) })}</b><div class="rp-last">${last}</div></div>` +
+      `<button class="btn rb-btn" data-act="rp_fwd" ${rp.target < all.length ? "" : "disabled"} title="${this.T("replay_fwd")}">▶</button></div>`;
+  }
+
   tick() {
     const g = this.game;
     if (this.rolling && !this.board.diceRolling()) {   // the dice have settled
@@ -1385,7 +1447,7 @@ class App {
       }
       if (g) this.render();
     }
-    if (this.online) { this.nextEvent(); return; }
+    if (this.online) { if (this.rp) this.replayTick(); else this.nextEvent(); return; }
     if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
     if (this.debug || g.pending.kind === "dice") return;
     if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
@@ -1396,6 +1458,8 @@ class App {
 
 // ------------------------------------------------------------ event wiring
 function wire(app) {
+  // taps on the turn pill (replay mode); on pointerdown, as the pill may be drawn again before the click
+  document.addEventListener("pointerdown", e => { if (e.target.closest(".rb-status")) app.tapStatus(); });
   document.addEventListener("click", e => {
     if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
     if (e.target.closest("#confirm")) {
@@ -1404,9 +1468,8 @@ function wire(app) {
       else if (a === "leave_no" || e.target.id === "confirm") app.askLeave(false);
       return;
     }
-    if (app.viewOpen && !e.target.closest(".viewmenu")) app.openViewMenu(false);   // click elsewhere folds it
     if (app.hudOpen && !e.target.closest(".hudpop, .hud-btn")) { app.hudOpen = false; app.render(); }
-    const b = e.target.closest("[data-act],[data-opt],[data-pay],[data-view]");
+    const b = e.target.closest("[data-act],[data-opt],[data-pay]");
     if (!b) return;
     if (b.closest("#setup")) {
       if (b.dataset.act && b.dataset.act !== "lang") app.setupAction(b.dataset.act, b.dataset.val);
@@ -1414,8 +1477,8 @@ function wire(app) {
     }
     const g = app.game;
     if (!g) return;
-    if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound", "hud"].includes(b.dataset.act) && b.dataset.view === undefined) return;
-    if (b.dataset.view !== undefined) { app.view(b.dataset.view); app.openViewMenu(false); return; }
+    if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound", "hud"].includes(b.dataset.act)) return;
+    if (app.rp && (b.dataset.pay !== undefined || b.dataset.opt !== undefined)) return;
     if (b.dataset.pay !== undefined) {
       app.choose(g.pending.options.find(o => String(o.payload) === b.dataset.pay));
       return;
@@ -1427,6 +1490,7 @@ function wire(app) {
       return;
     }
     const act = b.dataset.act;
+    if (act === "rp_back" || act === "rp_fwd") { if (app.rp) app.replayStep(act === "rp_back" ? -1 : 1); return; }
     if ((act === "dice_go" || act === "dice_rand") && app.online) return;
     if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
     else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }
@@ -1439,7 +1503,6 @@ function wire(app) {
     else if (act === "again") app.playAgain();
     else if (act === "hud") { app.hudOpen = !app.hudOpen; app.render(); }
     else if (act === "sound") { app.sound = !app.sound; sound.setOn(app.sound); app.persist(); app.render(); }
-    else if (act === "viewmenu") app.openViewMenu(!app.viewOpen);
     else if (act === "info") app.showInfo(true);
     else if (act === "chip") {
       const p = g.players[+b.dataset.val];
@@ -1461,12 +1524,6 @@ function wire(app) {
     const act = e.target.dataset.act;
     if (act === "lang") app.setLang(e.target.value);
     else if (act === "debug") app.setDebug(e.target.checked);
-    else if (act === "follow") {
-      app.follow = e.target.checked;
-      app.persist();
-      if (app.follow && app.game && !app.game.players[app.game.turn].isAi) app.view("mine");
-      app.openViewMenu(false);
-    }
     else if (act === "speed" && Config.ANIM_SPEEDS[e.target.value]) {
       app.speed = e.target.value;
       app.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[app.speed];
