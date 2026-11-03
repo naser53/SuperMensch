@@ -49,11 +49,33 @@ test("both dice must be used when possible", () => {
   assert.ok(plays.length && plays.every(p => p.steps.length === 2));
 });
 
-test("burnt die: one die only when the other color cannot move", () => {
+test("six prize: a color that alone can move plays both dice when it can", () => {
   const g = make();
-  put(g, 0, 0, 5);
+  put(g, 0, 0, 5);                         // color 3 (also player A's) is all in the yard
   const plays = g.playsFor(0, [3, 2]);
-  assert.ok(plays.length && plays.every(p => p.steps.length === 1));
+  assert.ok(plays.length && plays.every(p => p.steps.length === 2));
+});
+
+test("six prize: a piece that enters with the 6 goes on with the other die (DUXJ-83 turn 187)", () => {
+  const g = make();
+  for (let i = 0; i < 4; i++) put(g, 0, i, g.L + i);        // red complete in its nest
+  for (let i = 1; i < 4; i++) put(g, 3, i, g.L + i);        // three of the other color home, one in the yard
+  const plays = g.playsFor(0, [6, 4]);
+  assert.ok(plays.length && plays.every(p => p.steps.length === 2 && p.steps.some(s => s.die === 6 && s.entered)));
+});
+
+test("six prize: when only one die can be played, it is the 6", () => {
+  const g = make();
+  const one = die => ({ steps: [{ die }] });
+  assert.deepEqual(g._sixPrize([one(3), one(6), one(3)], [6, 3]).map(p => p.steps[0].die), [6]);
+  assert.equal(g._sixPrize([one(3)], [6, 3]).length, 1);      // a 6 that cannot be played burns
+});
+
+test("burnt die: a die burns only when no play uses both; then the choice is free", () => {
+  const g = make();
+  put(g, 0, 0, g.L - 3);                   // +5 or +3 alone fit into the nest, the sum overshoots
+  const plays = g.playsFor(0, [5, 3]);
+  assert.deepEqual(plays.map(p => p.steps.length + ":" + p.steps[0].die).sort(), ["1:3", "1:5"]);
 });
 
 test("sum move: the field in between counts and captures", () => {
