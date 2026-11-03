@@ -188,14 +188,17 @@ export function parsePlace(text, g) {
 //   go drop N        the game goes back to dice turn N (0 = the first) and throws it again with
 //                    the same dice (a computer keeps its moves with them); N < 0 counts back
 //                    from the last turn (-1: the one before it)
-//   drop dice 3,6    the last dice turn is thrown again with these dice (as many as it had)
+//   roll dice 3,6    the last dice turn is thrown again with these dice (as many as it had);
+//                    "drop dice" is the old name
+//   reset            the game starts again from the beginning, with the same players
 export function parseDebug(text) {
   const s = String(text || "").trim().toLowerCase();
+  if (s === "reset") return { reset: true };
   let m = /^go\s+drop\s+(-?\d+)$/.exec(s);
   if (m) return { go: +m[1] };
-  m = /^drop\s+dice\s+([1-6](?:[\s,]+[1-6])*)$/.exec(s);
+  m = /^(?:roll|drop)\s+dice\s+([1-6](?:[\s,]+[1-6])*)$/.exec(s);
   if (m) return { dice: m[1].split(/[\s,]+/).map(Number) };
-  throw new Error("commands: go drop N · drop dice 3,6");
+  throw new Error("commands: go drop N · roll dice 3,6 · reset");
 }
 
 // the dice turns of a game: [{ at, player, dice }], at = index of the turn's first throw event
@@ -266,7 +269,9 @@ export class Room {
   // the admin's debug command (parseDebug): a new room from the events before that dice turn
   // and the turn's throw again (the same dice, or the given ones)
   debug(text) {
-    const cmd = parseDebug(text), turns = diceTurns(this.setup, this.events);
+    const cmd = parseDebug(text);
+    if (cmd.reset) return { turn: null, room: new Room(this.setup, [], this.table.game.rng) };
+    const turns = diceTurns(this.setup, this.events);
     if (!turns.length) throw new Error("no dice thrown yet");
     const k = cmd.dice ? turns.length - 1 : cmd.go < 0 ? turns.length - 1 + cmd.go : cmd.go;
     if (k < 0 || k >= turns.length) throw new Error(`no dice turn ${cmd.go} (0..${turns.length - 1})`);

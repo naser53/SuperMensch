@@ -580,7 +580,9 @@ earlier sketch (browser dice, PINs).
   (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
   `go drop N` (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
   same dice, and the computers play on as before up to the next decision of a person) or
-  `drop dice 3,6` / `drop dice 4,2,5` (the last dice turn again with these dice, as many as it had).
+  `roll dice 3,6` / `roll dice 4,2,5` (the last dice turn again with these dice, as many as it had;
+  `drop dice` still works) or `reset` (the game from the beginning with the same players; also the
+  Reset game button, pressed twice).
   The events after that are dropped; open pages load the game again (`{t:"recolor"}`).
   `parseDebug`/`diceTurns`/`Room.debug` in `server/core.js`, `POST /api/admin/debug`.
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
