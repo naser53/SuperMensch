@@ -44,8 +44,8 @@ everything. The castle-breaker piece and point loans go into later versions.
   `node tests/golden.mjs --record`. Never re-record to hide an unintended change.
 * Every game number lives in `js/config.js`. Do not hard-code numbers elsewhere.
 * Before a change that is expensive or ambiguous, ask the owner. Small, clear changes: just do them.
-* When a rule changes, update the rules doc as well: the source is `content.js` (see §9),
-  then `docs/rules-fa.docx`, `docs/rules-fa.md`, and these handoff files.
+* When a rule changes, update the rules doc as well: the source is `docs/rules-fa.md` (see §9),
+  then `docs/rules-fa.docx`, and these handoff files.
 * The owner tests on Windows (local folder `C:\Claude\PRJ\SuperMensch`; it still has old
   Python leftovers and should be re-cloned) and his kids will use Android tablets.
 
@@ -530,9 +530,12 @@ npm run build       # dist/supermensch.html
   keeps the piece in play while the attacker still gets the full points.
 
 ## 9. Rules document
-* Source: `content.js` + `build.js` (docx-js) + `diagrams.py`, kept in the working scratchpad,
-  **not in the repo**. Output copied to `docs/rules-fa.docx`. `docs/rules-fa.md` is the same
-  text as markdown (no diagrams).
+* Source (from 2026-11-03): **`docs/rules-fa.md`**. `docs/rules-fa.docx` is built from that text
+  (a docx-js script in the working scratchpad, **not in the repo**, Vazirmatn embedded) plus 10
+  figures: the 6-, 8- and 4-color boards (drawn from the geometry in `js/boards.js`), piece life
+  cycle, turn flow, hunter forward/backward, walls and castles, ranks, precise strike and tunnels.
+  On a rule change, edit the md first, then rebuild the docx. The section numbers (§1 to §17) are
+  used in code and tests and do not change.
 * Online Claude Docs: "قوانین بازی — نسخه‌ی نهایی ۱" (the rules) and "SuperMensch — طرح
   نسخه‌ی آنلاین" (the online plan), in the owner's claude.ai artifacts.
 
