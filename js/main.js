@@ -617,9 +617,6 @@ class App {
     const done = this.matching().filter(q => q.steps.length === sel.picks.length);
     if (done.length) { this.choose(done[0].option, entry); return; }
     this.autoDie();
-    // the piece just moved stays selected while it can go on: its next field shows in yellow
-    const m = c.step.mover;
-    if (m[0] === "p" && this.pieceDice(m).size) sel.piece = m;
     this.render();
     this.board.animateSteps(entry, this.hop());
   }
@@ -1072,6 +1069,17 @@ class App {
     }
     if (hit.field !== undefined) {
       if (sel.die === null) { this.board.forbid(ev); return; }
+      // a field where a piece lands with the selected die: that piece moves there
+      const lands = this.candidates().filter(c => {
+        const m = c.step.mover, r = m[0] === "p" ? c.state.pos[m[1]][m[2]] : -1;
+        return r >= 0 && r < g.L && g.absOf(m[1], r) === hit.field;
+      });
+      if (lands.length === 1) { this.pickCandidate(lands[0]); return; }
+      if (lands.length > 1) {
+        sel.ambig = lands.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+        this.render();
+        return;
+      }
       const mine = this.candidates().filter(c => c.step.mover[0] === "hn" && g.gate(g._completedColor(g.turn, shown)) === hit.field);
       if (mine.length) {
         sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));

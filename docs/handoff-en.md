@@ -333,9 +333,10 @@ Two orders work, and you can switch at any time:
   `Board3D.forbidStructure`).
 * **Piece first:** click a piece. Only the dice it can use stay active, and **yellow target
   rings** with the die value appear on its possible fields. Click a ring or a die to move.
-* After the first die is played, the **remaining die is selected automatically**, and the piece
-  that just moved **stays selected** with its next field in yellow when it can go on (owner,
-  2026-11-03: tapping field 12 after 9 to 10 did nothing). A tap on another piece moves that one.
+* After the first die is played, the **remaining die is selected automatically**. Then a tap on a
+  piece moves it with that die, and so does a tap on the **field where a piece lands** with it
+  (owner, 2026-11-03: tapping field 12 after 9 to 10 did nothing). Keeping the moved piece selected
+  with its next field in yellow was tried and dropped the same day: on the phone no tap was taken.
 * **Three dice** (stuck, card, castle break): click the two dice to keep; *Second try* where allowed.
 * **Hunter:** with a 6, a pale waiting hunter with "?" stands on the gate; click it, then choose
   forward / backward.
