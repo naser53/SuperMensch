@@ -220,8 +220,8 @@ game: no declarations, no Tunnels button, no info table).
 * **Cost** 80 / 120 / 160 for 1 / 2 / 3 corridors. Fully paid, no failure.
 * **Declare** before the roll when the piece is at most 6 fields before the entrance
   (`TUNNEL_DECLARE_RANGE`). Until the dice are rolled that turn it can be taken back with Undo
-  (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. Until the roll a declared tunnel is drawn as its line only; the circles of
-  its fields appear once the roll has made it final. The chosen tunnel is shown; other players' tunnels
+  (cost refunded; option `["untunnel", ...]`, owner's request); after the roll no cancelling. While choosing (Tunnels list open), the tunnels on offer are drawn as lines
+  only; a declared tunnel shows its line with the circles of its fields. The chosen tunnel is shown; other players' tunnels
   appear paler.
 * **Tunnels buttons:** one per color of the player, its icon in that color, with that color's count.
   It opens that color's list (each line with a color dot) and draws its tunnels on the board, faint, in
