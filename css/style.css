@@ -240,6 +240,18 @@ label.check.on { color: var(--accent); }
 @keyframes forbid-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
   15% { opacity: 1; } 50% { opacity: .9; transform: translate(-50%, -50%) scale(1.25); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+.build-fx { position: fixed; transform: translate(-50%, -100%); pointer-events: none; z-index: 50;
+  filter: drop-shadow(0 0 6px rgba(255,214,90,.9)) drop-shadow(0 2px 3px rgba(0,0,0,.35)); animation: build-fx 1.5s ease-out forwards; }
+@keyframes build-fx { 0% { opacity: 0; transform: translate(-50%, -80%) scale(.4); }
+  15% { opacity: 1; transform: translate(-50%, -100%) scale(1.15); }
+  25% { transform: translate(-50%, -100%) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -105%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(1); } }
+.build-ring { position: fixed; width: 34px; height: 20px; transform: translate(-50%, -50%); pointer-events: none;
+  z-index: 49; border: 3px solid #f2c230; border-radius: 50%; box-shadow: 0 0 8px #f2c230; animation: build-ring 1.5s ease-out forwards; }
+@keyframes build-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+  15% { opacity: 1; } 60% { opacity: .9; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); } }
 @keyframes forbid { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
   15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
   35% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; } }
