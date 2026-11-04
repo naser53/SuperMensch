@@ -237,8 +237,8 @@ async function placeRoom(g) {
   let text;
   try { text = (await api("admin/place", { id: g.id })).text; }
   catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-  box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">One line per color (R B G Y P T N K): track fields 1..${g.setup.colors * (g.setup.corridor || 10)},
-    the nest after them, y = yard. Saving starts the current turn again; the players' pages load the game again.</div>
+  box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">One line per color (R B G Y P T N K), or one per piece (R2 23, R2z 3): track fields 1..${g.setup.colors * (g.setup.corridor || 10)}
+    as on the board, z1..z4 the color's nest (z1 just inside), y = yard. Saving starts the current turn again; the players' pages load the game again.</div>
     <textarea data-pt rows="${text.split("\n").length}" cols="40" style="font-family:monospace">${esc(text)}</textarea>
     <div class="row"><button class="primary" data-psave>Place</button> <button data-pcancel>Cancel</button></div><div data-msg></div></section>`;
   box.querySelector("[data-pcancel]").onclick = () => { box.innerHTML = ""; };

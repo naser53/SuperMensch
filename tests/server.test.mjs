@@ -172,11 +172,16 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   const room = new Room(setup, [], mulberry32(5));
   room.place("B: 41 42 43 44\nY: 34 y y y\nR: 4 y y y\nG: y y y y");
   const g = room.table.game;
-  assert.equal(room.placeText(), "R: 4 y y y\nB: 41 42 43 44\nG: y y y y\nY: 34 y y y");
+  assert.equal(room.placeText(), "R: 4 y y y\nB: z1 z2 z3 z4\nG: y y y y\nY: 34 y y y");
   assert.equal(g.hunterEligible(1, g.state), 1);                  // blue is home: the hunter may come in
   assert.equal(fingerprint(Table.replay(setup, room.events).game), room.fingerprint());
+  room.place("R2 23\nR3z 2\nG1 z1; G4 y");                       // a line per piece; z = the nest
+  assert.equal(room.placeText().split("\n")[0], "R: 4 23 z2 y");
+  assert.equal(room.placeText().split("\n")[2], "G: z1 y y y");
   const n = room.events.length;
   assert.throws(() => room.place("R: 4 4 y y"), /two pieces/);
+  assert.throws(() => room.place("R5 3"), /no such piece/);
+  assert.throws(() => room.place("R1 z5"), /no such nest field/);
   assert.throws(() => room.place("B: 41 42"), /needs 4/);
   assert.throws(() => room.place("Q: 1 y y y"), /no such color/);
   assert.equal(room.events.length, n);                             // a refused place changes nothing
