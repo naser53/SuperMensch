@@ -36,6 +36,9 @@ export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "
 // body to general, again to marshal; a marshal glows instead); an admin setting like the hunter
 let POINTS_LOOK = "bar";
 export function setPointsLook(w) { POINTS_LOOK = w === "ring" ? "ring" : "bar"; }
+// the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
+// from one piece to the next (rad)
+const WAVE_HEIGHT = 0.45, WAVE_SPEED = 1.6, WAVE_STEP = 0.55;
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
@@ -332,7 +335,7 @@ export class Board3D {
     if (this.hunterGhosts) this.hunterGhosts.clear();
     this.diceGroup.clear();
     this.dice = [];
-    this.trophy(null);
+    this.wave(null);
     this.buildBoard();
     this.buildPieces();
     this.fitView();
@@ -1251,45 +1254,20 @@ export class Board3D {
     setTimeout(() => el.remove(), 1000);
   }
 
-  // The winner: a pawn in the winner's first color turns slowly in the middle of the board, in a
-  // soft glow, with the name and the total score over it (kept small so the board stays readable;
-  // owner, 2026-11-02). null takes it away.
-  trophy(text, color = "#ffcf3a") {
-    if (this.trophyGrp) { this.scene.remove(this.trophyGrp); this.trophyGrp = null; }
-    if (text === null) return;
-    const grp = new THREE.Group();
-    const base = new THREE.Color(color);
-    const gold = new THREE.MeshStandardMaterial({ color: base, metalness: 0.35, roughness: 0.3,
-      emissive: base.clone().multiplyScalar(0.5), emissiveIntensity: 0.4 });
-    const pawn = new THREE.Group();
-    for (const geo of this.pawnGeo) { const m = new THREE.Mesh(geo, gold); m.castShadow = true; pawn.add(m); }
-    pawn.scale.setScalar(1.5);
-    const halo = this.haloSprite();
-    halo.material.depthTest = true;
-    halo.material.color = base.clone().lerp(new THREE.Color("#ffffff"), 0.4);
-    halo.position.y = 0.9;
-    halo.scale.set(3.4, 3.4, 1);
-    halo.renderOrder = 0;
-    const label = this.textSprite(text, "#" + base.clone().multiplyScalar(0.75).getHexString(), 0.75);
-    label.position.y = 2.7;
-    const light = new THREE.PointLight(base, 1.2, 5);
-    light.position.y = 1.6;
-    grp.add(halo, pawn, label, light);
-    grp.position.set(0, this.surfaceY(), 0.3);
-    grp.userData = { pawn, halo, t0: performance.now() };
-    this.scene.add(grp);
-    this.trophyGrp = grp;
+  // The winner: all the winner's pieces rise and fall slowly, one after the other like a wave
+  // (owner, 2026-11-04; it was one big pawn in the middle). colors: the winner's colors, null stops it.
+  wave(colors) {
+    this.waveOn = colors && colors.length ? { colors: colors.slice(), t0: performance.now() / 1000 } : null;
   }
 
-  stepTrophy(now) {
-    const t = this.trophyGrp;
-    if (!t) return;
-    const u = (now - t.userData.t0) / 1000, grow = Math.min(1, u / 0.8);
-    t.userData.pawn.rotation.y = u * 0.9;
-    t.userData.pawn.position.y = 0.15 * Math.sin(u * 2.2);
-    t.scale.setScalar(0.2 + 0.8 * (1 - Math.pow(1 - grow, 3)));
-    const s = 3.4 * (1 + 0.1 * Math.sin(u * 4));
-    t.userData.halo.scale.set(s, s, 1);
+  // the height a piece is lifted by the winner's wave at time t (seconds)
+  waveY(grp, t) {
+    const w = this.waveOn, p = grp.userData.piece;
+    if (!w || !p || p[0] !== "p") return 0;
+    const c = w.colors.indexOf(p[1]);
+    if (c < 0) return 0;
+    const n = c * 4 + p[2], u = t - w.t0;
+    return WAVE_HEIGHT * Math.min(1, u / 1.5) * (0.5 - 0.5 * Math.cos(u * WAVE_SPEED - n * WAVE_STEP));
   }
 
   // how many pixels one unit is at point p
@@ -1609,7 +1587,7 @@ export class Board3D {
       grp.position.x += flat.x * k;
       grp.position.z += flat.z * k;
       const lift = Math.min(1.2, dist * 0.35);            // hop while moving
-      grp.position.y += (tg.y + lift - grp.position.y) * Math.min(1, k * 1.5);
+      grp.position.y += (tg.y + lift + this.waveY(grp, tnow) - grp.position.y) * Math.min(1, k * 1.5);
       this.turnToAim(grp, k);
     }
     this.stepAnim();
@@ -1621,7 +1599,6 @@ export class Board3D {
     this.stepDice(now, k);
     this.stepShine(now);
     this.stepBoom(now);
-    this.stepTrophy(now);
     const pulse = 1 + 0.12 * Math.sin(tnow * 6);
     for (const grp of this.targetGroup.children) grp.userData.pulse.scale.setScalar(pulse);
     this.controls.update();
