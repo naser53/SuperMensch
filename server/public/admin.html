@@ -42,8 +42,8 @@
       <h2>Points on a pawn</h2>
       <div class="muted">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
         Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
-      <div class="row"><label><input type="radio" name="points" value="bar" checked> Bar</label>
-        <label><input type="radio" name="points" value="ring"> Ring</label>
+      <div class="row"><label><input type="radio" name="points" value="bar"> Bar</label>
+        <label><input type="radio" name="points" value="ring" checked> Ring</label>
         <button class="primary" id="pointsBtn">Save</button> <span id="pointsMsg"></span></div>
     </section>
 
@@ -141,7 +141,7 @@ $("#hunterBtn").onclick = async () => {
   try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", "Saved."); }
   catch (e) { show("#hunterMsg", e.message, true); }
 };
-const showPoints = d => { document.querySelector(`[name=points][value=${d.points === "ring" ? "ring" : "bar"}]`).checked = true; };
+const showPoints = d => { document.querySelector(`[name=points][value=${d.points === "bar" ? "bar" : "ring"}]`).checked = true; };
 $("#pointsBtn").onclick = async () => {
   try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value })); show("#pointsMsg", "Saved."); }
   catch (e) { show("#pointsMsg", e.message, true); }
