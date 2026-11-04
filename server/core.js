@@ -205,20 +205,20 @@ export function parsePlace(text, g) {
 
 // The admin's debug commands for a room (a test aid), on the dice turns of the game. A dice turn
 // is one turn of throwing: a second try (retry) belongs to the turn of the first throw.
-//   go drop N        the game goes back to dice turn N (0 = the first) and throws it again with
+//   rewind N         the game goes back to dice turn N (0 = the first) and throws it again with
 //                    the same dice (a computer keeps its moves with them); N < 0 counts back
-//                    from the last turn (-1: the one before it)
+//                    from the last turn (-1: the one before it); "go drop N" is the old name
 //   roll dice 3,6    the last dice turn is thrown again with these dice (as many as it had);
 //                    "drop dice" is the old name
 //   reset            the game starts again from the beginning, with the same players
 export function parseDebug(text) {
   const s = String(text || "").trim().toLowerCase();
   if (s === "reset") return { reset: true };
-  let m = /^go\s+drop\s+(-?\d+)$/.exec(s);
+  let m = /^(?:rewind|go\s+drop)\s+(-?\d+)$/.exec(s);
   if (m) return { go: +m[1] };
   m = /^(?:roll|drop)\s+dice\s+([1-6](?:[\s,]+[1-6])*)$/.exec(s);
   if (m) return { dice: m[1].split(/[\s,]+/).map(Number) };
-  throw new Error("commands: go drop N · roll dice 3,6 · reset");
+  throw new Error("commands: rewind N · roll dice 3,6 · reset");
 }
 
 // the dice turns of a game: [{ at, player, dice }], at = index of the turn's first throw event

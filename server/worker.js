@@ -68,7 +68,7 @@ async function api(req, env, url) {
       const room = env.ROOM.get(env.ROOM.idFromName(body.id));
       return json({ text: await room.place(typeof body.text === "string" && body.text.trim() ? body.text : null) });
     }
-    if (parts[1] === "debug" && body && isGameId(body.id)) {       // go drop N · drop dice 3,6 (a test aid); no text: the dice turns
+    if (parts[1] === "debug" && body && isGameId(body.id)) {       // rewind N · roll dice 3,6 (a test aid); no text: the dice turns
       const room = env.ROOM.get(env.ROOM.idFromName(body.id));
       return json(await room.debug(typeof body.text === "string" && body.text.trim() ? body.text : null));
     }

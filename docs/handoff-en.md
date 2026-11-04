@@ -592,7 +592,7 @@ earlier sketch (browser dice, PINs).
   pages load the game again.
   **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
   (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
-  `go drop N` (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
+  `rewind N` (owner, 2026-11-04; `go drop N` still works) (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
   same dice, and the computers play on as before up to the next decision of a person) or
   `roll dice 3,6` / `roll dice 4,2,5` (the last dice turn again with these dice, as many as it had;
   `drop dice` still works) or `reset` (the game from the beginning with the same players; also the
