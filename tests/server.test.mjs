@@ -187,8 +187,9 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   assert.equal(room.events.length, n);                             // a refused place changes nothing
 });
 
-test("admin debug: go drop N and drop dice go back to a dice turn and throw it again", () => {
+test("admin debug: rewind N and roll dice go back to a dice turn and throw it again", () => {
   assert.deepEqual(parseDebug("Go drop -1"), { go: -1 });
+  assert.deepEqual(parseDebug("Rewind 3"), { go: 3 });
   assert.deepEqual(parseDebug("drop dice 4,2, 5"), { dice: [4, 2, 5] });
   assert.deepEqual(parseDebug("Roll dice 3 6"), { dice: [3, 6] });
   assert.deepEqual(parseDebug(" reset "), { reset: true });
@@ -211,7 +212,7 @@ test("admin debug: go drop N and drop dice go back to a dice turn and throw it a
   assert.equal(r0.turn, 0);
   assert.deepEqual(r0.room.events.slice(0, turns[0].at + 1), room.events.slice(0, turns[0].at + 1));
   // go drop 10 and -1: the events before that turn stay; the throw has the same dice
-  for (const [cmd, k] of [["go drop 10", 10], ["go drop -1", turns.length - 2]]) {
+  for (const [cmd, k] of [["rewind 10", 10], ["go drop -1", turns.length - 2]]) {
     const r = room.debug(cmd);
     assert.equal(r.turn, k);
     assert.deepEqual(r.room.events.slice(0, turns[k].at + 1), room.events.slice(0, turns[k].at + 1));

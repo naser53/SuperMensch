@@ -253,15 +253,15 @@ async function placeRoom(g) {
 }
 
 // debug commands for a room (a test aid), on the dice turns (a second try belongs to its turn):
-//   go drop N      back to dice turn N (0 = first, -1 = the one before the last), same dice
+//   rewind N       back to dice turn N (0 = first, -1 = the one before the last), same dice
 //   roll dice 3,6  the last dice turn again with these dice
 //   reset          the game from the beginning (also the Reset game button)
 async function debugRoom(g) {
   const box = $("#edit-" + g.id);
   const draw = r => {
-    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">go drop N: back to dice turn N (0 = the first, -1 = one before the last), thrown again with the same dice.
+    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">rewind N: back to dice turn N (0 = the first, -1 = one before the last), thrown again with the same dice.
       roll dice 3,6 or roll dice 4,2,5: the last dice turn again with these dice (as many as it had). reset: the game from the beginning. The players' pages load the game again.</div>
-      <div class="row"><input data-dc size="24" placeholder="go drop -1"> <button class="primary" data-drun>Run</button> <button data-dreset>Reset game</button> <button data-dclose>Close</button></div>
+      <div class="row"><input data-dc size="24" placeholder="rewind -1"> <button class="primary" data-drun>Run</button> <button data-dreset>Reset game</button> <button data-dclose>Close</button></div>
       <div data-msg></div>
       <pre data-dt style="max-height:16em;overflow:auto;font-size:12px">${esc(r.turns || "No dice yet.")}</pre></section>`;
     box.querySelector("[data-dclose]").onclick = () => { box.innerHTML = ""; };
