@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.2 (2026-11-04)
+
+* Voice report: every 10 seconds the voice log notes what arrives (KB, audio level), whether each voice plays, what is sent, and the sound outputs the phone offers. One Android phone still hears nothing while the other hears it; the next report shows where the sound stops.
+
 ## v3.0.1 (2026-11-04)
 
 Voice chat fixes after the first test on two Android phones (Samsung, Chrome): one player stopped hearing the other after about 10 seconds.
