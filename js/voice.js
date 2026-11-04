@@ -77,6 +77,8 @@ export class Voice {
         const outs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audiooutput");
         const loud = outs.find(d => /speaker/i.test(d.label) && !/earpiece|headset|head/i.test(d.label));
         if (loud) sink = loud.deviceId;
+        const list = outs.map(d => d.label || "?").join(", ") + " -> " + (loud ? loud.label : "default");
+        if (list !== this.outsSeen) { this.outsSeen = list; this.note("outputs " + list); }
       }
     } catch { /* no device list */ }
     for (const h of this.heard.values()) {
@@ -369,11 +371,38 @@ export class Voice {
     } catch { return 0; }
   }
 
+  // every few seconds a line for the report: what arrives, what plays, what is sent
+  async stats() {
+    try {
+      const parts = [];
+      if (this.listen) {
+        let rx = 0, lv = null;
+        (await this.listen.pc.getStats()).forEach(r => {
+          if (r.type === "inbound-rtp" && r.kind === "audio") { rx += r.bytesReceived || 0; if (typeof r.audioLevel === "number") lv = Math.max(lv || 0, r.audioLevel); }
+        });
+        parts.push(`in ${Math.round(rx / 1024)}KB lvl ${lv === null ? "-" : lv.toFixed(2)}`);
+      }
+      for (const h of this.heard.values()) {
+        const a = h.audio;
+        parts.push(`play ${h.sid.slice(0, 6)} ${a.paused ? "paused" : "on"} rs${a.readyState} vol${a.volume}${a.muted ? " muted" : ""}${a.sinkId ? " sink" : ""}`);
+      }
+      if (this.mic) {
+        let tx = 0;
+        (await this.mic.pc.getStats()).forEach(r => { if (r.type === "outbound-rtp") tx += r.bytesSent || 0; });
+        parts.push(`out ${Math.round(tx / 1024)}KB${this.mic.muted ? " muted" : ""}`);
+      }
+      if (this.ctx) parts.push("ctx " + this.ctx.state);
+      if (navigator.audioSession) parts.push("session " + navigator.audioSession.type);
+      if (parts.length) this.note(parts.join(" · "));
+    } catch (e) { this.note("stats failed " + (e && e.message)); }
+  }
+
   tick() {
     if (this.timer) return;
     this.timer = setInterval(() => {
       const now = performance.now();
       if (now - this.lastCheck > V.RETRY_MS) { this.lastCheck = now; this.replay(); }   // a voice that stopped plays again
+      if (now - (this.lastStats || 0) > V.STATS_MS) { this.lastStats = now; this.stats(); }
       if (this.mic && !this.mic.muted && this.level(this.mic.an) > V.SPEAK_LEVEL)
         for (const s of this.mySeats) this.loud.set(s, now);
       for (const h of this.heard.values())

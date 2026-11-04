@@ -6,7 +6,7 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-11-04: **version 3.0.1** (3.0.0 was the voice chat release, section 12.2; see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
+State as of 2026-11-04: **version 3.0.2** (3.0.0 was the voice chat release, section 12.2; see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
 version 1.0.4, which the owner closed. The one-color game is
 the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
@@ -720,3 +720,6 @@ The owner wanted group voice like WhatsApp, also from countries that block direc
   is made again (`relisten`). A **Speaker** button (on by default, kept in localStorage
   `supermensch-speaker`) sets `navigator.audioSession.type` (iOS) and `setSinkId` to a loudspeaker
   where offered. `Voice.log` keeps the last voice events; Info > Copy adds them to the report.
+* **v3.0.2**: still one Samsung (Android 10, Chrome) hears nothing although its log shows the voice
+  arriving ("sound from"). `Voice.stats` adds a line every `Config.VOICE.STATS_MS` (KB in and level,
+  each player's state, KB out, AudioContext state) and the sound outputs, to find where it stops.
