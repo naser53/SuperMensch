@@ -585,8 +585,9 @@ earlier sketch (browser dice, PINs).
   glow). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **Place pieces** (owner, 2026-11-03; a test aid): a room's pieces can be put anywhere from the admin
-  page, one line per color (`R: 4 y y y`, fields as in the debug command `move`: 1..L track, L+1.. nest,
-  y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
+  page, one line per color (`R: 4 z1 y y`) or per piece (`R2 23`, `R2z 3` = red 2 to nest field 3;
+  owner, 2026-11-04): 1..L track as on the board, z1..z4 the color's nest (z1 just inside; L+1.. still
+  works), y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
   event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
   pages load the game again.
   **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
