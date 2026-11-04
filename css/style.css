@@ -420,3 +420,13 @@ label.check.on { color: var(--accent); }
 @media (max-width: 640px) { .rb-replay { bottom: 96px; } }
 .rb-replay .rp-last .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .rb-replay .rp-dice { display: inline-flex; gap: 2px; margin-inline-start: 4px; }
+
+/* ---- voice chat (v3.0.0): the mic button, the speaking ring, another player's voice on its chip ---- */
+#ribbon:has(.mic-btn) .rb-players { inset-inline-end: 150px; }
+.rb-tools .mic-btn { color: var(--muted); }
+.rb-tools .mic-btn.mic-live { color: #fff; background: #2f9a4f; border-color: #2f9a4f; }
+.rb-tools .mic-btn.mic-wait { opacity: .6; }
+.chip.speaking { box-shadow: 0 0 0 3px #3fbf6a, 0 0 12px 3px rgba(63,191,106,.75); transition: box-shadow .12s; }
+.chip .vq { display: inline-flex; align-items: center; border: 0; background: none; padding: 0 1px; color: #2f9a4f; cursor: pointer; }
+.chip .vq.shut { color: var(--muted); }
+.chip .vq.off { color: var(--accent); }

@@ -108,6 +108,10 @@ export class Config {
   static BOARD_COLORS = ["#f0e6c8", "#b59c6c"];
   // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
+  // voice chat in online games (js/voice.js): the microphone's bit rate (Opus, bit/s; about 15 MB an
+  // hour), the loudness that lights a speaker's chip (0..1, RMS), how long it stays lit (ms), and how
+  // often the loudness is measured (ms)
+  static VOICE = { BITRATE: 32000, SPEAK_LEVEL: 0.02, SPEAK_HOLD_MS: 400, TICK_MS: 120 };
 
   // (entry corridor, exit corridor) pairs; corridors 1..n, the final one is never an exit.
   tunnels() {

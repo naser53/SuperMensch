@@ -4,6 +4,21 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.0 (2026-11-04): voice chat
+
+The voice chat release. Players in an online game talk to each other, like a group call.
+
+**Voice chat**
+* Each device sends its microphone once to a relay (Cloudflare Realtime SFU), which passes it on to the other devices of the room. A relay, and TURN over TLS on port 443 when it is set up, give the best chance in countries that block direct calls.
+* Echo cancellation and noise suppression are on; Opus at about 32 kbit/s (about 15 MB an hour per speaker).
+* **Admin page:** a **Voice** tick per player (may talk), and one **Voice chat on** switch for the whole server. Turning either off stops the microphones in open games at once.
+* **In the game:** a microphone button next to the Scores star, for a device with a ticked player. The microphone starts closed; a tap opens it, the next mutes it. It goes off when the player leaves the game or closes the page.
+* A green ring glows around the chip of the player who is speaking.
+* Every player hears the others. A small speaker on a player's chip mutes that player on this device only.
+* The server keeps the Cloudflare token; the page asks `/api/games/<ID>/voice`, and only devices that hold a seat in the room are answered.
+
+**Setup:** the Cloudflare secrets `REALTIME_APP_ID` and `REALTIME_APP_TOKEN` (and, for better reach, `TURN_KEY_ID` and `TURN_KEY_TOKEN`), see the README.
+
 ## v2.4.0 (2026-11-04)
 
 The dock layout of v2.3.0 stays. Rules, game over, the hunter and the admin page.

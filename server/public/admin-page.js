@@ -17,14 +17,31 @@ const show = (el, msg, bad) => { $(el).className = bad ? "err" : "ok"; $(el).tex
 async function loadUsers() {
   users = await api("users");
   $("#users").innerHTML = users.map(u => `<div class="row"><code>${u.id}</code>
-    <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button></div>`).join("") +
+    <input data-uid="${u.id}" value="${esc(u.name)}" size="20"><button data-ren="${u.id}">Rename</button>
+    <label title="May talk in voice chat"><input type="checkbox" data-uvoice="${u.id}" ${u.voice ? "checked" : ""}> Voice</label></div>`).join("") +
     `<div id="renMsg"></div>`;
   document.querySelectorAll("[data-ren]").forEach(b => b.onclick = async () => {
     const id = +b.dataset.ren;
     try { await api("admin/rename", { id, name: document.querySelector(`[data-uid="${id}"]`).value }); await loadUsers(); seatRows(); show("#renMsg", "Saved"); }
     catch (e) { show("#renMsg", e.message, true); }
   });
+  document.querySelectorAll("[data-uvoice]").forEach(x => x.onchange = async () => {
+    try { users = await api("admin/uservoice", { id: +x.dataset.uvoice, on: x.checked }); show("#renMsg", "Saved"); }
+    catch (e) { x.checked = !x.checked; show("#renMsg", e.message, true); }
+  });
 }
+
+// voice chat: the server-wide switch, and whether Cloudflare Realtime is set up (server/voice.js)
+const showVoice = d => {
+  const v = d.voice || {};
+  $("#voiceOn").checked = !!v.on;
+  $("#voiceReady").innerHTML = v.ready ? "Cloudflare Realtime is set up."
+    : '<span class="err">Cloudflare Realtime is not set up yet</span>: add the secrets <code>REALTIME_APP_ID</code> and <code>REALTIME_APP_TOKEN</code> (see the README). Until then nobody can talk.';
+};
+$("#voiceOn").onchange = async () => {
+  try { showVoice(await api("admin/voice", { on: $("#voiceOn").checked })); show("#voiceMsg", "Saved."); }
+  catch (e) { show("#voiceMsg", e.message, true); }
+};
 
 // the piece colors of every game (server settings): a color picker each, and a way back to the default
 const COLOR_NAMES = ["Red", "Blue", "Green", "Yellow", "Purple", "Teal", "Pink", "Black"];
@@ -36,6 +53,7 @@ async function loadColors(d) {
   d = d || await api("settings");
   showHunter(d);
   showPoints(d);
+  showVoice(d);
   $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[i] || "Color " + (i + 1), d.colors[i], def)).join("");
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, BOARD_NAMES[i], (d.board || [])[i], def)).join("");
   document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {

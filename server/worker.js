@@ -9,12 +9,16 @@ import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
 import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, newGameId, nextName } from "./core.js";
 import { adminApi } from "./admin.js";
+import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
 // the downloaded game file (file://) asks this server too
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, x-admin-key",
   "access-control-allow-methods": "GET, POST, OPTIONS" };
+// the voice fields a device keeps in its WebSocket attachment (sessions it made, its microphone)
+const VOICE_KEYS = ["sessions", "voice"];
+const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
 const fail = (msg, status = 400) => json({ error: msg }, status);
 
 export default {
@@ -37,6 +41,7 @@ async function api(req, env, url) {
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
   const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), hunter: await lobby.hunter(), points: await lobby.points(),
+    voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
@@ -70,6 +75,7 @@ async function api(req, env, url) {
   if (parts[0] === "games" && isGameId(parts[1])) {
     const room = env.ROOM.get(env.ROOM.idFromName(parts[1]));
     if (parts[2] === "ws") return room.fetch(req);
+    if (parts[2] === "voice" && body) return json(await room.voice(body));   // voice chat (server/voice.js)
     if (parts[2] === "colors" && body) {           // a child picks the colors of a seat, before the first move
       const setup = await room.recolor(body.seat, body.colors);
       await lobby.setSetup(parts[1], setup);
@@ -93,12 +99,36 @@ export class Lobby extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT)`);
     const cols = this.sql.exec(`PRAGMA table_info(users)`).toArray().map(c => c.name);
     if (!cols.includes("can_create")) this.sql.exec(`ALTER TABLE users ADD COLUMN can_create INTEGER NOT NULL DEFAULT 0`);
+    if (!cols.includes("voice")) this.sql.exec(`ALTER TABLE users ADD COLUMN voice INTEGER NOT NULL DEFAULT 0`);
     if (!this.sql.exec(`SELECT COUNT(*) AS n FROM users`).one().n)
       for (let i = 1; i <= USERS; i++) this.sql.exec(`INSERT INTO users (id, name) VALUES (?, ?)`, i, `user${i}`);
   }
 
   users() {
-    return this.sql.exec(`SELECT id, name FROM users ORDER BY id`).toArray().map(u => ({ id: u.id, name: u.name }));
+    return this.sql.exec(`SELECT id, name, voice FROM users ORDER BY id`).toArray().map(u => ({ id: u.id, name: u.name, voice: !!u.voice }));
+  }
+
+  // voice chat (owner, 2026-11-04): may this player talk (the admin's tick per player)
+  setUserVoice(id, on) {
+    if (!this.sql.exec(`SELECT id FROM users WHERE id = ?`, id | 0).toArray().length) throw new Error("no such user");
+    this.sql.exec(`UPDATE users SET voice = ? WHERE id = ?`, on ? 1 : 0, id | 0);
+    return this.users();
+  }
+
+  // the server-wide voice switch (on unless the admin turns it off)
+  voiceOn() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'voice'`).toArray();
+    return !r.length || JSON.parse(r[0].v) !== false;
+  }
+
+  setVoiceOn(on) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('voice', ?)`, JSON.stringify(!!on));
+    return this.voiceOn();
+  }
+
+  // what a room needs to decide who may talk: the switch and the ticked players
+  voiceInfo() {
+    return { on: this.voiceOn(), users: this.sql.exec(`SELECT id FROM users WHERE voice = 1`).toArray().map(u => u.id) };
   }
 
 
@@ -219,14 +249,19 @@ export class Lobby extends DurableObject {
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
 //                   { t: "again" }                           the game is over: play again (new room)
 //                   { t: "debug", on }                       replay (debug) mode on / off on this device
+//                   { t: "mute", on }                        voice: this device's microphone muted / open
 //   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
-//                   (mine: the seats this device got; taken: wanted seats another device holds)
+//                   (mine: the seats this device got; taken: wanted seats another device holds;
+//                   voice: { on, can } the room has voice chat / this device may talk; voices as below)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
 //                   { t: "again", id }                       the next game of this room: go there
 //                   { t: "debug", by: [name] }               who else is in replay mode; while anyone
 //                                                            is, every move is refused ("debug")
+//                   { t: "voices", list: [{ sid, track, seats, muted }] }   the microphones in the room
+//                   { t: "voiceok", on, can }                the admin changed who may talk
+// Voice signalling goes over HTTP (POST /api/games/<ID>/voice, GameRoom.voice), as the SFU answers it.
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -395,20 +430,23 @@ export class GameRoom extends DurableObject {
       const humans = room.setup.players.map((p, i) => (p.isAi ? -1 : i)).filter(i => i >= 0);
       const old = ws.deserializeAttachment() || {};
       const token = msg.token ? String(msg.token).slice(0, 64) : old.token || null;
+      const vi = await this._voiceInfo();
       const device = msg.device ? String(msg.device).slice(0, 40) : old.device || "?";
       const others = this.ctx.getWebSockets().filter(o => o !== ws).map(o => ({ ws: o, ...(o.deserializeAttachment() || {}) }));
       // a seat stays with a connected device until it leaves; the same browser takes it back
       const { seats, taken } = claimSeats(Array.isArray(msg.seats) ? msg.seats : [], humans, others, token);
       for (const o of others)
         if (token && o.token === token && (o.seats || []).some(s => seats.includes(s)))
-          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)), debug: !!o.debug });
-      ws.serializeAttachment({ device, token, seats, debug: !!msg.debug });
-      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken, debug: this._debugBy(ws) });
+          o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)), debug: !!o.debug, ...keepVoice(o) });
+      ws.serializeAttachment({ device, token, seats, debug: !!msg.debug, ...keepVoice(old) });
+      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken, debug: this._debugBy(ws),
+        voice: { on: vi.on, can: voiceCan(room.setup.players, seats, vi.users, vi.on) }, voices: this._voices() });
       this._all({ t: "seats", seats: this._seats() });
       this._debugAll();
       return;
     }
     if (msg.t === "leave") {
+      await this._voiceStop(ws);
       ws.serializeAttachment({ device: "?", seats: [] });
       this._all({ t: "seats", seats: this._seats() });
       this._debugAll();
@@ -418,6 +456,11 @@ export class GameRoom extends DurableObject {
     if (msg.t === "debug") {
       ws.serializeAttachment({ ...(ws.deserializeAttachment() || {}), debug: !!msg.on });
       this._debugAll();
+      return;
+    }
+    if (msg.t === "mute") {
+      const a = ws.deserializeAttachment() || {};
+      if (a.voice) { ws.serializeAttachment({ ...a, voice: { ...a.voice, muted: !!msg.on } }); this._voicesAll(); }
       return;
     }
     if (msg.t === "again") { await this.again(ws); return; }
@@ -455,7 +498,8 @@ export class GameRoom extends DurableObject {
     catch (e) { this._againP = null; this._send(ws, { t: "refused", reason: String(e.message || e), seq: room.events.length }); }
   }
 
-  webSocketClose(ws) {
+  async webSocketClose(ws) {
+    await this._voiceStop(ws);
     ws.serializeAttachment({ device: "?", seats: [] });
     this._all({ t: "seats", seats: this._seats() });
     this._debugAll();
@@ -474,6 +518,101 @@ export class GameRoom extends DurableObject {
   }
 
   _debugAll() { for (const ws of this.ctx.getWebSockets()) this._send(ws, { t: "debug", by: this._debugBy(ws) }); }
+
+  // ------------------------------------------------------------ voice chat (server/voice.js)
+  async _voiceInfo() {
+    const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
+    const vi = await lobby.voiceInfo();
+    return { on: vi.on && voiceReady(this.env), users: vi.users };
+  }
+
+  // the open microphones: whose they are (seats), and where the others pull them from
+  _voices() {
+    const out = [];
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment() || {};
+      if (a.voice) out.push({ sid: a.voice.sid, track: a.voice.track, seats: a.seats || [], muted: !!a.voice.muted });
+    }
+    return out;
+  }
+
+  _voicesAll() { this._all({ t: "voices", list: this._voices() }); }
+
+  // a device's microphone stops (it left, or may no longer talk)
+  async _voiceStop(ws) {
+    const a = ws.deserializeAttachment() || {};
+    if (!a.voice) return;
+    const v = a.voice;
+    const { voice, ...rest } = a;
+    ws.serializeAttachment(rest);
+    this._voicesAll();
+    if (voiceReady(this.env)) { try { await sfu(this.env).close(v.sid, [v.mid]); } catch { /* gone already */ } }
+  }
+
+  // the admin changed the switch or a player's tick: tell every device, stop microphones not allowed now
+  async voiceRefresh() {
+    if (!this._load()) return;
+    const vi = await this._voiceInfo(), players = this.room.setup.players;
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment() || {};
+      const can = voiceCan(players, a.seats || [], vi.users, vi.on);
+      if (!can) await this._voiceStop(ws);
+      this._send(ws, { t: "voiceok", on: vi.on, can });
+    }
+  }
+
+  // A page's voice request (POST /api/games/<ID>/voice): { op, token, ... }. The device is found by
+  // its token among the connected ones; it may only use the SFU sessions it made here.
+  //   ice                              ICE servers (TURN when set up)
+  //   session                          a new SFU session  -> { sessionId }
+  //   push  { sid, sdp, mid, track }   send the microphone (only a device that may talk) -> SFU answer
+  //   pull  { sid, tracks }            hear microphones listed in "voices"              -> SFU offer
+  //   renegotiate { sid, sdp }         the page's answer to that offer
+  async voice(body) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const token = typeof body.token === "string" ? body.token.slice(0, 64) : null;
+    const ws = token && this.ctx.getWebSockets().find(w => { const a = w.deserializeAttachment() || {}; return a.token === token && (a.seats || []).length; });
+    if (!ws) throw new Error("voice: not in this game");
+    const vi = await this._voiceInfo();
+    if (!vi.on) throw new Error("voice: off");
+    const api = sfu(this.env);
+    let a = ws.deserializeAttachment() || {};
+    const sid = body.op === "ice" || body.op === "session" ? null : cleanId(body.sid);
+    if (body.op !== "ice" && body.op !== "session" && !(a.sessions || []).includes(sid)) throw new Error("voice: unknown session");
+    if (body.op === "ice") return { iceServers: await api.ice() };
+    if (body.op === "session") {
+      const sessionId = await api.session();
+      a = ws.deserializeAttachment() || {};
+      ws.serializeAttachment({ ...a, sessions: [...(a.sessions || []), sessionId].slice(-4) });
+      return { sessionId };
+    }
+    if (body.op === "push") {
+      if (!voiceCan(room.setup.players, a.seats || [], vi.users, vi.on)) throw new Error("voice: not allowed");
+      const track = cleanId(body.track), mid = cleanId(String(body.mid));
+      if (!track || !mid || typeof body.sdp !== "string") throw new Error("voice: bad request");
+      if (a.voice) await this._voiceStop(ws);         // one microphone per device
+      const r = await api.push(sid, body.sdp, [{ mid, trackName: track }]);
+      a = ws.deserializeAttachment() || {};
+      ws.serializeAttachment({ ...a, voice: { sid, track, mid, muted: !!body.muted } });
+      this._voicesAll();
+      return { sessionDescription: r.sessionDescription };
+    }
+    if (body.op === "pull") {
+      const open = this._voices();
+      const tracks = (Array.isArray(body.tracks) ? body.tracks : []).slice(0, 8)
+        .filter(t => t && open.some(v => v.sid === t.sessionId && v.track === t.trackName && v.sid !== sid));
+      if (!tracks.length) throw new Error("voice: nothing to hear");
+      const r = await api.pull(sid, tracks);
+      return { sessionDescription: r.sessionDescription, tracks: r.tracks, requiresImmediateRenegotiation: r.requiresImmediateRenegotiation };
+    }
+    if (body.op === "renegotiate") {
+      if (typeof body.sdp !== "string") throw new Error("voice: bad request");
+      await api.renegotiate(sid, body.sdp);
+      return { ok: true };
+    }
+    throw new Error("voice: unknown request");
+  }
 
   async _report() {
     if (!this._meta("id")) return;

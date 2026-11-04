@@ -6,7 +6,7 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-11-04: **version 2.4.0** (see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
+State as of 2026-11-04: **version 3.0.0**, the voice chat release (section 12.2; see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
 version 1.0.4, which the owner closed. The one-color game is
 the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
@@ -680,3 +680,36 @@ on the server never changes.
 * `move 1 s2B 33`, `score 1 50` as in the debug console (`js/debugcmd.js`).
 Pieces are written `s` + number + color letter (R B G Y P T), as in the debug console: `P` is
 Purple, so it cannot also mean "piece".
+
+### 12.2 Voice chat (v3.0.0; owner, 2026-11-04)
+The owner wanted group voice like WhatsApp, also from countries that block direct internet calls
+(Iran, UAE, China). The version is 3.0.0 to mark it (owner).
+* **Relay:** every device sends its microphone once to **Cloudflare Realtime SFU**, which passes it on
+  to the other devices (lighter than every device calling every other one, and it works where direct
+  calls are blocked). With a **Realtime TURN** key the page also gets TURN servers (UDP, TCP and TLS on
+  443, which looks like ordinary HTTPS); no promise for Iran or China. Free allowance: 1,000 GB a month
+  for SFU and TURN together; Opus at about 32 kbit/s is about 15 MB an hour per speaker.
+* **Secrets** (repository secrets, put on the Worker by `server.yml`): `REALTIME_APP_ID`,
+  `REALTIME_APP_TOKEN` (needed), `TURN_KEY_ID`, `TURN_KEY_TOKEN` (optional). `REALTIME_API` is for
+  tests only (another SFU address).
+* **Admin:** a **Voice** tick per player (Lobby `users.voice`, `POST /api/admin/uservoice {id, on}`)
+  and a server-wide switch, on by default (`settings` key `voice`, `POST /api/admin/voice {on}`;
+  `/api/settings` gives `voice: {on, ready}`, ready = the SFU secrets are there). A change reaches the
+  open rooms at once (`GameRoom.voiceRefresh`): microphones no longer allowed are closed.
+* **Who:** a device may talk when the switch is on and one of its seats belongs to a ticked player
+  (`voiceCan` in `server/voice.js`). Every device in the room hears the others (owner's plan: the tick
+  is about talking).
+* **Game:** a mic button next to the Scores star (`micHtml` in `js/main.js`) for a device that may
+  talk. It starts closed; a tap asks the browser for the microphone and opens it, the next mutes it
+  (`{t:"mute"}` tells the room). Exit and closing the page stop it; a new WebSocket starts voice clean.
+  A green ring (`.chip.speaking`) shows who speaks (own microphone: Web Audio level; others: the
+  packets' audio level, `getSynchronizationSources`), thresholds in `Config.VOICE`. A small speaker on
+  another talker's chip mutes them on this device only (grey when they muted themselves).
+* **Code:** `js/voice.js` (the page's WebRTC: one sendonly connection for the microphone, one for
+  listening; pulls with immediate renegotiation), `server/voice.js` (Cloudflare calls, `voiceCan`,
+  tested in `tests/server.test.mjs`), `GameRoom.voice` in `server/worker.js` (`POST /api/games/<ID>/voice`
+  with the device token: `ice`, `session`, `push`, `pull`, `renegotiate`; a device may use only the SFU
+  sessions it made; the room lists open microphones as `{t:"voices"}`).
+* **Tested** with two browsers and a stand-in SFU (a browser page that answers the same API): sound
+  arrives, the ring lights, mute and local mute work, and the admin's tick takes effect at once. Not
+  yet tried against the real Cloudflare service or from the countries above.

@@ -8,6 +8,17 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
   if (what === "check") return json({ ok: true });
   if (what === "rename" && body) return json(await lobby.rename(body.id, body.name));
   if (what === "games") return json(await lobby.allGames());
+  // voice chat: the server-wide switch, and the tick per player; the open rooms hear of it at once
+  if (what === "voice" && body) {
+    await lobby.setVoiceOn(!!body.on);
+    await voiceRefresh(env, lobby);
+    return json(await settings());
+  }
+  if (what === "uservoice" && body) {
+    const users = await lobby.setUserVoice(body.id, !!body.on);
+    await voiceRefresh(env, lobby);
+    return json(users);
+  }
   if (what === "colors" && body) {
     const colors = cleanColors(body.colors), board = body.board === undefined ? null : cleanBoard(body.board);
     await lobby.setColors(colors);
@@ -49,4 +60,10 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     return json(await lobby.removeGame(body.id));
   }
   return null;
+}
+
+// tell every open room that who may talk has changed (GameRoom.voiceRefresh)
+async function voiceRefresh(env, lobby) {
+  const games = await lobby.openGames();
+  await Promise.all(games.map(g => env.ROOM.get(env.ROOM.idFromName(g.id)).voiceRefresh().catch(() => {})));
 }

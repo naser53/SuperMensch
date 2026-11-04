@@ -235,3 +235,52 @@ test("admin debug: rewind N and roll dice go back to a dice turn and throw it ag
   const device = Table.replay(su, rd.room.events);
   assert.equal(fingerprint(device.game), rd.room.fingerprint());
 });
+
+// ---------------------------------------------------------------- voice chat (server/voice.js)
+import { cleanId, iceList, sfu, voiceCan, voiceReady } from "../server/voice.js";
+
+test("voice: only a ticked player may talk, and only while the server-wide switch is on", () => {
+  const players = [{ isAi: true }, { user: 3 }, { user: 5 }];
+  assert.equal(voiceCan(players, [1], [3], true), true);
+  assert.equal(voiceCan(players, [2], [3], true), false);       // not ticked
+  assert.equal(voiceCan(players, [1, 2], [3], true), true);     // one of the device's seats is enough
+  assert.equal(voiceCan(players, [1], [3], false), false);      // the switch is off
+  assert.equal(voiceCan(players, [0], [3], true), false);       // a computer seat
+  assert.equal(voiceCan(players, [], [3], true), false);
+  assert.equal(voiceReady({ REALTIME_APP_ID: "a" }), false);
+  assert.equal(voiceReady({ REALTIME_APP_ID: "a", REALTIME_APP_TOKEN: "t" }), true);
+});
+
+test("voice: ids from a page are short and plain; TURN answers become a list", () => {
+  assert.equal(cleanId("abc-12_x"), "abc-12_x");
+  assert.equal(cleanId("../x"), null);
+  assert.equal(cleanId(5), null);
+  assert.deepEqual(iceList({ iceServers: { urls: ["turns:t:443"], username: "u", credential: "c" } }),
+    [{ urls: ["turns:t:443"], username: "u", credential: "c" }]);
+  assert.deepEqual(iceList({ iceServers: [{ urls: "stun:s" }] }), [{ urls: "stun:s" }]);
+  assert.equal(iceList(null)[0].urls, "stun:stun.cloudflare.com:3478");
+});
+
+test("voice: the SFU is asked with the server's token; its errors become errors", async () => {
+  const calls = [];
+  const fake = async (url, init) => {
+    calls.push({ url, init, body: init.body && JSON.parse(init.body) });
+    if (url.endsWith("/sessions/new")) return new Response(JSON.stringify({ sessionId: "S1" }));
+    if (url.includes("/turn/")) return new Response(JSON.stringify({ iceServers: [{ urls: "turns:x:443" }] }));
+    if (url.endsWith("/renegotiate")) return new Response(JSON.stringify({ errorCode: "bad", errorDescription: "no" }));
+    return new Response(JSON.stringify({ sessionDescription: { type: "answer", sdp: "v=0" }, tracks: [] }));
+  };
+  const env = { REALTIME_APP_ID: "APP", REALTIME_APP_TOKEN: "TOK" };
+  const api = sfu(env, fake);
+  assert.equal(await api.session(), "S1");
+  assert.equal(calls[0].url, "https://rtc.live.cloudflare.com/v1/apps/APP/sessions/new");
+  assert.equal(calls[0].init.headers.authorization, "Bearer TOK");
+  await api.push("S1", "v=0 offer", [{ mid: 0, trackName: "mic-a" }]);
+  assert.deepEqual(calls[1].body, { sessionDescription: { type: "offer", sdp: "v=0 offer" }, tracks: [{ location: "local", mid: "0", trackName: "mic-a" }] });
+  await api.pull("S2", [{ sessionId: "S1", trackName: "mic-a" }]);
+  assert.deepEqual(calls[2].body.tracks, [{ location: "remote", sessionId: "S1", trackName: "mic-a" }]);
+  await assert.rejects(api.renegotiate("S2", "v=0 answer"), /voice: no/);
+  assert.equal(calls[3].init.method, "PUT");
+  assert.equal((await api.ice())[0].urls, "stun:stun.cloudflare.com:3478");              // no TURN key: STUN only
+  assert.equal((await sfu({ ...env, TURN_KEY_ID: "K", TURN_KEY_TOKEN: "T" }, fake).ice())[0].urls, "turns:x:443");
+});
