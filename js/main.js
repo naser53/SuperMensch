@@ -414,7 +414,6 @@ class App {
     };
     if (g.over) {
       status = `<b>${this.T("game_over")}</b>`;
-      list = `<ol class="ranking">` + g.places.map((i, k) => `<li><span class="muted">${num(this.lang, k + 1)}.</span> <b>${this.S(g.players[i].name)}</b> <span class="muted">${this.T("final_score", { n: g.state.scores[i] })}</span></li>`).join("") + "</ol>";
       // play again: online, a new room with the same players (the server makes it once); offline, the same setup
       const again = !this.online || this.online.seats.length;
       acts = (again ? btn('data-act="again"', this.T("play_again"), "primary") : "") + btn('data-act="menu"', this.T("new_game"), again ? "" : "primary");
@@ -546,14 +545,14 @@ class App {
 
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
-    return `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
+    return `<button class="btn rb-btn icon hud-btn${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}" aria-pressed="${!!this.scoresMode}">${ICON.star}</button>` +
+      `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
       `<div class="hudpop" ${this.hudOpen ? "" : "hidden"}>` + this.drawerHtml() + "</div>";
   }
 
   // the drawer under the menu button: scores, info, debug, language, speed, sound, leave
   drawerHtml() {
     return "" +
-      `<button class="btn rb-btn icon${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}">${ICON.star}<span>${this.T("scores")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
       (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
       this.langSelect() +
@@ -973,11 +972,10 @@ class App {
     this.checkNests(end);
     if (g.over && !this.fireworksDone) {     // the game is over: fireworks once the last move has landed
       this.fireworksDone = true;
-      const w = g.places[0];                   // the winner: a pawn in the winner's first color, with the total score
+      const w = g.places[0];                   // the winner: fireworks in the first color, the pieces in a wave
       const wc = w !== undefined ? COLORS[g.players[w].colors[0]] : null;
       setTimeout(() => this.board.fireworks(wc), Math.max(0, end - performance.now()) + 400);
-      if (w !== undefined) setTimeout(() => this.board.trophy(`${tr(this.lang, g.players[w].name)} · ${num(this.lang, g.state.scores[w])}`, wc),
-        Math.max(0, end - performance.now()) + 600);
+      if (w !== undefined) setTimeout(() => this.board.wave(g.players[w].colors), Math.max(0, end - performance.now()) + 600);
     }
     this.nextAi = end + this.delay;
     this.moveEnd = entries && entries.length ? end + this.delay : end;   // online: the next throw waits for this
