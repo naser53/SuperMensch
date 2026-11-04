@@ -12,6 +12,11 @@ export const COLORS = Config.PIECE_COLORS.slice();
 const LIGHT_DEFAULT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
 export const LIGHT = LIGHT_DEFAULT.slice();
 
+// the wall sign (bricks, in a 46×46 box): the "not allowed" sign over a wall and the wall-built effect
+const WALL_SVG = '<g fill="#c0703f" stroke="#5a2e17" stroke-width="1.4"><rect x="4" y="14" width="14" height="8"/><rect x="18" y="14" width="14" height="8"/><rect x="4" y="22" width="7" height="8"/><rect x="11" y="22" width="14" height="8"/><rect x="25" y="22" width="7" height="8"/><rect x="4" y="30" width="14" height="8"/><rect x="18" y="30" width="14" height="8"/></g>';
+// the castle-built effect: two towers, a keep with a gate, and a flag in the builder's color (64×64)
+const castleSvg = flag => `<g stroke="#3d3d3d" stroke-width="1.6" stroke-linejoin="round"><path d="M32 6v12" fill="none"/><path d="M32 6l11 3.5-11 3.5z" fill="${flag}"/><path d="M4 60V26h4v4h4v-4h4v4h4v-4h4v34z" fill="#9a9a9a"/><path d="M40 60V26h4v4h4v-4h4v4h4v-4h4v34z" fill="#9a9a9a"/><path d="M18 60V22h4v-4h5v4h5v-4h5v4h5v-4h4v42z" fill="#b5b5b5"/><path d="M26 60V47a6 6 0 0 1 12 0v13z" fill="#5a3a1e"/><rect x="9" y="38" width="4" height="7" rx="2" fill="#3d3d3d"/><rect x="51" y="38" width="4" height="7" rx="2" fill="#3d3d3d"/><rect x="30" y="30" width="4" height="7" rx="2" fill="#3d3d3d"/></g>`;
+
 // the board's own colors set by the admin: [surface, edge], null = the board's default
 export const BOARD = [null, null];
 
@@ -316,10 +321,43 @@ export class Board3D {
     };
     for (const [x, y] of feet) add("forbid-ring", x, y, "", 1300);
     const x = tops.reduce((s, p) => s + p[0], 0) / tops.length, y = Math.min(...tops.map(p => p[1]));
-    const wall = '<g fill="#c0703f" stroke="#5a2e17" stroke-width="1.4"><rect x="4" y="14" width="14" height="8"/><rect x="18" y="14" width="14" height="8"/><rect x="4" y="22" width="7" height="8"/><rect x="11" y="22" width="14" height="8"/><rect x="25" y="22" width="7" height="8"/><rect x="4" y="30" width="14" height="8"/><rect x="18" y="30" width="14" height="8"/></g>';
     const castle = '<path d="M4 38V10h5v5h4v-5h5v5h4v-5h5v5h4v-5h5v28H24v-8a5 5 0 0 0-10 0v8z" fill="#a3a3a3" stroke="#444" stroke-width="1.5" stroke-linejoin="round"/>';
     const ban = '<circle cx="34" cy="34" r="9" fill="#fff" stroke="#d62828" stroke-width="3.2"/><line x1="28" y1="40" x2="40" y2="28" stroke="#d62828" stroke-width="3.2" stroke-linecap="round"/>';
-    add("forbid-struct", x, y, `<svg viewBox="0 0 46 46" width="60" height="60">${block.castle ? castle : wall}${ban}</svg>`, 1300);
+    add("forbid-struct", x, y, `<svg viewBox="0 0 46 46" width="60" height="60">${block.castle ? castle : WALL_SVG}${ban}</svg>`, 1300);
+  }
+
+  // A move builds a wall or a castle (owner, 2026-11-04): a wall or castle sign pops up above
+  // its pieces once the mover has landed (at time t), and golden rings glow under them; all fade
+  // within about 1.5 s. Only a new structure counts: none -> wall, or a wall or lone pieces -> castle.
+  buildFx(before, after, m, t) {
+    if (m[0] !== "p") return;
+    const g = this.game, [, col, i] = m, r = after.pos[col][i];
+    if (r < 0 || r >= g.L) return;
+    const s = g.structures(after).get(g.absOf(col, r));
+    if (!s) return;
+    const n = s[2].length, old = g.structures(before);
+    const prev = Math.max(0, ...s[2].map(x => { const o = old.get(x); return o && o[1] === col ? o[2].length : 0; }));
+    const castle = n >= 3;
+    if (castle ? prev >= 3 : prev >= 2) return;
+    const spots = s[2].map(x => this.xz(this.data.track[x], this.surfaceY()));
+    setTimeout(() => {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      const toScreen = v => { v = v.clone().project(this.camera); return [rect.left + (v.x + 1) / 2 * rect.width, rect.top + (1 - v.y) / 2 * rect.height]; };
+      const add = (cls, [x, y], html) => {
+        const el = document.createElement("div");
+        el.className = cls;
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.innerHTML = html;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1600);
+      };
+      for (const v of spots) add("build-ring", toScreen(v), "");
+      const tops = spots.map(v => toScreen(v.clone().setY(v.y + 1.1)));
+      const at = [tops.reduce((a, p) => a + p[0], 0) / tops.length, Math.min(...tops.map(p => p[1]))];
+      add("build-fx", at, castle ? `<svg viewBox="0 0 64 64" width="76" height="76">${castleSvg(COLORS[col])}</svg>`
+        : `<svg viewBox="0 4 46 38" width="64" height="53">${WALL_SVG}</svg>`);
+    }, Math.max(0, t - performance.now()));
   }
 
   // ------------------------------------------------------------ board
@@ -1058,6 +1096,7 @@ export class Board3D {
         t += 220;
       }
       this.queueLook(step.mover, before, after, t);          // the new rank shows after the move and the capture
+      this.buildFx(before, after, step.mover, t);            // a new wall or castle: its sign above it
     }
     this.animEnd = t + 60;
     return this.animEnd;

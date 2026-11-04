@@ -416,6 +416,10 @@ the fingerprint.
   three dice ("Naser is stuck: three dice!" with the dice) and the gift six (`throwBanners`, from the
   new `log_stuck` / `log_gift` entries of a move). A tap on a player chip at the top shows that
   player's colors and name in a small card right under that chip, for 1.5 s. The Info page names the online game (name and code).
+* **Wall or castle built** (owner, 2026-11-04; `Board3D.buildFx`, CSS `.build-fx`, `.build-ring`): when a
+  move makes a new wall, or turns pieces into a castle, the wall sign (bricks) or a castle picture with
+  a flag in the builder's color pops up above its pieces once the mover has landed, golden rings glow
+  under them, and all fades out within about 1.5 s. On every device (it runs from `animateSteps`).
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
