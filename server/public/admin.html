@@ -184,10 +184,9 @@ async function loadRooms(list) {
   const gs = list || await api("admin/games", {});
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.setup.corridor ? g.setup.corridor + " fields · " : ""}${g.status} · ${new Date(g.updated).toLocaleString()}</span>
-    <button data-edit="${g.id}">Edit players</button> <button data-place="${g.id}">Place pieces</button> <button data-dbg="${g.id}">Debug</button> <button data-del="${g.id}">Delete</button></div>
+    <button data-edit="${g.id}">Edit players</button> <button data-dbg="${g.id}">Debug</button> <button data-del="${g.id}">Delete</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">No rooms.</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
-  document.querySelectorAll("[data-place]").forEach(b => b.onclick = () => placeRoom(gs.find(g => g.id === b.dataset.place)));
   document.querySelectorAll("[data-dbg]").forEach(b => b.onclick = () => debugRoom(gs.find(g => g.id === b.dataset.dbg)));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Sure? Delete"; return; }
@@ -230,59 +229,80 @@ function editRoom(g) {
   draw();
 }
 
-// put the pieces of a room somewhere (a test aid): one line per color, fields as in the debug
-// command "move" (1..L on the track, L+1.. in the nest, y = yard). The turn starts again.
-async function placeRoom(g) {
-  const box = $("#edit-" + g.id);
-  let text;
-  try { text = (await api("admin/place", { id: g.id })).text; }
-  catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-  box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">One line per color (R B G Y P T N K), or one per piece (R2 23, R2z 3): track fields 1..${g.setup.colors * (g.setup.corridor || 10)}
-    as on the board, z1..z4 the color's nest (z1 just inside), y = yard. Saving starts the current turn again; the players' pages load the game again.</div>
-    <textarea data-pt rows="${text.split("\n").length}" cols="40" style="font-family:monospace">${esc(text)}</textarea>
-    <div class="row"><button class="primary" data-psave>Place</button> <button data-pcancel>Cancel</button></div><div data-msg></div></section>`;
-  box.querySelector("[data-pcancel]").onclick = () => { box.innerHTML = ""; };
-  box.querySelector("[data-psave]").onclick = async () => {
-    const msg = box.querySelector("[data-msg]");
-    try {
-      const r = await api("admin/place", { id: g.id, text: box.querySelector("[data-pt]").value });
-      box.querySelector("[data-pt]").value = r.text;
-      msg.className = "ok"; msg.textContent = "Placed.";
-    } catch (e) { msg.className = "err"; msg.textContent = e.message; }
-  };
-}
+// Debug a room (a test aid): one box for every command, one per line, run in order. The i button
+// shows the commands. Piece lines go to admin/place, rewind / roll dice / reset to admin/debug,
+// rename to admin/renamegame. The players' pages load the game again.
+const DEBUG_HELP = `<b>Pieces</b> (the current turn starts again)
+  R2 23          red 2 on field 23
+  R2z 3          red 2 on nest field 3 (also R2 z3)
+  R1 y           red 1 in the yard
+  R: 5 z1 y y    all the pieces of a color
+  colors R B G Y P T N K · fields 1..L as on the board · z1 just inside the nest, z4 at the back
+<b>Dice turns</b>
+  rewind N       back to dice turn N (0 = the first, -1 = one before the last), same dice
+  roll dice 3,6  the last dice turn again with these dice (as many as it had)
+  reset          the game from the beginning
+<b>Room</b>
+  rename Name    a new name for the room`;
+const DEBUG_CMD = /^\s*(reset|rewind\b|go\s+drop\b|roll\s+dice\b|drop\s+dice\b)/i;
+const RENAME_CMD = /^\s*rename\s+(.+)$/i;
 
-// debug commands for a room (a test aid), on the dice turns (a second try belongs to its turn):
-//   rewind N       back to dice turn N (0 = first, -1 = the one before the last), same dice
-//   roll dice 3,6  the last dice turn again with these dice
-//   reset          the game from the beginning (also the Reset game button)
-async function debugRoom(g) {
+async function debugRoom(g, note = null, keep = "") {
   const box = $("#edit-" + g.id);
-  const draw = r => {
-    box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">rewind N: back to dice turn N (0 = the first, -1 = one before the last), thrown again with the same dice.
-      roll dice 3,6 or roll dice 4,2,5: the last dice turn again with these dice (as many as it had). reset: the game from the beginning. The players' pages load the game again.</div>
-      <div class="row"><input data-dc size="24" placeholder="rewind -1"> <button class="primary" data-drun>Run</button> <button data-dreset>Reset game</button> <button data-dclose>Close</button></div>
-      <div data-msg></div>
-      <pre data-dt style="max-height:16em;overflow:auto;font-size:12px">${esc(r.turns || "No dice yet.")}</pre></section>`;
-    box.querySelector("[data-dclose]").onclick = () => { box.innerHTML = ""; };
-    const run = async text => {
-      const msg = box.querySelector("[data-msg]");
-      try {
-        const r2 = await api("admin/debug", { id: g.id, text });
-        draw(r2);
-        const m2 = box.querySelector("[data-msg]");
-        m2.className = "ok"; m2.textContent = r2.turn === null ? "The game starts again from the beginning." : `Back to dice turn #${r2.turn}.`;
-      } catch (e) { msg.className = "err"; msg.textContent = e.message; }
+  let d, p;
+  try { [d, p] = await Promise.all([api("admin/debug", { id: g.id }), api("admin/place", { id: g.id })]); }
+  catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+  box.innerHTML = `<section style="margin:6px 0 10px;position:relative">
+    <div class="row"><b>Debug</b> <button data-help title="Commands" aria-label="Commands" style="border-radius:50%;width:26px;height:26px;padding:0;font-weight:bold;font-style:italic;font-family:serif">i</button></div>
+    <pre data-helpbox hidden style="position:absolute;z-index:5;top:40px;left:12px;right:12px;margin:0;padding:10px 12px;background:#fffbe6;border:1px solid #e0c96b;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);white-space:pre-wrap;font-size:12.5px">${DEBUG_HELP}</pre>
+    <textarea data-dc spellcheck="false" style="display:block;box-sizing:border-box;width:100%;min-height:7em;resize:vertical;font:14px/1.4 monospace;padding:6px 8px">${esc(keep)}</textarea>
+    <div class="row"><button class="primary" data-drun>Run</button> <button data-dreset>Reset game</button> <button data-dclose>Close</button>
+      <span class="muted">one command per line; Ctrl+Enter runs</span></div>
+    <div data-msg></div>
+    <div class="muted">Pieces now</div><pre style="margin:2px 0 8px;font-size:12px">${esc(p.text)}</pre>
+    <div class="muted">Dice turns</div><pre data-dt style="margin:2px 0;max-height:16em;overflow:auto;font-size:12px">${esc(d.turns || "No dice yet.")}</pre></section>`;
+  const msg = box.querySelector("[data-msg]"), ta = box.querySelector("[data-dc]"), help = box.querySelector("[data-helpbox]");
+  if (note) { msg.className = note.err ? "err" : "ok"; msg.textContent = note.text; }
+  box.querySelector("[data-help]").onclick = () => { help.hidden = !help.hidden; };
+  help.onclick = () => { help.hidden = true; };
+  box.querySelector("[data-dclose]").onclick = () => { box.innerHTML = ""; };
+  const run = async text => {
+    const lines = text.split("\n").map(s => s.trim()).filter(Boolean), done = [];
+    let pieces = [], renamed = false;
+    const flush = async () => {
+      if (!pieces.length) return;
+      await api("admin/place", { id: g.id, text: pieces.join("\n") });
+      done.push(`placed ${pieces.length === 1 ? pieces[0] : pieces.length + " lines"}`);
+      pieces = [];
     };
-    box.querySelector("[data-drun]").onclick = () => run(box.querySelector("[data-dc]").value);
-    box.querySelector("[data-dc]").onkeydown = e => { if (e.key === "Enter") run(box.querySelector("[data-dc]").value); };
-    const rb = box.querySelector("[data-dreset]");          // a second press resets
-    rb.onclick = () => { if (rb.dataset.sure !== "1") { rb.dataset.sure = "1"; rb.textContent = "Sure? Reset"; return; } run("reset"); };
-    const pre = box.querySelector("[data-dt]");
-    pre.scrollTop = pre.scrollHeight;
+    try {
+      for (const line of lines) {
+        const rn = RENAME_CMD.exec(line);
+        if (rn) {
+          await flush();
+          await api("admin/renamegame", { id: g.id, name: rn[1].trim() });
+          g.name = rn[1].trim(); renamed = true;
+          done.push(`renamed to "${g.name}"`);
+        } else if (DEBUG_CMD.test(line)) {
+          await flush();
+          const r = await api("admin/debug", { id: g.id, text: line });
+          done.push(r.turn === null ? "the game starts again" : `back to dice turn #${r.turn}`);
+        } else pieces.push(line);
+      }
+      await flush();
+      if (renamed) await loadRooms();
+      await debugRoom(g, { text: done.length ? "Done: " + done.join(" · ") + "." : "Nothing to run." });
+    } catch (e) {
+      if (renamed) await loadRooms();
+      await debugRoom(g, { err: true, text: (done.length ? "Done: " + done.join(" · ") + ". " : "") + e.message }, text);   // keep the text to fix it
+    }
   };
-  try { draw(await api("admin/debug", { id: g.id })); }
-  catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  box.querySelector("[data-drun]").onclick = () => run(ta.value);
+  ta.onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run(ta.value); };
+  const rb = box.querySelector("[data-dreset]");          // a second press resets
+  rb.onclick = () => { if (rb.dataset.sure !== "1") { rb.dataset.sure = "1"; rb.textContent = "Sure? Reset"; return; } run("reset"); };
+  const pre = box.querySelector("[data-dt]");
+  pre.scrollTop = pre.scrollHeight;
 }
 
 async function open() {
