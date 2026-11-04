@@ -4,19 +4,35 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
-## Unreleased
+## v2.4.0 (2026-11-04)
 
-* **Replay mode for debugging online games:** five quick taps on the turn pill; arrows over the dock step one whole turn back or forward; the other devices are locked and see who is debugging. Five more taps go back to the live game.
+The dock layout of v2.3.0 stays. Rules, game over, the hunter and the admin page.
+
+**Rules**
+* **Six prize:** a 6 never burns. When only one die can be played, it is the 6. When one color cannot move, the other color plays both dice only if one of them is a 6; otherwise it plays one die.
+* Six first only when the 6 brings a new piece in.
+* Second step: tap the landing field; the moved piece stays selected for its second step.
+
+**Game**
+* **Game over:** no ranking card and no big golden pawn; the winner's pieces rise and fall in a slow wave. A Scores (star) button sits next to the menu. Play again after a game.
+* A wall or castle sign shows when a move builds one.
+* Short messages for stuck throws and the gift six; the game name in Info.
+* Tapping a player chip shows the player's name card under it for 1.5 s.
+* **Points on a pawn:** bar or ring, chosen on the admin page; ring is the default.
+* **Hunter:** a shorter, thicker arrow through the middle of the pawn at head height (or a sword, chosen on the admin page). The Forward / Back choice is a small bubble over the waiting hunter.
+* Tunnels on offer are drawn as lines only; a declared tunnel shows its field circles.
+* Sound: one recording for a single die, another for several.
+* **Replay mode for debugging online games:** five quick taps on the turn pill; arrows over the dock step one whole turn back or forward; the other devices are locked and see who is debugging.
 * The View (camera) button and its menu are gone; the board still turns by dragging and zooms.
-* **Admin: hunter weapon:** Arrow or Sword for every game on the server; the sword is drawn like the arrow, through the pawn at head height.
-* The hunter's arrow is 20% shorter and thicker, at head height, through the middle of the pawn, moved 5% of its length towards the tip.
-* **Admin: place pieces** in an online room (a test aid): one line per color; the turn starts again and open pages reload.
-* **Hunter way in on the board:** the Forward / Back choice is a small bubble over the waiting hunter, with arrows that point the way it would run (no more list in the panel).
-* The hunter carries only an arrow (no bow).
-* While choosing a tunnel, the tunnels on offer are drawn as lines only; a declared tunnel shows its line and its field circles.
-* **Piece colors in the admin page:** a color picker for each piece color, saved on the server and used by every game (players' pages pick them up on load and when the room list refreshes).
 * Yellow is 15% darker by default (`#cea70d`).
-* **Board colors in the admin page:** the board's surface and edge can be changed the same way, for every game.
+
+**Admin page**
+* Piece colors and board colors (surface and edge) for every game on the server.
+* **One Debug panel** for a room: one command per line, run in order: place pieces (`R2 23`, `R3z 2` for the nest, `R1 y` for the yard), `rewind N`, `roll dice 3,6`, `reset`, and `rename <name>` for the room. An **i** button shows a summary of the commands.
+* The admin API has its own file, `server/admin.js`, and the admin page's script is `admin-page.js`.
+
+**Docs**
+* `docs/rules-fa.md` and `rules-fa.docx` rewritten (8-color board and more).
 
 ## v2.3.0 (2026-11-02)
 
