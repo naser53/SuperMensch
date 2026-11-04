@@ -34,8 +34,8 @@ let HUNTER_WEAPON = "arrow";
 export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
 // how a pawn shows its own points: "bar" (a line up the body) or "ring" (a ring that climbs the
 // body to general, again to marshal; a marshal glows instead); an admin setting like the hunter
-let POINTS_LOOK = "bar";
-export function setPointsLook(w) { POINTS_LOOK = w === "ring" ? "ring" : "bar"; }
+let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
+export function setPointsLook(w) { POINTS_LOOK = w === "bar" ? "bar" : "ring"; }
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
 // from one piece to the next (rad)
 const WAVE_HEIGHT = 0.45, WAVE_SPEED = 1.6, WAVE_STEP = 0.55;

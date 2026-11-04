@@ -579,7 +579,7 @@ earlier sketch (browser dice, PINs).
   Sword, for the whole server (`POST /api/admin/hunter`, Lobby `settings` key `hunter`, sent with
   `/api/settings` as `hunter`; `setHunterWeapon` / `Board3D.hunterWeapon` in `js/render3d.js`).
   **Points look** (owner, 2026-11-03): the admin page chooses how a pawn shows its own points, for the
-  whole server: Bar (default, `progressBar`) or Ring (a thin ring that touches the body all round, the
+  whole server: Bar (`progressBar`) or Ring (the default since 2026-11-04, owner; a thin ring that touches the body all round, the
   owner wants no band; it climbs from the foot to two thirds of the pawn's height up to general,
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
   glow). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;

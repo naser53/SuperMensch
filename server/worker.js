@@ -159,14 +159,14 @@ export class Lobby extends DurableObject {
     return this.board();
   }
 
-  // how a pawn shows its own points in every game: "bar" (default) or "ring"
+  // how a pawn shows its own points in every game: "ring" (default; owner, 2026-11-04) or "bar"
   points() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'points'`).toArray();
-    return r.length && JSON.parse(r[0].v) === "ring" ? "ring" : "bar";
+    return r.length && JSON.parse(r[0].v) === "bar" ? "bar" : "ring";
   }
 
   setPoints(w) {
-    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('points', ?)`, JSON.stringify(w === "ring" ? "ring" : "bar"));
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('points', ?)`, JSON.stringify(w === "bar" ? "bar" : "ring"));
     return this.points();
   }
 
