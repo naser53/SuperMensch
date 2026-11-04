@@ -7,7 +7,7 @@
 بخوانید. نسخه‌ی انگلیسی: [`handoff-en.md`](handoff-en.md). متن کامل قوانین، بخش به بخش:
 [`rules-fa.md`](rules-fa.md) (همان متن `rules-fa.docx`).
 
-وضعیت در تاریخ ۲۰۲۶-۱۰-۳۱: **نسخه‌ی ۲.۰.۰** (تگ `v2.0.0`): نسخه‌ی آنلاین خانوادگی (بخش ۱۲) روی نسخه‌ی ۱.۰.۴ که صاحب پروژه بست. بازی تک‌رنگ بازی سنتی است
+وضعیت در تاریخ ۲۰۲۶-۱۱-۰۴: **نسخه‌ی ۲.۴.۰** (نگاه کنید به `CHANGELOG.md`). نسخه‌ی ۲.۰.۰ نسخه‌ی آنلاین خانوادگی (بخش ۱۲) روی نسخه‌ی ۱.۰.۴ که صاحب پروژه بست. بازی تک‌رنگ بازی سنتی است
 (بدون درجه، تونل، دیوار و قلعه)؛ بازی چندرنگ همه را دارد. مهره‌ی قلعه‌شکن و قرض امتیاز به نسخه‌های بعد می‌روند.
 
 ---
@@ -554,8 +554,9 @@ npm run build       # dist/supermensch.html
   تاریخچه · M5 لابی در پیشخوان. به خواست صاحب پروژه، v2.0.0 زودتر منتشر شد (بعد از M2، اتاق‌ساز و حذف اتاق)؛
   M3 تا M5 به‌صورت v2.x می‌آیند.
 * کد: `server/worker.js` (مسیرها، هر دو Durable Object، قرارداد WebSocket در توضیح‌هایش)،
+  `server/admin.js` (مسیرهای `/api/admin/*`؛ worker پس از بررسی کلید ادمین آن را صدا می‌زند)،
   `server/core.js` (بدون وابستگی به Cloudflare، با آزمون `tests/server.test.mjs`)،
-  `server/public/` (صفحه‌ها)، `wrangler.toml`، `.github/workflows/server.yml` (استقرار از
+  `server/public/` (صفحه‌ها؛ صفحه‌ی ادمین `admin.html` است و اسکریپتش `admin-page.js`)، `wrangler.toml`، `.github/workflows/server.yml` (استقرار از
   `v2`؛ secretها: `CLOUDFLARE_API_TOKEN`، `CLOUDFLARE_ACCOUNT_ID`، `ADMIN_KEY`).
 * اجرای محلی: `ADMIN_KEY=...` را در `.dev.vars` بگذارید، `npx wrangler dev` و بعد
   http://localhost:8787.

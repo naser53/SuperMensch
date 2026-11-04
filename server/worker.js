@@ -2,12 +2,13 @@
 //   Lobby     one Durable Object: users, the list of games and their results
 //   GameRoom  one Durable Object per game: setup, events, the devices' WebSockets
 // Pages come from server/public: / is the game (built from js/, with the room list on its first
-// page), /admin the admin page. Security is light on purpose (family use): no passwords for
+// page), /admin the admin page (its API is in admin.js). Security is light on purpose (family use): no passwords for
 // players; only the admin key (secret ADMIN_KEY) renames users and makes and deletes rooms.
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, editSetup, isGameId, newGameId, nextName } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, newGameId, nextName } from "./core.js";
+import { adminApi } from "./admin.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -40,49 +41,8 @@ async function api(req, env, url) {
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
-    if (parts[1] === "check") return json({ ok: true });
-    if (parts[1] === "rename" && body) return json(await lobby.rename(body.id, body.name));
-    if (parts[1] === "games") return json(await lobby.allGames());
-    if (parts[1] === "colors" && body) {
-      const colors = cleanColors(body.colors), board = body.board === undefined ? null : cleanBoard(body.board);
-      await lobby.setColors(colors);
-      if (board) await lobby.setBoard(board);
-      return json(await settings());
-    }
-    if (parts[1] === "points" && body) {          // how a pawn shows its own points: "bar" or "ring"
-      await lobby.setPoints(body.points);
-      return json(await settings());
-    }
-    if (parts[1] === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"
-      await lobby.setHunter(body.hunter);
-      return json(await settings());
-    }
-    if (parts[1] === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
-      const old = await lobby.setupOf(body.id);
-      if (!old) return fail("no such game", 404);
-      const { setup, keep } = editSetup(old, body.seats, await lobby.users());
-      await env.ROOM.get(env.ROOM.idFromName(body.id)).edit(setup, keep);
-      return json(await lobby.setSetup(body.id, setup));
-    }
-    if (parts[1] === "place" && body && isGameId(body.id)) {       // put the pieces somewhere (a test aid); no text: just show them
-      const room = env.ROOM.get(env.ROOM.idFromName(body.id));
-      return json({ text: await room.place(typeof body.text === "string" && body.text.trim() ? body.text : null) });
-    }
-    if (parts[1] === "debug" && body && isGameId(body.id)) {       // rewind N · roll dice 3,6 (a test aid); no text: the dice turns
-      const room = env.ROOM.get(env.ROOM.idFromName(body.id));
-      return json(await room.debug(typeof body.text === "string" && body.text.trim() ? body.text : null));
-    }
-    if (parts[1] === "renamegame" && body && isGameId(body.id)) {  // a new name for a room
-      const name = cleanName(body.name);
-      if (!name) return fail("the game needs a name");
-      if (!(await lobby.setupOf(body.id))) return fail("no such game", 404);
-      await env.ROOM.get(env.ROOM.idFromName(body.id)).setName(name);
-      return json(await lobby.renameGame(body.id, name));
-    }
-    if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
-      await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
-      return json(await lobby.removeGame(body.id));
-    }
+    const r = await adminApi(parts[1], body, { env, lobby, settings, json, fail });
+    if (r) return r;
   }
   if (parts[0] === "games" && parts.length === 1) {
     if (req.method === "GET") {        // with the seats held right now by a connected device
