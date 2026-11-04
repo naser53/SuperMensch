@@ -584,6 +584,11 @@ earlier sketch (browser dice, PINs).
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
   glow). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
+  **One Debug panel** (owner, 2026-11-04): Place pieces and Debug are one button, **Debug**, with one
+  large text box (one command per line, run in order: piece lines go to `admin/place`, `rewind` /
+  `roll dice` / `reset` to `admin/debug`, `rename Name` to `admin/renamegame`, which sets the room's
+  name in the Lobby and in the room's meta and reloads the devices), an **i** button with a popup of
+  the commands, and the pieces and dice turns shown under it. The text box keeps the text on an error.
   **Place pieces** (owner, 2026-11-03; a test aid): a room's pieces can be put anywhere from the admin
   page, one line per color (`R: 4 z1 y y`) or per piece (`R2 23`, `R2z 3` = red 2 to nest field 3;
   owner, 2026-11-04): 1..L track as on the board, z1..z4 the color's nest (z1 just inside; L+1.. still

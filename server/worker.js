@@ -72,6 +72,13 @@ async function api(req, env, url) {
       const room = env.ROOM.get(env.ROOM.idFromName(body.id));
       return json(await room.debug(typeof body.text === "string" && body.text.trim() ? body.text : null));
     }
+    if (parts[1] === "renamegame" && body && isGameId(body.id)) {  // a new name for a room
+      const name = cleanName(body.name);
+      if (!name) return fail("the game needs a name");
+      if (!(await lobby.setupOf(body.id))) return fail("no such game", 404);
+      await env.ROOM.get(env.ROOM.idFromName(body.id)).setName(name);
+      return json(await lobby.renameGame(body.id, name));
+    }
     if (parts[1] === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
       await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
       return json(await lobby.removeGame(body.id));
@@ -225,6 +232,11 @@ export class Lobby extends DurableObject {
     return r.length ? JSON.parse(r[0].setup) : null;
   }
 
+  renameGame(id, name) {
+    this.sql.exec(`UPDATE games SET name = ? WHERE id = ?`, name, id);
+    return this.allGames();
+  }
+
   setSetup(id, setup) {
     this.sql.exec(`UPDATE games SET setup = ?, status = 'open', result = NULL, updated = ? WHERE id = ?`, JSON.stringify(setup), Date.now(), id);
     return this.allGames();
@@ -338,6 +350,12 @@ export class GameRoom extends DurableObject {
       turn = r.turn;
     }
     return { turn, turns: this.room.turnsText(), view: this.room.view() };
+  }
+
+  // the admin gives the room a new name; the devices load the game again to show it
+  setName(name) {
+    this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('name', ?)`, JSON.stringify(name));
+    this._all({ t: "recolor" });
   }
 
   // the admin deletes the game: close the devices' connections and forget everything
