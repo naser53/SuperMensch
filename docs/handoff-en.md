@@ -6,7 +6,7 @@ Read it before you change anything. The Farsi version is [`handoff-fa.md`](hando
 The full rules in Farsi, section by section, are in [`rules-fa.md`](rules-fa.md) (same text as
 `rules-fa.docx`).
 
-State as of 2026-11-04: **version 3.0.0**, the voice chat release (section 12.2; see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
+State as of 2026-11-04: **version 3.0.1** (3.0.0 was the voice chat release, section 12.2; see `CHANGELOG.md`). Version 2.0.0 was the online family version (section 12) on top of
 version 1.0.4, which the owner closed. The one-color game is
 the traditional game (no ranks, tunnels, walls or castles); the game with several colors per player has
 everything. The castle-breaker piece and point loans go into later versions.
@@ -713,3 +713,10 @@ The owner wanted group voice like WhatsApp, also from countries that block direc
 * **Tested** with two browsers and a stand-in SFU (a browser page that answers the same API): sound
   arrives, the ring lights, mute and local mute work, and the admin's tick takes effect at once. Not
   yet tried against the real Cloudflare service or from the countries above.
+* **v3.0.1** (first real test, two Samsung phones with Chrome: one stopped hearing after ~10 s). A
+  dropped WebSocket makes the server close that device's microphone; the page now opens it again
+  by itself after it reconnects (`Voice.reset` keeps `resume`). A paused voice is played again
+  (`replay`, also every `Config.VOICE.RETRY_MS`), a failed or long-disconnected listening connection
+  is made again (`relisten`). A **Speaker** button (on by default, kept in localStorage
+  `supermensch-speaker`) sets `navigator.audioSession.type` (iOS) and `setSinkId` to a loudspeaker
+  where offered. `Voice.log` keeps the last voice events; Info > Copy adds them to the report.
