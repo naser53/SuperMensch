@@ -422,7 +422,10 @@ label.check.on { color: var(--accent); }
 .rb-replay .rp-dice { display: inline-flex; gap: 2px; margin-inline-start: 4px; }
 
 /* ---- voice chat (v3.0.0): the mic button, the speaking ring, another player's voice on its chip ---- */
-#ribbon:has(.mic-btn) .rb-players { inset-inline-end: 150px; }
+#ribbon:has(.mic-btn) .rb-players, #ribbon:has(.spk-btn) .rb-players { inset-inline-end: 150px; }
+#ribbon:has(.mic-btn):has(.spk-btn) .rb-players { inset-inline-end: 190px; }
+.rb-tools .spk-btn { color: var(--muted); }
+.rb-tools .spk-btn.on { color: #2f7fd0; }
 .rb-tools .mic-btn { color: var(--muted); }
 .rb-tools .mic-btn.mic-live { color: #fff; background: #2f9a4f; border-color: #2f9a4f; }
 .rb-tools .mic-btn.mic-wait { opacity: .6; }

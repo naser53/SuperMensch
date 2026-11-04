@@ -9,6 +9,8 @@ export const COLOR_NAMES = {
 
 export const STR = {
   en: {
+    speaker_on: "Speaker mode is on (loud): tap for normal",
+    speaker_off: "Normal sound: tap for speaker mode (loud)",
     mic_off: "Voice chat: tap to talk",
     mic_live: "Your microphone is on: tap to mute",
     mic_muted: "Your microphone is muted: tap to talk",
@@ -252,6 +254,8 @@ export const STR = {
     lang_label: "Language",
   },
   fa: {
+    speaker_on: "حالت اسپیکر روشن است (بلند): برای حالت معمولی بزنید",
+    speaker_off: "صدای معمولی: برای حالت اسپیکر (بلند) بزنید",
     mic_off: "چت صوتی: برای حرف زدن بزنید",
     mic_live: "میکروفون شما روشن است: برای بستن بزنید",
     mic_muted: "میکروفون شما بسته است: برای حرف زدن بزنید",
@@ -495,6 +499,8 @@ export const STR = {
     lang_label: "زبان",
   },
   de: {
+    speaker_on: "Lautsprecher an (laut): tippen für normal",
+    speaker_off: "Normaler Ton: tippen für Lautsprecher (laut)",
     mic_off: "Sprachchat: tippen zum Sprechen",
     mic_live: "Dein Mikrofon ist an: tippen zum Stummschalten",
     mic_muted: "Dein Mikrofon ist stumm: tippen zum Sprechen",

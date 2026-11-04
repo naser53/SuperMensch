@@ -4,6 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.1 (2026-11-04)
+
+Voice chat fixes after the first test on two Android phones (Samsung, Chrome): one player stopped hearing the other after about 10 seconds.
+* A microphone that was open opens again by itself when the phone's connection drops for a moment and comes back (before, the server closed it and it stayed closed).
+* A voice that stops playing is played again, and a broken listening connection is made again.
+* **Speaker** button next to the microphone (on by default): asks the phone to play the others on the loudspeaker, where the browser allows it.
+* The last voice events are added to the game report (menu, Info, Copy), to find the cause if sound stops again.
+
 ## v3.0.0 (2026-11-04): voice chat
 
 The voice chat release. Players in an online game talk to each other, like a group call.

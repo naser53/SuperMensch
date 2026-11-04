@@ -53,6 +53,8 @@ const ICON = {
   // voice chat: the microphone (open / closed) and another player's voice (heard / muted here)
   mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
   micOff: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"/>'),
+  speaker: svg('<rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="6.5" r="1" fill="currentColor"/>'),
+  speakerOff: svg('<rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="6.5" r="1" fill="currentColor"/><path d="M3 3l18 18"/>'),
   ear: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>', 13),
   earOff: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>', 13),
   stuck: svg('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>', 14),
@@ -563,9 +565,12 @@ class App {
   // voice chat (online, when the admin lets one of this device's players talk): closed, open or muted
   micHtml() {
     const v = this.voice;
-    if (!v || !v.can) return "";
+    if (!v) return "";
+    // speaker mode (phones): the others' voices on the loudspeaker; shown while there is someone to hear
+    const spk = v.hearing ? `<button class="btn rb-btn icon spk-btn${v.speaker ? " on" : ""}" data-act="speaker" aria-pressed="${v.speaker}" title="${this.T(v.speaker ? "speaker_on" : "speaker_off")}">${v.speaker ? ICON.speaker : ICON.speakerOff}</button>` : "";
+    if (!v.can) return spk;
     const st = v.micState;
-    return `<button class="btn rb-btn icon mic-btn mic-${st}" data-act="mic" aria-pressed="${st === "live"}" title="${this.T("mic_" + st)}">${st === "live" ? ICON.mic : ICON.micOff}</button>`;
+    return spk + `<button class="btn rb-btn icon mic-btn mic-${st}" data-act="mic" aria-pressed="${st === "live"}" title="${this.T("mic_" + st)}">${st === "live" ? ICON.mic : ICON.micOff}</button>`;
   }
 
   // the drawer under the menu button: scores, info, debug, language, speed, sound, leave
@@ -1147,6 +1152,7 @@ class App {
       `Debug mode: ${this.debug ? "on" : "off"} · debug edits: ${(tb.edits || []).length}`,
       `Language: ${this.lang} · round ${g.turnNo} · turn of player ${g.turn + 1} · pending ${g.pending ? g.pending.kind : "none"} · over ${!!g.over}`,
       `Fingerprint: ${fingerprint(g)} · events ${tb.events.length}`,
+      ...(this.voice && this.voice.log.length ? [`Voice (speaker ${this.voice.speaker ? "on" : "off"}, mic ${this.voice.micState}, ${navigator.userAgent}):`, ...this.voice.log.map(x => "  " + x)] : []),
       "",
       "Moves (oldest first):",
       ...g.log.map((m, i) => `${i + 1}. ${en(m)}`),
@@ -1536,6 +1542,7 @@ function wire(app) {
     const g = app.game;
     if (!g) return;
     if (b.dataset.act === "mic") { if (app.voice) app.voice.toggleMic(); return; }
+    if (b.dataset.act === "speaker") { if (app.voice) app.voice.toggleSpeaker(); return; }
     if (b.dataset.act === "vquiet") { if (app.voice) app.voice.toggleQuiet(+b.dataset.val); return; }
     if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound", "hud"].includes(b.dataset.act)) return;
     if (app.rp && (b.dataset.pay !== undefined || b.dataset.opt !== undefined)) return;
