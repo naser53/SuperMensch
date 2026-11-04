@@ -9,6 +9,7 @@ import { VERSION } from "./version.js";
 import { Config } from "./config.js";
 import { boardFor } from "./boards.js";
 import { sound } from "./sound.js";
+import { Voice } from "./voice.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -49,6 +50,11 @@ const ICON = {
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   soundOn: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>'),
   soundOff: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>'),
+  // voice chat: the microphone (open / closed) and another player's voice (heard / muted here)
+  mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
+  micOff: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"/>'),
+  ear: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>', 13),
+  earOff: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>', 13),
   stuck: svg('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>', 14),
 };
 
@@ -192,6 +198,7 @@ class App {
 
   showSetup() {
     if (this.online) {                                          // Exit: free this device's seats, back to the lobby
+      if (this.voice) this.voice.stop();                        // the microphone goes off with the game
       const ws = this.online.ws;
       this.online.ws = null;
       try { ws.send(JSON.stringify({ t: "leave" })); } catch { /* not connected */ }
@@ -537,7 +544,10 @@ class App {
       if (place >= 0) tags.push(`<span class="tag">${this.T("place", { n: place + 1 })}</span>`);
       if (g.mode === "two") tags.push(`<span class="cards" title="${this.T("cards", { n: g.cards[i] })}">${ICON.cardSmall}${num(this.lang, g.cards[i])}</span>`);
       if (g.stuck(i) && place < 0) tags.push(`<span class="stuck" title="${this.T("stuck")}">${ICON.stuck}</span>`);
-      return `<div class="chip${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}" data-act="chip" data-val="${i}">` +
+      const vo = this.voice && this.voice.voiceOf(i);       // another device's microphone: mute it here
+      if (vo) tags.push(`<button class="vq${vo.quiet ? " off" : ""}${vo.muted ? " shut" : ""}" data-act="vquiet" data-val="${i}" title="${this.T(vo.quiet ? "voice_loud" : "voice_quiet", { p: tr(this.lang, pl.name) })}">${vo.quiet ? ICON.earOff : ICON.ear}</button>`);
+      const talk = this.voice && this.voice.speaking.has(i) ? " speaking" : "";
+      return `<div class="chip${talk}${i === g.turn && !g.over ? " turn" : ""}${place >= 0 ? " done" : ""}" data-act="chip" data-val="${i}">` +
         pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
         `<span class="nm">${this.S(pl.name)}</span><b class="pts" title="${this.T("score", { n: g.state.scores[i] })}">${esc(num(this.lang, g.state.scores[i]))}</b>${tags.join("")}</div>`;
     }).join("");
@@ -545,9 +555,17 @@ class App {
 
   // view, scores, info, debug, language, computer speed, menu
   toolsHtml() {
-    return `<button class="btn rb-btn icon hud-btn${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}" aria-pressed="${!!this.scoresMode}">${ICON.star}</button>` +
+    return this.micHtml() + `<button class="btn rb-btn icon hud-btn${this.scoresMode ? " on" : ""}" data-act="scores" title="${this.T("scores")}" aria-pressed="${!!this.scoresMode}">${ICON.star}</button>` +
       `<button class="btn rb-btn icon hud-btn${this.hudOpen ? " on" : ""}" data-act="hud" aria-expanded="${!!this.hudOpen}" title="${this.T("menu")}">${ICON.menu}</button>` +
       `<div class="hudpop" ${this.hudOpen ? "" : "hidden"}>` + this.drawerHtml() + "</div>";
+  }
+
+  // voice chat (online, when the admin lets one of this device's players talk): closed, open or muted
+  micHtml() {
+    const v = this.voice;
+    if (!v || !v.can) return "";
+    const st = v.micState;
+    return `<button class="btn rb-btn icon mic-btn mic-${st}" data-act="mic" aria-pressed="${st === "live"}" title="${this.T("mic_" + st)}">${st === "live" ? ICON.mic : ICON.micOff}</button>`;
   }
 
   // the drawer under the menu button: scores, info, debug, language, speed, sound, leave
@@ -1169,12 +1187,39 @@ class App {
 
   startOnline(id, seats) {
     this.online = { id, seats, remote: new Set(), queue: [], sent: null, applying: false, fp: null, ws: null };
+    this.startVoice(id, seats);
     $("#setup").hidden = true;
     this.connect();
   }
 
+  // voice chat (js/voice.js): the server says who may talk and which microphones are open
+  startVoice(id, seats) {
+    const o = this.online;
+    this.voice = new Voice({
+      post: async (op, body = {}) => {
+        const r = await fetch(`${apiBase()}/api/games/${encodeURIComponent(id)}/voice`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op, token: deviceToken(), ...body }) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || r.status);
+        return d;
+      },
+      onChange: () => { if (this.game) this.render(); },
+      onError: code => this.voiceNote("voice_" + code),
+      onMute: on => { if (o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify({ t: "mute", on })); },
+    });
+    this.voice.mySeats = seats;
+    this.voice.onSpeaking = set => document.querySelectorAll(".rb-players .chip").forEach(c => c.classList.toggle("speaking", set.has(+c.dataset.val)));
+    addEventListener("pagehide", () => this.voice && this.voice.stop());
+  }
+
+  // a voice message in a card under the mic button (the hint line would hide it at the next move)
+  voiceNote(key) {
+    this.flashBanner(this.T(key), null, null, document.querySelector(".mic-btn") || document.querySelector(".rb-tools"), 3500);
+  }
+
   connect() {
     const o = this.online;
+    o.fresh = true;                          // a new connection: the server knows no voice of this device yet
     const ws = new WebSocket(`${apiBase().replace(/^http/, "ws")}/api/games/${encodeURIComponent(o.id)}/ws`);
     o.ws = ws;
     ws.onopen = () => this.hello();
@@ -1220,6 +1265,18 @@ class App {
       o.queue = [];
       o.sent = null;
       this.hello();
+      return;
+    }
+    if (m.t === "state" && this.voice) {
+      if (o.fresh) { this.voice.reset(); o.fresh = false; }
+      this.voice.setAllowed(m.voice && m.voice.on, m.voice && m.voice.can);
+      this.voice.setVoices(m.voices, m.mine || o.seats);
+    }
+    if (m.t === "voices" && this.voice) { this.voice.setVoices(m.list); return; }
+    if (m.t === "voiceok" && this.voice) {
+      const had = this.voice.mic;
+      this.voice.setAllowed(m.on, m.can);
+      if (had && !m.can) this.voiceNote("voice_off");
       return;
     }
     if (m.t === "state") {
@@ -1457,7 +1514,10 @@ class App {
 // ------------------------------------------------------------ event wiring
 function wire(app) {
   // taps on the turn pill (replay mode); on pointerdown, as the pill may be drawn again before the click
-  document.addEventListener("pointerdown", e => { if (e.target.closest(".rb-status")) app.tapStatus(); });
+  document.addEventListener("pointerdown", e => {
+    if (app.voice) app.voice.wake();                // sound may play only after a tap
+    if (e.target.closest(".rb-status")) app.tapStatus();
+  });
   document.addEventListener("click", e => {
     if (e.target.id === "info") { app.showInfo(false); return; }      // click beside the card closes it
     if (e.target.closest("#confirm")) {
@@ -1475,6 +1535,8 @@ function wire(app) {
     }
     const g = app.game;
     if (!g) return;
+    if (b.dataset.act === "mic") { if (app.voice) app.voice.toggleMic(); return; }
+    if (b.dataset.act === "vquiet") { if (app.voice) app.voice.toggleQuiet(+b.dataset.val); return; }
     if (app.scoresMode && !["scores", "info", "info_close", "menu", "sound", "hud"].includes(b.dataset.act)) return;
     if (app.rp && (b.dataset.pay !== undefined || b.dataset.opt !== undefined)) return;
     if (b.dataset.pay !== undefined) {

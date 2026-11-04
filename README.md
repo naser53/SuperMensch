@@ -63,6 +63,13 @@ it tags that commit `v<version>` and publishes a release with the built page and
 After a deliberate rule change, record the fixed games again with
 `node tests/golden.mjs --record`.
 
+**Voice chat (online server, v3.0.0):** in the Cloudflare dashboard open *Realtime*, create an
+**SFU** application and a **TURN** key, and add their ids and tokens as repository secrets
+`REALTIME_APP_ID`, `REALTIME_APP_TOKEN`, `TURN_KEY_ID`, `TURN_KEY_TOKEN` (the TURN pair is optional
+but helps behind strict filters). The server deploy puts them on the Worker. Then tick **Voice** for
+the players who may talk on the admin page. Cloudflare's free allowance is 1,000 GB a month for SFU
+and TURN together; a speaker uses about 15 MB an hour.
+
 | Path | Purpose |
 | --- | --- |
 | `js/config.js` | All game parameters |
@@ -74,6 +81,8 @@ After a deliberate rule change, record the fixed games again with
 | `js/main.js` | Setup screen, ribbon, game loop |
 | `js/debugcmd.js` | Debug console commands |
 | `js/table.js` | A game plus its event list, for replay and the online game |
+| `js/voice.js` | Voice chat in online games (WebRTC through Cloudflare Realtime) |
+| `server/` | The online server (Cloudflare Worker); `server/voice.js` talks to Cloudflare Realtime |
 | `js/version.js` | The game version |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |

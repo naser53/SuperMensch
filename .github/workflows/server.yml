@@ -2,7 +2,8 @@ name: Online server
 
 # Deploys the online server (wrangler.toml) to Cloudflare from the main branch (since v2.1.0).
 # Repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and ADMIN_KEY (the key
-# for renaming users on the page; any password the owner chooses).
+# for renaming users on the page; any password the owner chooses). Voice chat (v3.0.0):
+# REALTIME_APP_ID, REALTIME_APP_TOKEN, and optionally TURN_KEY_ID, TURN_KEY_TOKEN.
 
 on:
   push:
@@ -35,3 +36,17 @@ jobs:
         run: |
           if [ -z "$ADMIN_KEY" ]; then echo "::warning::ADMIN_KEY is not set: renaming users stays off"; exit 0; fi
           printf '%s' "$ADMIN_KEY" | npx wrangler secret put ADMIN_KEY
+      - name: Voice chat secrets (Cloudflare Realtime SFU and TURN; v3.0.0)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REALTIME_APP_ID: ${{ secrets.REALTIME_APP_ID }}
+          REALTIME_APP_TOKEN: ${{ secrets.REALTIME_APP_TOKEN }}
+          TURN_KEY_ID: ${{ secrets.TURN_KEY_ID }}
+          TURN_KEY_TOKEN: ${{ secrets.TURN_KEY_TOKEN }}
+        run: |
+          for k in REALTIME_APP_ID REALTIME_APP_TOKEN TURN_KEY_ID TURN_KEY_TOKEN; do
+            v="${!k}"
+            if [ -z "$v" ]; then echo "::warning::$k is not set: voice chat $( [ "${k#TURN}" = "$k" ] && echo stays off || echo works without TURN )"; continue; fi
+            printf '%s' "$v" | npx wrangler secret put "$k"
+          done
