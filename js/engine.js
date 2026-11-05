@@ -236,15 +236,18 @@ export class Game {
     return cs[0] === col ? cs[1] : cs[0];
   }
 
-  // §9: one color complete and the other still has a living piece
+  // §9: a live piece out on the way (track or tunnel), not only in the nest or the yard
+  // (owner, 2026-11-01). The hunter needs one in its second color to come in and to stay.
+  colorOnWay(st, col) {
+    return st.pos[col].some(r => (r >= 0 && r < this.L) || r === TUN);
+  }
+
+  // §9: one color complete and the other still has a piece out on the way
   hunterEligible(p, st) {
     if (this.mode !== "two" || st.hunters[p] !== null) return null;
     const cc = this._completedColor(p, st);
     if (cc === null) return null;
-    // the other color needs a live piece out on the way (track or tunnel), not only in the nest
-    // or the yard (owner, 2026-11-01)
-    const oc = this._otherColor(p, cc);
-    if (!st.pos[oc].some(r => (r >= 0 && r < this.L) || r === TUN)) return null;
+    if (!this.colorOnWay(st, this._otherColor(p, cc))) return null;
     return cc;
   }
 
@@ -918,10 +921,11 @@ export class Game {
     return msgs;
   }
 
-  // §9: the hunter leaves when its second color has no living piece
+  // §9: the hunter leaves when its second color has no piece out on the way; pieces that can
+  // still move inside the nest do not keep it (owner, 2026-11-05)
   _cleanupHunters(st) {
     st.hunters.forEach((h, q) => {
-      if (h && !this.colorHasAlive(st, this._otherColor(q, h[0]))) {
+      if (h && !this.colorOnWay(st, this._otherColor(q, h[0]))) {
         st.hunters[q] = null;
         this.log.push(M("log_hunter_gone", { p: this.players[q].name }));
       }

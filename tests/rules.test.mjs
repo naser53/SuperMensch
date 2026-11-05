@@ -740,6 +740,20 @@ test("hunter enters only while the other color has a piece out on the way", () =
   assert.equal(g.hunterEligible(0, g.state), 3);
 });
 
+test("hunter leaves when the other color has no piece out on the way, even with nest moves left", () => {
+  const g = make();
+  const L = g.L;
+  g.state.pos[3] = [L, L + 1, L + 2, L + 3];                // yellow complete
+  g.state.pos[0] = [5, L, L + 2, L + 3];                     // red: one on the track, one free in the nest
+  g.state.hunters[0] = [3, 20, 1, 0];
+  g._cleanupHunters(g.state);
+  assert.ok(g.state.hunters[0]);                             // stays while a red piece is on the track
+  g.state.pos[0][0] = YARD;                                  // only the nest piece can still move
+  assert.ok(g.colorHasAlive(g.state, 0));
+  g._cleanupHunters(g.state);
+  assert.equal(g.state.hunters[0], null);
+});
+
 test("a 6 into the nest may be played alone; the other die burns", () => {
   const g = make();
   const L = g.L;
