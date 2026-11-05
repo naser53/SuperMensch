@@ -289,7 +289,7 @@ The notes below are from the ribbon on top; what each part does still holds, onl
   Debug, language, animation speed (Slow / Medium / Fast; Fast is the v1 speed; `Config.ANIM_SPEEDS`), sound on/off, Menu (icons with tooltips; labels on wide screens). Menu (and
   Esc) asks first while a game is running: *Leave* or *Keep playing*; the computer waits meanwhile.
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
-  roll (a 3D die with rounded edges in a small glass orb, the owner's "Dice3D" design (`js/rolldie.js`, one WebGL canvas moved into each redrawn button), that turns slowly, so no face reads as a value, faster on hover; it speeds up, slows down and dims smoothly when the button turns on or off; it always stays in its
+  roll (a small 3D die that turns slowly, so no face reads as a value; it always stays in its
   place and is greyed out, standing still, until it is the human's time to roll), triple-dice card,
   **Second try** right beside it (an icon only, a die in a turning arrow; always shown, greyed out
   when it cannot be used), triple-dice card and tunnels (also always shown, greyed out when they
@@ -449,7 +449,6 @@ the fingerprint.
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/sound.js` | Sound effects: the dice recording, the rest synthesized (move, capture, knock, gate, fireworks) |
 | `js/dicesound.js` | The dice-throw recordings (`sounds/dice-one.mp3`, `sounds/dice-many.mp3`) as base64 |
-| `js/rolldie.js` | The roll button's die (Dice3D: rounded die in a glass orb), one small WebGL canvas moved into each redrawn button |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
 | `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
