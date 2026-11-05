@@ -16,8 +16,6 @@ Languages: **English** (default), **فارسی** (right-to-left) and **Deutsch**
   of `main`. What each version holds: [`CHANGELOG.md`](CHANGELOG.md). Code and font are inside that one file.
 * **Online with family (v2):** https://supermensch-dev.ndaneshi.workers.dev: pick a user and
   a room, the server throws the dice and everybody sees every throw live.
-* **GitHub Pages:** GitHub Pages publishes the same page (one-time setup: repository
-  **Settings → Pages → Source: GitHub Actions**).
 
 Move by clicking: click a die and then a piece, or a piece first (its possible fields show
 yellow rings with the die value) and then a ring or a die. Use **Undo** to take back the first
