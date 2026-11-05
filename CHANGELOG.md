@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.5 (2026-11-05)
+
+* Hunter: it now leaves the board when its second color has no piece out on the track (or in a tunnel). Pieces that can still move inside the nest no longer keep it; this is the same condition as for bringing it in.
+
 ## v3.0.4 (2026-11-05)
 
 * Debug replay bar takes less room: the back and forward arrows are small and have no ring, and Continue is a plain green play icon.
