@@ -77,7 +77,6 @@ button, select, input { font: inherit; color: inherit; }
   animation: rollhint 1.6s ease-in-out infinite; }
 .btn.rb-roll:hover { background: var(--accent); filter: brightness(1.08); }
 .btn.rb-roll:disabled { background: #e4e1da; border-color: #d6d2c9; color: #a8a49b; animation: none; cursor: default; filter: none; }
-.btn.rb-roll:disabled .dice3d { opacity: .5; }
 /* Second try: an icon button right beside the big die, as tall as it */
 .btn.rb-retry { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; min-width: 56px; padding: 4px;
   background: var(--accent); border-color: var(--accent); color: #fff; }
