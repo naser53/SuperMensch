@@ -77,32 +77,15 @@ button, select, input { font: inherit; color: inherit; }
   animation: rollhint 1.6s ease-in-out infinite; }
 .btn.rb-roll:hover { background: var(--accent); filter: brightness(1.08); }
 .btn.rb-roll:disabled { background: #e4e1da; border-color: #d6d2c9; color: #a8a49b; animation: none; cursor: default; filter: none; }
-.btn.rb-roll:disabled .cube3d { opacity: .5; }
+.btn.rb-roll:disabled .dice3d { opacity: .5; }
 /* Second try: an icon button right beside the big die, as tall as it */
 .btn.rb-retry { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; min-width: 56px; padding: 4px;
   background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.rb-retry:hover { background: var(--accent); filter: brightness(1.08); }
 .btn.rb-retry:disabled { background: #e4e1da; border-color: #d6d2c9; color: #a8a49b; cursor: default; filter: none; }
-.btn.rb-roll:disabled .cube3d-in { animation-play-state: paused; }
-/* the roll button's die: a cube that turns slowly (no face is a value) */
-.cube3d { --s: 34px; width: var(--s); height: var(--s); margin: 0 6px; perspective: 200px; flex: none; }
-.cube3d-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d;
-  animation: cubespin 9s linear infinite; }
-.rb-roll:hover .cube3d-in { animation-duration: 2.4s; }
-.cf { position: absolute; inset: 0; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 4px;
-  background: #fffdf6; border: 1.5px solid #c9c2b2; border-radius: 7px; backface-visibility: hidden; }
-.cf i { margin: 1.5px; border-radius: 50%; }
-.cf i.on { background: #2b2b2b; }
-.cf1 { transform: translateZ(calc(var(--s) / 2)); }
-.cf6 { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
-.cf2 { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
-.cf5 { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
-.cf3 { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
-.cf4 { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
-@keyframes cubespin { from { transform: rotateX(-24deg) rotateY(0deg) rotateZ(8deg); }
-  50% { transform: rotateX(-34deg) rotateY(180deg) rotateZ(-8deg); }
-  to { transform: rotateX(-24deg) rotateY(360deg) rotateZ(8deg); } }
-@media (prefers-reduced-motion: reduce) { .cube3d-in { animation: none; transform: rotateX(-24deg) rotateY(-34deg); } }
+/* the roll button's die: a 3D die in a glass orb (js/rolldie.js), turning slowly so no face is a value */
+.dice3d { --s: 40px; width: var(--s); height: var(--s); margin: 0 4px; flex: none; display: block; border-radius: 50%; }
+.dice3d-cv { display: block; width: 100% !important; height: 100% !important; border-radius: 50%; }
 @keyframes rollhint { 0%, 100% { box-shadow: 0 0 0 0 rgba(184,59,55,.45); } 50% { box-shadow: 0 0 0 7px rgba(184,59,55,0); } }
 .rb-speed { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
 .rb-speed select { padding: 6px 4px; min-height: 38px; }
@@ -361,7 +344,7 @@ label.check.on { color: var(--accent); }
 .btn.rb-roll { width: 78px; height: 78px; min-height: 0; padding: 0; margin: -30px 4px 0; border-radius: 50%; justify-content: center;
   border: 4px solid var(--bg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
 .btn.rb-roll > span:last-child { display: none; }
-.btn.rb-roll .cube3d { --s: 36px; }
+.btn.rb-roll .dice3d { --s: 62px; margin: 0; }
 .btn.sat, .rb-actions .undo { width: 48px; height: 48px; min-height: 0; min-width: 0; padding: 0; border-radius: 50%; justify-content: center; }
 .btn.rb-retry svg { width: 26px; height: 26px; }
 .rb-btn.sat:disabled, .rb-actions .undo:disabled { background: rgba(250,249,245,.9); opacity: .55; }
@@ -374,6 +357,7 @@ label.check.on { color: var(--accent); }
   .rb-actions { gap: 5px; padding: 6px 8px; }
   .btn.sat, .rb-actions .undo { width: 44px; height: 44px; }
   .btn.rb-roll { width: 70px; height: 70px; min-height: 0; }
+  .btn.rb-roll .dice3d { --s: 56px; }
   .hint3d { display: none; }
 }
 /* ---- end layout ---- */
