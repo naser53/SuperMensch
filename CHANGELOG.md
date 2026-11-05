@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.4 (2026-11-05)
+
+* Debug replay bar takes less room: the back and forward arrows are small and have no ring, and Continue is a plain green play icon.
+* A turn with more than four dice (a second throw) shows them smaller, so the line no longer wraps; a long name is cut with "…".
+
 ## v3.0.3 (2026-11-05)
 
 * Debug replay (five taps on the turn pill): a green **Run** button continues the game from the position shown. Tap it twice (the first tap asks); the later moves are deleted and every device loads the game again.

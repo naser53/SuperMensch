@@ -1487,7 +1487,7 @@ class App {
   }
 
   // The bar keeps one width while stepping (owner, 2026-11-05): the widest of the turn line and
-  // each player's line with three dice, measured once (again when the language changes).
+  // each player's line with four dice (two throws of two), measured once (again when the language changes).
   fitReplayBar(el) {
     const rp = this.rp, bar = el.querySelector(".rb-replay");
     if (!rp || !bar) return;
@@ -1498,7 +1498,7 @@ class App {
       probe.style.cssText = "position:absolute;visibility:hidden;width:max-content;min-width:0;max-width:none;";
       probe.innerHTML = `<div><b>${this.T("replay_turn", { n, m: n })}</b></div>` + this.game.players.map(pl =>
         `<div class="rp-last">${pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")}` +
-        `<span>${this.S(pl.name)}</span><span class="rp-dice">${die + die + die}</span></div>`).join("");
+        `<span>${this.S(pl.name)}</span><span class="rp-dice">${die + die}</span><span class="rp-dice">${die + die}</span></div>`).join("");
       bar.appendChild(probe);
       rp.w = Math.ceil(Math.max(...[...probe.children].map(c => c.getBoundingClientRect().width))) + 4;
       rp.wLang = this.lang;
@@ -1531,8 +1531,10 @@ class App {
     let last = "";
     if (prev) {
       const pl = this.game.players[prev.player], dice = all.slice(prev.at, rp.target).filter(ev => ev.dice);
-      last = pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
-        `<span>${this.S(pl.name)}</span>` + dice.map(ev => `<span class="rp-dice">${ev.dice.map(v => dieHtml(v, "", "")).join("")}</span>`).join("");
+      // the bar's width fits four dice of 20 px: more dice (another throw) are drawn smaller, on one line
+      const n = dice.reduce((s, ev) => s + ev.dice.length, 0), ds = n > 4 ? Math.max(10, Math.floor((90 - 4 * (dice.length - 1)) / n) - 3) : 20;
+      last = `<span class="rp-who" style="--ds:${ds}px">` + pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("") +
+        `<span class="rp-name">${this.S(pl.name)}</span></span>` + dice.map(ev => `<span class="rp-dice" style="--ds:${ds}px">${ev.dice.map(v => dieHtml(v, "", "")).join("")}</span>`).join("");
     }
     return `<div class="rb-replay" dir="ltr">` +
       `<button class="btn rb-btn" data-act="rp_back" ${rp.target > 0 ? "" : "disabled"} title="${this.T("replay_back")}">◀</button>` +
