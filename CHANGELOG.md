@@ -4,7 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
-## v3.0.5 (2026-11-05)
+## v3.0.6 (2026-11-05)
 
 * The roll button's die is now the Dice3D design: a real 3D die with rounded edges and red one-pip inside a small glass orb. It turns slowly while you can roll (faster on hover) and stands still, greyed out, otherwise. Dice results, sounds and the panel layout are unchanged.
 
