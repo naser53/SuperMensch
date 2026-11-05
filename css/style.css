@@ -378,6 +378,22 @@ label.check.on { color: var(--accent); }
 }
 /* ---- end layout ---- */
 
+/* the 3D die (js/rolldie.js): the button turns see-through and a persistent face lies over it,
+   so the colour, the pulse and the die change smoothly instead of restarting on every redraw */
+.dice3d { display: none; }
+.btn.rb-roll.has-face .cube3d { display: none; }
+.btn.rb-roll.has-face .dice3d { display: block; width: 62px; height: 62px; flex: none; }
+.btn.rb-roll.has-face, .btn.rb-roll.has-face:hover, .btn.rb-roll.has-face:disabled {
+  background: transparent; border-color: var(--bg); animation: none; filter: none; }
+.dice3d-face { position: fixed; z-index: 8; border-radius: 50%; pointer-events: none; display: grid; place-items: center;
+  background: var(--accent); transition: background-color .45s ease; }
+.dice3d-face.off { background: #e4e1da; }
+.dice3d-face::after { content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  animation: rollhint 1.6s ease-in-out infinite; transition: opacity .45s ease; }
+.dice3d-face.off::after { opacity: 0; }
+.dice3d-cv { display: block; border-radius: 50%; }
+@media (max-width: 640px) { .btn.rb-roll.has-face .dice3d { width: 56px; height: 56px; } }
+
 /* a short message at the top for 2 s (no tunnel for this color...) */
 .flash { position: absolute; top: 96px; left: 50%; transform: translate(-50%, -6px); z-index: 9; padding: 6px 14px; border-radius: 999px;
   background: rgba(255,255,255,.95); box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 14px; font-weight: 700; white-space: nowrap;
