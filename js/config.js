@@ -106,7 +106,7 @@ export class Config {
   // the board's own colors on the 6- and 8-color boards: its surface and its edge (the 4-color board
   // keeps its classic cream and red unless the admin sets them). The admin may change both too.
   static BOARD_COLORS = ["#f0e6c8", "#b59c6c"];
-  // the online server (v2); a page served by another host (GitHub Pages, the downloaded file) asks it
+  // the online server (v2); a page served by another host (such as the downloaded file) asks it
   static SERVER_URL = "https://supermensch-dev.ndaneshi.workers.dev";
   // voice chat in online games (js/voice.js): the microphone's bit rate (Opus, bit/s; about 15 MB an
   // hour), the loudness that lights a speaker's chip (0..1, RMS), how long it stays lit (ms), and how

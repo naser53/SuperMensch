@@ -461,7 +461,6 @@ the fingerprint.
 | `tools/replay.mjs` | Rebuilds a game from the report of the Copy button in Info |
 | `docs/` | Rules (docx, md) and these handoff files |
 | `.github/workflows/ci.yml` | Tests, simulation, build, publish to the `latest` release |
-| `.github/workflows/pages.yml` | GitHub Pages; fails until Pages is enabled |
 
 ### Engine model
 * A state machine. `Game.pending` is the current Decision; its kinds are `pre_roll`, `keep`,
@@ -499,7 +498,7 @@ npm run build       # dist/supermensch.html
 * During development serve the folder (`npx serve .`) and open `index.html`.
 * Every push to `main` runs CI: tests, 3 simulated games, build, then publishes
   `supermensch.html` to the **latest** GitHub release (download and open it in a browser).
-* GitHub Pages needs a one-time switch by the owner: Settings → Pages → Source: GitHub Actions.
+* No GitHub Pages: its workflow was removed (owner, 2026-11-05); the game is the release file and the online server.
 * Browser checks were done with Playwright + Chromium (swiftshader WebGL); keep screenshots out
   of the repo (`*.png` is in `.gitignore`).
 
@@ -555,7 +554,6 @@ npm run build       # dist/supermensch.html
 ## 10. Known limitations
 * The computer player never breaks walls or castles, overspends on tunnels, and does not weigh
   the demotion rule.
-* `pages.yml` fails until Pages is enabled.
 
 ## 11. Backlog
 1. Done: the side panel became the ribbon on top (dice on the board first, then the ribbon).

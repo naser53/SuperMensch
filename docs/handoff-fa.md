@@ -395,7 +395,6 @@
 | `tools/replay.mjs` | بازسازی بازی از گزارش دکمه‌ی کپی در Info |
 | `docs/` | قوانین (docx و md) و همین فایل‌ها |
 | `.github/workflows/ci.yml` | آزمون، شبیه‌سازی، ساخت، انتشار در release «latest» |
-| `.github/workflows/pages.yml` | GitHub Pages؛ تا روشن نشود خطا می‌دهد |
 
 ### مدل موتور
 * ماشین حالت: `Game.pending` تصمیم فعلی است با نوع‌های `pre_roll`، `keep`، `play`، `dice`.
@@ -434,7 +433,7 @@ npm run build       # dist/supermensch.html
 * هنگام توسعه پوشه را با `npx serve .` سرو کنید و `index.html` را باز کنید.
 * هر push به `main`: آزمون‌ها، ۳ بازی شبیه‌سازی، ساخت و انتشار `supermensch.html` در release
   **latest** گیت‌هاب (دانلود و باز کردن در مرورگر).
-* GitHub Pages یک بار باید روشن شود: Settings → Pages → Source: GitHub Actions.
+* GitHub Pages نداریم: workflow آن حذف شد (صاحب پروژه، ۲۰۲۶-۱۱-۰۵)؛ بازی همان فایل release و سرور آنلاین است.
 * آزمون مرورگر با Playwright و Chromium انجام شده؛ عکس‌ها داخل مخزن نروند (`*.png` در `.gitignore`).
 
 ## ۸. دلیل تصمیم‌ها
@@ -480,7 +479,6 @@ npm run build       # dist/supermensch.html
 
 ## ۱۰. محدودیت‌های شناخته‌شده
 * بازیکن کامپیوتری دیوار و قلعه نمی‌شکند، برای تونل زیادی خرج می‌کند و قانون تنزل درجه را در نظر نمی‌گیرد.
-* `pages.yml` تا روشن شدن Pages خطا می‌دهد.
 
 ## ۱۱. کارهای باقی‌مانده
 ۱. انجام شد: پنل کناری ریبون بالا شد (اول تاس روی صفحه، بعد ریبون).

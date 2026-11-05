@@ -1,6 +1,6 @@
 // Builds dist/supermensch.html: one self-contained file (scripts, styles and the
 // Vazirmatn font inlined) that runs offline straight from the disk, and
-// dist/index.html, the same file for GitHub Pages, and server/public/index.html (the online server's start page).
+// dist/index.html, the same file under that name, and server/public/index.html (the online server's start page).
 import { build } from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
