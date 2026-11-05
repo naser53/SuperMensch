@@ -508,6 +508,7 @@ class App {
       <div class="rb-status"><div class="rb-line">${status}</div></div>
       <div class="rb-actions">${acts}</div>${this.replayBarHtml()}
       <div class="rb-tools">${this.toolsHtml()}</div>`;
+    this.fitReplayBar(el);
     drop.innerHTML = list;
     drop.hidden = !list;
     this.showToast(hint, this.scoresMode);
@@ -1464,6 +1465,48 @@ class App {
     if (next) { rp.target = next.at; this.render(); }
   }
 
+  // Continue (owner, 2026-11-05): the game goes on from the position shown; the moves after it
+  // are deleted on the server, so a first tap only asks, a second within 4 s does it. Every
+  // device loads the game again ({t:"recolor"}), this one back in the live game.
+  replayContinue() {
+    const rp = this.rp, now = performance.now();
+    if (rp.at < rp.target) return;                    // still playing a step forward
+    if (rp.at >= this.replayEvents().length) { this.exitReplay(); return; }
+    if (!rp.sure || now - rp.sure > 4000) {
+      rp.sure = now;
+      this.flash(this.T("replay_go_sure"));
+      this.render();
+      setTimeout(() => { if (this.rp === rp && rp.sure === now) { rp.sure = 0; this.render(); } }, 4000);
+      return;
+    }
+    rp.sure = 0;
+    const ws = this.online.ws;
+    if (!ws || ws.readyState !== 1) { this.showToast(this.T("online_lost"), true); return; }
+    ws.send(JSON.stringify({ t: "rewind", at: rp.at }));
+    this.flash(this.T("replay_go_done"));
+  }
+
+  // The bar keeps one width while stepping (owner, 2026-11-05): the widest of the turn line and
+  // each player's line with three dice, measured once (again when the language changes).
+  fitReplayBar(el) {
+    const rp = this.rp, bar = el.querySelector(".rb-replay");
+    if (!rp || !bar) return;
+    if (!rp.w || rp.wLang !== this.lang) {
+      const die = dieHtml(6, "", ""), n = num(this.lang, 888);
+      const probe = document.createElement("div");
+      probe.className = "rp-at";
+      probe.style.cssText = "position:absolute;visibility:hidden;width:max-content;min-width:0;max-width:none;";
+      probe.innerHTML = `<div><b>${this.T("replay_turn", { n, m: n })}</b></div>` + this.game.players.map(pl =>
+        `<div class="rp-last">${pl.colors.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")}` +
+        `<span>${this.S(pl.name)}</span><span class="rp-dice">${die + die + die}</span></div>`).join("");
+      bar.appendChild(probe);
+      rp.w = Math.ceil(Math.max(...[...probe.children].map(c => c.getBoundingClientRect().width))) + 4;
+      rp.wLang = this.lang;
+      probe.remove();
+    }
+    bar.querySelector(".rp-at").style.width = `${rp.w}px`;
+  }
+
   // forward steps are played one event at a time, at the pace of the game (from tick)
   replayTick() {
     const rp = this.rp;
@@ -1494,7 +1537,9 @@ class App {
     return `<div class="rb-replay" dir="ltr">` +
       `<button class="btn rb-btn" data-act="rp_back" ${rp.target > 0 ? "" : "disabled"} title="${this.T("replay_back")}">◀</button>` +
       `<div class="rp-at"><b>${this.T("replay_turn", { n: num(this.lang, k), m: num(this.lang, turns.length - 1) })}</b><div class="rp-last">${last}</div></div>` +
-      `<button class="btn rb-btn" data-act="rp_fwd" ${rp.target < all.length ? "" : "disabled"} title="${this.T("replay_fwd")}">▶</button></div>`;
+      `<button class="btn rb-btn" data-act="rp_fwd" ${rp.target < all.length ? "" : "disabled"} title="${this.T("replay_fwd")}">▶</button>` +
+      `<button class="btn rb-btn rp-go${rp.sure ? " sure" : ""}" data-act="rp_go" ${rp.at < rp.target ? "disabled" : ""} title="${this.T("replay_go")}" aria-label="${this.T("replay_go")}">` +
+      `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></button></div>`;
   }
 
   tick() {
@@ -1558,6 +1603,7 @@ function wire(app) {
     }
     const act = b.dataset.act;
     if (act === "rp_back" || act === "rp_fwd") { if (app.rp) app.replayStep(act === "rp_back" ? -1 : 1); return; }
+    if (act === "rp_go") { if (app.rp) app.replayContinue(); return; }
     if ((act === "dice_go" || act === "dice_rand") && app.online) return;
     if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
     else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }

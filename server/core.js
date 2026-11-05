@@ -310,6 +310,13 @@ export class Room {
     return { turn: k, room: new Room(this.setup, events, this.table.game.rng) };
   }
 
+  // replay (debug) mode's Continue (owner, 2026-11-05): the game goes on from the first n events;
+  // the events after them are dropped and the next throw is a new one
+  rewind(n) {
+    if (!Number.isInteger(n) || n < 0 || n > this.events.length) throw new Error("no such position");
+    return new Room(this.setup, this.events.slice(0, n), this.table.game.rng);
+  }
+
   // the dice turns as text, one per line: "#3 Naser 6 2 / 5 5" (a second try after the slash)
   turnsText() {
     return diceTurns(this.setup, this.events).map((t, i) =>
