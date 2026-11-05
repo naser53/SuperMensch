@@ -500,6 +500,9 @@ class App {
           return btn(`${pre.tun ? `data-act="tunnels" data-val="${c}"` : "disabled"} data-n="${n}" style="--tc:${COLORS[c]};--slot:${(two ? 2 : 1) + k}" title="${esc(this.T("tunnel_menu", { n }))}: ${esc(COLOR_NAMES[this.lang][c])}"`,
             esc(num(this.lang, n)), `pre sat tunc${pre.tun && this.tunnelOpen === c ? " on" : ""}`, ICON.tunnel);
         }).join("") : "") + acts;
+      // Undo comes and goes (two-dice moves, tunnels before the roll); keep its slot so the dock
+      // never changes width and the icons never shift (owner, 2026-11-05)
+      if (!acts.includes('rb-btn undo"')) acts += '<button class="btn rb-btn undo slot-keep" disabled aria-hidden="true" tabindex="-1"></button>';
     }
     if (this.scoresMode) { hint = `<b>${this.T("scores_on")}</b> ${this.T("scores_legend")}`; list = ""; }
     if (locked && !g.over) { status = `<b class="rb-dbg">${this.T("replay_locked", { p: locked.map(x => x === "?" ? this.T("replay_someone") : this.S(x)).join("، ") })}</b>`; hint = ""; list = ""; }

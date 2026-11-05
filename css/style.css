@@ -358,6 +358,7 @@ label.check.on { color: var(--accent); }
 .rb-actions .rb-roll { order: 3; }
 .rb-actions .rb-retry { order: 4; }
 .rb-actions .undo { order: 6; }
+.rb-actions .undo.slot-keep { visibility: hidden; }   /* the reserved Undo slot */
 .btn.rb-roll { width: 78px; height: 78px; min-height: 0; padding: 0; margin: -30px 4px 0; border-radius: 50%; justify-content: center;
   border: 4px solid var(--bg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
 .btn.rb-roll > span:last-child { display: none; }
