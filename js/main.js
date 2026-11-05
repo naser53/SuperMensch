@@ -1539,7 +1539,7 @@ class App {
       `<div class="rp-at"><b>${this.T("replay_turn", { n: num(this.lang, k), m: num(this.lang, turns.length - 1) })}</b><div class="rp-last">${last}</div></div>` +
       `<button class="btn rb-btn" data-act="rp_fwd" ${rp.target < all.length ? "" : "disabled"} title="${this.T("replay_fwd")}">▶</button>` +
       `<button class="btn rb-btn rp-go${rp.sure ? " sure" : ""}" data-act="rp_go" ${rp.at < rp.target ? "disabled" : ""} title="${this.T("replay_go")}" aria-label="${this.T("replay_go")}">` +
-      `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></button></div>`;
+      `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button></div>`;
   }
 
   tick() {
