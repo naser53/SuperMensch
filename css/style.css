@@ -420,6 +420,12 @@ label.check.on { color: var(--accent); }
 @media (max-width: 640px) { .rb-replay { bottom: 96px; } }
 .rb-replay .rp-last .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .rb-replay .rp-dice { display: inline-flex; gap: 2px; margin-inline-start: 4px; }
+.rb-replay .rp-at { max-width: calc(100vw - 210px); }
+.rb-replay .rp-last { flex-wrap: wrap; }
+.rb-replay .rp-go { background: #2e9e4f; border-color: #237a3c; color: #fff; }
+.rb-replay .rp-go:hover:not(:disabled) { background: #26873f; }
+.rb-replay .rp-go.sure { background: #d08a00; border-color: #a86f00; animation: rp-pulse .7s ease-in-out infinite alternate; }
+@keyframes rp-pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
 /* ---- voice chat (v3.0.0): the mic button, the speaking ring, another player's voice on its chip ---- */
 #ribbon:has(.mic-btn) .rb-players, #ribbon:has(.spk-btn) .rb-players { inset-inline-end: 150px; }

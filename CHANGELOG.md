@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.3 (2026-11-05)
+
+* Debug replay (five taps on the turn pill): a green **Run** button continues the game from the position shown. Tap it twice (the first tap asks); the later moves are deleted and every device loads the game again.
+* The replay bar keeps one width (from the longest player name and three dice), so the back and forward arrows no longer move.
+
 ## v3.0.2 (2026-11-04)
 
 * Voice report: every 10 seconds the voice log notes what arrives (KB, audio level), whether each voice plays, what is sent, and the sound outputs the phone offers. One Android phone still hears nothing while the other hears it; the next report shows where the sound stops.

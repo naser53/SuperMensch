@@ -249,6 +249,9 @@ export class Lobby extends DurableObject {
 //                   { t: "move", seq, ev: { pick } }         seq = events the device has seen
 //                   { t: "again" }                           the game is over: play again (new room)
 //                   { t: "debug", on }                       replay (debug) mode on / off on this device
+//                   { t: "rewind", at }                      replay mode's Continue: the game goes on
+//                                                            from the first `at` events (only from a
+//                                                            device in replay mode)
 //                   { t: "mute", on }                        voice: this device's microphone muted / open
 //   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
 //                   (mine: the seats this device got; taken: wanted seats another device holds;
@@ -334,17 +337,23 @@ export class GameRoom extends DurableObject {
     let turn = null;
     if (text !== null) {
       const r = room.debug(text);
-      const next = r.room;
-      let same = 0;                                   // the events that stay as they were
-      while (same < next.events.length && JSON.stringify(next.events[same]) === JSON.stringify(room.events[same])) same++;
-      this.sql.exec(`DELETE FROM events WHERE seq >= ?`, same);
-      this.room = next;
-      this._save(same);
-      this._all({ t: "recolor" });                    // the devices load the game again
-      await this._report();
+      await this._replace(r.room);
       turn = r.turn;
     }
     return { turn, turns: this.room.turnsText(), view: this.room.view() };
+  }
+
+  // a new room in place of this one (debug, rewind): the events that stay as they were are kept,
+  // the rest stored again; every device loads the game again
+  async _replace(next) {
+    const room = this._load();
+    let same = 0;
+    while (same < next.events.length && JSON.stringify(next.events[same]) === JSON.stringify(room.events[same])) same++;
+    this.sql.exec(`DELETE FROM events WHERE seq >= ?`, same);
+    this.room = next;
+    this._save(same);
+    this._all({ t: "recolor" });
+    await this._report();
   }
 
   // the admin gives the room a new name; the devices load the game again to show it
@@ -455,6 +464,17 @@ export class GameRoom extends DurableObject {
     }
     if (msg.t === "debug") {
       ws.serializeAttachment({ ...(ws.deserializeAttachment() || {}), debug: !!msg.on });
+      this._debugAll();
+      return;
+    }
+    if (msg.t === "rewind") {
+      const a = ws.deserializeAttachment() || {};
+      if (!a.debug) { this._send(ws, { t: "refused", reason: "not debugging", seq: room.events.length }); return; }
+      let next;
+      try { next = room.rewind(msg.at); }
+      catch (e) { this._send(ws, { t: "refused", reason: String(e.message || e), seq: room.events.length }); return; }
+      ws.serializeAttachment({ ...a, debug: false });
+      await this._replace(next);
       this._debugAll();
       return;
     }

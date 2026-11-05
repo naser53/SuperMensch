@@ -617,6 +617,12 @@ earlier sketch (browser dice, PINs).
   `{t:"debug", by:[names]}`, which show "X is debugging" in the pill and are locked. A device that
   closes leaves the mode. `App.enterReplay` / `replayStep` / `replayTick` in `js/main.js`,
   `GameRoom._debugBy` in `server/worker.js`.
+  **Continue** (owner, 2026-11-05): a green Run button (icon only) after the forward arrow goes on
+  from the position shown. The first tap asks (the button pulses), a second within 4 s sends
+  `{t:"rewind", at}`; the room (`Room.rewind`, `GameRoom._replace`) drops the later events, throws
+  anew and plays the computers, and every device loads the game again, this one back live.
+  At the live end it just leaves the mode. The bar keeps one width: the widest of "Turn n of m"
+  and each player's line with three dice, measured once per game and language (`fitReplayBar`).
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
   for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
   `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`
