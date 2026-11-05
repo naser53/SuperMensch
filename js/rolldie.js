@@ -17,6 +17,8 @@ const PIPS = {
 const SPIN = { x: 0.007986, y: 0.014641 };   // radians per frame at 60 fps, from the design
 const HOVER_SPIN = 3.5;                       // hover makes it turn this much faster
 const ORB_R = 0.32;
+const DIM = 0.5;                              // opacity of the die while the button is disabled
+const EASE = 0.06;                            // share of the way to the new speed/dimming per frame (about half a second)
 
 function faceTexture(n, aniso) {
   const s = 256, c = document.createElement("canvas");
@@ -54,8 +56,11 @@ const ORB_VERT = `
 class RollDieView {
   constructor() {
     this.ok = false;
-    this.spinning = false;
+    this.run = false;      // the animation loop is running
+    this.active = false;   // the button can be pressed
     this.hover = false;
+    this.speed = 0;        // 0 = still, 1 = normal turning
+    this.fade = DIM;       // canvas opacity
     this.last = 0;
     this.raf = 0;
     this.reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -64,7 +69,7 @@ class RollDieView {
   init() {
     if (this.ok || this.failed) return this.ok;
     try {
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setClearColor(0x000000, 0);
       const canvas = renderer.domElement;
@@ -131,9 +136,12 @@ class RollDieView {
   }
 
   // Put the canvas into the slot of the freshly drawn roll button (if there is one).
+  // The ribbon is rebuilt on every change, so nothing here may jump: the canvas keeps its pixels
+  // (preserveDrawingBuffer), and the speed and the dimming ease toward the new state instead of
+  // switching, so going from active to inactive (or back) is a smooth slow-down (or start).
   mount(root) {
     const slot = root && root.querySelector(".rb-roll .dice3d");
-    if (!slot) { this.stop(); return; }
+    if (!slot) { this.run = false; return; }
     if (!this.init()) return;
     if (this.canvas.parentNode !== slot) slot.appendChild(this.canvas);
     const btn = slot.closest("button");
@@ -141,33 +149,41 @@ class RollDieView {
     btn.addEventListener("pointerenter", () => { this.hover = true; });
     btn.addEventListener("pointerleave", () => { this.hover = false; });
     const px = Math.round(slot.getBoundingClientRect().width) || 40;
-    if (px !== this.size) { this.size = px; this.renderer.setSize(px, px, false); }
-    this.draw();
-    if (btn.disabled || this.reduced) this.stop(); else this.start();
+    if (px !== this.size) { this.size = px; this.renderer.setSize(px, px, false); this.draw(); }
+    this.active = !btn.disabled;
+    this.canvas.style.opacity = this.fade.toFixed(3);
+    this.wake();
   }
 
   draw() { this.renderer.render(this.scene, this.camera); }
 
-  start() {
-    if (this.spinning) return;
-    this.spinning = true;
+  // targets for the current state: speed 1 and full color when active, 0 and dimmed otherwise
+  target() {
+    return { speed: this.active && !this.reduced ? (this.hover ? HOVER_SPIN : 1) : 0, fade: this.active ? 1 : DIM };
+  }
+
+  wake() {
+    if (this.run) return;
+    this.run = true;
     this.last = performance.now();
     const tick = now => {
-      if (!this.spinning) return;
-      if (!this.canvas.isConnected) { this.stop(); return; }
-      const k = Math.min(4, (now - this.last) / (1000 / 60)) * (this.hover ? HOVER_SPIN : 1);
+      if (!this.run || !this.canvas.isConnected) { this.run = false; return; }
+      const f = Math.max(0, Math.min(4, (now - this.last) / (1000 / 60)));   // frames passed (60 fps = 1)
       this.last = now;
-      this.die.rotation.x += SPIN.x * k;
-      this.die.rotation.y += SPIN.y * k;
+      const t = this.target();
+      const ease = 1 - Math.pow(1 - EASE, f);
+      this.speed += (t.speed - this.speed) * ease;
+      this.fade += (t.fade - this.fade) * ease;
+      if (Math.abs(t.speed - this.speed) < 0.003) this.speed = t.speed;
+      if (Math.abs(t.fade - this.fade) < 0.003) this.fade = t.fade;
+      this.die.rotation.x += SPIN.x * this.speed * f;
+      this.die.rotation.y += SPIN.y * this.speed * f;
+      this.canvas.style.opacity = this.fade.toFixed(3);
       this.draw();
+      if (this.speed === 0 && this.fade === t.fade) { this.run = false; return; }   // settled and still
       this.raf = requestAnimationFrame(tick);
     };
     this.raf = requestAnimationFrame(tick);
-  }
-
-  stop() {
-    this.spinning = false;
-    cancelAnimationFrame(this.raf);
   }
 }
 
