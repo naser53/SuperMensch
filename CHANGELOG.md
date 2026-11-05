@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.8 (2026-11-05)
+
+* Roll button: back to the earlier turning cube (as in 3.0.5). The Dice3D die of 3.0.6 and 3.0.7 still jolted when the button turned on or off, so the owner chose to restore the old one.
+
 ## v3.0.7 (2026-11-05)
 
 * Roll button die: no more jolt when the button turns on or off. The die now speeds up and slows down smoothly and fades between full color and greyed out (about half a second), instead of switching at once; its first frame could also turn it a little backwards, which is fixed.

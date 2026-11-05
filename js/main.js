@@ -10,7 +10,6 @@ import { Config } from "./config.js";
 import { boardFor } from "./boards.js";
 import { sound } from "./sound.js";
 import { Voice } from "./voice.js";
-import { RollDie } from "./rolldie.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -32,8 +31,10 @@ const dieHtml = (v, cls, attrs) =>
 // ribbon icons (inline SVG, drawn in the button's text color)
 const svg = (body, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 const ICON = {
-  // the slot for the 3D die in the glass orb (js/rolldie.js puts its canvas here)
-  die: '<span class="dice3d" aria-hidden="true"></span>',
+  // a small 3D die that turns slowly, so no face reads as a value
+  die: '<span class="cube3d" aria-hidden="true"><span class="cube3d-in">' +
+    [1, 2, 3, 4, 5, 6].map(v => `<span class="cf cf${v}">${Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[v].includes(i) ? "on" : ""}"></i>`).join("")}</span>`).join("") +
+    "</span></span>",
   card: svg('<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="9.5" cy="8" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="14.5" cy="16" r="1" fill="currentColor"/>'),
   cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
   castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
@@ -508,7 +509,6 @@ class App {
       <div class="rb-actions">${acts}</div>${this.replayBarHtml()}
       <div class="rb-tools">${this.toolsHtml()}</div>`;
     this.fitReplayBar(el);
-    RollDie.mount(el);
     drop.innerHTML = list;
     drop.hidden = !list;
     this.showToast(hint, this.scoresMode);
