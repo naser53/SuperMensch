@@ -148,7 +148,8 @@ use a card.
 * Moves and captures like a normal piece and can be captured. Always circles, never enters a
   nest, builds no walls, uses no tunnels, does not take part in breaks by default
   (`HUNTER_CAN_BREAK`).
-* Removed automatically when the other color has no live piece; can come back with a 6 later.
+* Removed automatically when the other color has no live piece out on the track (pieces that can
+  still move inside the nest do not keep it; owner, 2026-11-05); can come back with a 6 later.
 
 ### 3.9 Walls and castles
 * Same-color pieces on consecutive fields: 2 = **wall**, 3 or more = **castle** (a fortress of 4

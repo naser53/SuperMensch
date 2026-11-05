@@ -8,6 +8,10 @@ attached. The `latest` release is always the newest build of `main`.
 
 * The roll button's die is now the Dice3D design: a real 3D die with rounded edges and red one-pip inside a small glass orb. It turns slowly while you can roll (faster on hover) and stands still, greyed out, otherwise. Dice results, sounds and the panel layout are unchanged.
 
+## v3.0.5 (2026-11-05)
+
+* Hunter: it now leaves the board when its second color has no piece out on the track (or in a tunnel). Pieces that can still move inside the nest no longer keep it; this is the same condition as for bringing it in.
+
 ## v3.0.4 (2026-11-05)
 
 * Debug replay bar takes less room: the back and forward arrows are small and have no ring, and Continue is a plain green play icon.
