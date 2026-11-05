@@ -408,23 +408,29 @@ label.check.on { color: var(--accent); }
 @keyframes hc-in { from { opacity: 0; transform: translate(-50%, -85%) scale(.8); } to { opacity: 1; transform: translate(-50%, -100%); } }
 
 /* online debug replay: back / forward over the dock (five taps on the turn pill) */
-.rb-replay { bottom: 108px; left: 0; right: 0; margin-inline: auto; width: max-content; display: flex; align-items: center; gap: 10px;
-  padding: 6px 10px; border-radius: 18px; background: rgba(255,244,214,.92); border: 2px dashed #d08a00; box-shadow: 0 4px 14px rgba(0,0,0,.16); }
-.rb-replay .rb-btn { width: 48px; height: 48px; min-height: 0; padding: 0; justify-content: center; font-size: 20px; border-radius: 50%; }
+.rb-replay { bottom: 108px; left: 0; right: 0; margin-inline: auto; width: max-content; display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px; border-radius: 18px; background: rgba(255,244,214,.92); border: 2px dashed #d08a00; box-shadow: 0 4px 14px rgba(0,0,0,.16); }
+.rb-replay .rb-btn { width: 32px; height: 40px; min-height: 0; padding: 0; justify-content: center; font-size: 20px; border-radius: 8px;
+  background: transparent; border: none; box-shadow: none; color: var(--ink); }
+.rb-replay .rb-btn:hover:not(:disabled) { background: rgba(0,0,0,.06); }
+.rb-replay .rb-btn:disabled { opacity: .3; }
 .rb-replay .rp-at { min-width: 120px; text-align: center; font-size: 14px; }
 .rb-replay .rp-last { display: flex; align-items: center; gap: 4px; justify-content: center; font-size: 12px; color: var(--muted); min-height: 18px; }
-.rb-replay .rp-last .die { width: 20px; height: 20px; padding: 2px; gap: 0; border-radius: 4px; }
-.rb-replay .rp-last .die i { width: 4px; height: 4px; }
+.rb-replay .rp-last .die { width: var(--ds, 20px); height: var(--ds, 20px); padding: calc(var(--ds, 20px) / 10); gap: 0; border-radius: calc(var(--ds, 20px) / 5);
+  border-width: clamp(1px, calc(var(--ds, 20px) / 10), 2px); }
+.rb-replay .rp-last .die i { width: calc(var(--ds, 20px) / 5); height: calc(var(--ds, 20px) / 5); }
 .rb-dbg { color: #b06d00; }
 .rb-status { cursor: default; user-select: none; -webkit-user-select: none; }
 @media (max-width: 640px) { .rb-replay { bottom: 96px; } }
 .rb-replay .rp-last .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .rb-replay .rp-dice { display: inline-flex; gap: 2px; margin-inline-start: 4px; }
-.rb-replay .rp-at { max-width: calc(100vw - 210px); }
-.rb-replay .rp-last { flex-wrap: wrap; }
-.rb-replay .rp-go { background: #2e9e4f; border-color: #237a3c; color: #fff; }
-.rb-replay .rp-go:hover:not(:disabled) { background: #26873f; }
-.rb-replay .rp-go.sure { background: #d08a00; border-color: #a86f00; animation: rp-pulse .7s ease-in-out infinite alternate; }
+.rb-replay .rp-at { max-width: calc(100vw - 150px); }
+.rb-replay .rp-last { flex-wrap: nowrap; }
+.rb-replay .rp-who { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.rb-replay .rp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rb-replay .rp-dice { flex-shrink: 0; }
+.rb-replay .rp-go { color: #2e9e4f; }
+.rb-replay .rp-go.sure { color: #d08a00; animation: rp-pulse .7s ease-in-out infinite alternate; }
 @keyframes rp-pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
 /* ---- voice chat (v3.0.0): the mic button, the speaking ring, another player's voice on its chip ---- */
