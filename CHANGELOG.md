@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.6 (2026-11-06)
+
+* Fix: after a jump in replay mode (and on opening a game) the last throw of the player before was thrown again beside the player whose turn it is, every die crossed out, as if that player could not move. The page now takes the last throw as already seen (`showTable`, `openOnline` in `js/main.js`).
+
 ## v3.2.5 (2026-11-06)
 
 * Rule change (owner): bounties up with the new rank thresholds. Capturing a general gives +20 / −20 (was 10), a marshal +30 / −30 (was 15): `GENERAL_BOUNTY` / `MARSHAL_BOUNTY` in `js/config.js`. Golden records re-recorded.
