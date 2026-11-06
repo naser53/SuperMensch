@@ -1150,7 +1150,7 @@ class App {
     this.doneNests = new Set();
     this.fireworksDone = this.game.over;
     this.diceRef = null;
-    this.seenLast = null;
+    this.seenLast = this.game.lastDice;      // the last throw is history: not thrown again, crossed out, on load
     this.prevTurn = undefined;
     $("#setup").hidden = true;
     this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
@@ -1271,7 +1271,7 @@ class App {
     this.sel = null;
     this.hold = null;
     this.diceRef = null;
-    this.seenLast = null;
+    this.seenLast = this.game.lastDice;      // nor after a jump in replay mode (beside the next player, crossed out)
     this.keptFrom = null;
     this.usedFrom = null;
     this.prevTurn = undefined;
