@@ -56,7 +56,7 @@ color's gate: `YARD = -1`, `TUN = -2`, `0..L-1` the track, `L..L+3` the nest.
 
 ### 3.1 Board and names
 * Each color: a **yard** (H), a **gate** (first track field), a **threshold** (last track
-  field, just before its own gate) and a **nest** Z1..Z4 (Z4 deepest). 4 pieces per color.
+  field, just before its own gate) and a **nest** Z1..Z4 (Z4 deepest; the nest fields show faint numbers 1..4). 4 pieces per color.
 * **Corridors:** each run of 10 track fields, numbered per color: start (1), 2..5, final (6).
   The middle of a corridor is its field 5 (used by tunnels). The 4-color board has corridors
   start, 2, 3, final.

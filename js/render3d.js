@@ -394,15 +394,17 @@ export class Board3D {
 
   xz(p, y = 0) { return new THREE.Vector3(p[0], y, p[1]); }
 
-  numberTexture(n, ring) {
+  // A field top with a faint number. bg/ink: the nest fields use their light color and a faint
+  // darker ink, so Z1..Z4 read like the track numbers.
+  numberTexture(n, ring, bg = "#ffffff", ink = "#c9c6bd") {
     return canvasTex(128, 128, (g, w, h) => {
-      g.fillStyle = "#ffffff";
+      g.fillStyle = bg;
       g.fillRect(0, 0, w, h);
       if (ring) {
         g.strokeStyle = ring; g.lineWidth = 9;
         g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.stroke();
       }
-      g.fillStyle = "#c9c6bd";
+      g.fillStyle = ink;
       g.font = "500 44px Vazirmatn, sans-serif";
       g.textAlign = "center"; g.textBaseline = "middle";
       g.fillText(String(n), 64, 68);
@@ -522,10 +524,11 @@ export class Board3D {
     for (let c = 0; c < n; c++) {
       this.nestFields = this.nestFields || {};
       this.nestFields[c] = [];
-      for (const p of d.home[c]) {
-        this.nestFields[c].push(this.field(p, LIGHT[c], { side: LIGHT[c] }));
+      d.home[c].forEach((p, i) => {
+        this.nestFields[c].push(this.field(p, null, { side: LIGHT[c],
+          top: this.numberTexture(i + 1, null, LIGHT[c], "rgba(0,0,0,0.2)") }));
         this.ring(p, COLORS[c], FIELD_R, 0.04);
-      }
+      });
       for (const p of d.yard[c]) {
         this.field(p, LIGHT[c], { r: FIELD_R * 0.95, h: 0.03, side: LIGHT[c] });
       }
