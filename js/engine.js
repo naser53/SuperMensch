@@ -819,6 +819,12 @@ export class Game {
   // ------------------------------------------------------------ scoring §11
   piecePoints(color, rel) {
     const c = this.cfg;
+    if (c.square_points) {
+      // the field's number in the captured piece's own count: gate 1 ... threshold L
+      if (rel === 0) return c.gate_points;
+      if (rel === this.L - 1) return this.L + c.threshold_extra;
+      return rel + 1;
+    }
     const idx = Math.min(Math.floor(rel / c.corridor_len), c.corridor_points.length - 1);
     let pts = c.corridor_points[idx];
     if (rel === 0) pts += c.gate_bonus;

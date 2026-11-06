@@ -1,2 +1,2 @@
 // The game version (same as package.json; a test checks). Tags are v<VERSION>; see CHANGELOG.md.
-export const VERSION = "3.0.13";
+export const VERSION = "3.1.1";
