@@ -724,6 +724,31 @@ test("CASTLES off: a wall of two and a lone piece; WALLS off: two in a row prote
   }
 });
 
+// the scores view: a soldier sent to the yard shows no points; a ranked piece keeps them
+test("scores view: a captured soldier's points and captures go back to 0", () => {
+  const g = make();
+  put(g, 3, 0, 1);
+  const at = g.absOf(1, 20);
+  put(g, 0, 0, g.relOf(0, at) - 4);
+  put(g, 1, 0, 20);
+  g.state.kills[1][0] = 50; g.state.earned[1][0] = 50; g.state.hits[1][0] = 2;
+  const p = g.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === YARD);
+  assert.ok(p);
+  assert.equal(p.state.earned[1][0], 0);
+  assert.equal(p.state.hits[1][0], 0);
+  assert.equal(g.state.earned[1][0], 50);              // the state before the move is untouched
+  // a general pushed back as a soldier loses them too
+  const h = make();
+  put(h, 3, 0, 1);
+  put(h, 0, 0, h.relOf(0, h.absOf(1, 20)) - 4);
+  put(h, 1, 0, 20);
+  h.state.kills[1][0] = h.state.earned[1][0] = h.cfg.general_points; h.state.hits[1][0] = 3;
+  const q = h.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === 13);
+  assert.ok(q);
+  assert.equal(q.state.earned[1][0], 0);
+  assert.equal(q.state.hits[1][0], 0);
+});
+
 test("gift six (two colors): counted per stuck turn without a 6", () => {
   const g = make();                                    // every piece at home: player A is stuck
   const N = g.cfg.gift_six_turns;
