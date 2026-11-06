@@ -135,6 +135,7 @@ export class FrameRecorder {
   constructor() { this.frames = []; this.pre = null; }
 
   before(g, ev, opt, dec) {
+    g.noMove = null;                 // only the throw with no move of this event is shown burnt (main.js did this before)
     const enc = new Encoder(g);
     const o = ev.pick !== undefined ? enc.enc(opt) : null;
     const e = dec.kind === "play" && opt.payload && opt.payload.steps ? enc.enc(playEntries(g, opt.payload)) : null;
