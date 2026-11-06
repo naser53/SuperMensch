@@ -911,12 +911,18 @@ class App {
     const row = (a, b) => `<tr><td>${a}</td><td class="pts">${b}</td></tr>`;
     const table = (title, rows) => `<h3>${this.T(title)}</h3><table class="info-table"><tbody>${rows.join("")}</tbody></table>`;
     const corr = [];
+    if (c.square_points) {
+      corr.push(row(this.T("info_square", { a: N(2), b: N(g.L - 1) }), this.T("info_square_pts")));
+      corr.push(row(this.T("info_gate_sq", { n: N(1) }), N(c.gate_points)));
+      corr.push(row(this.T("info_threshold_sq", { n: N(g.L) }), N(g.L + c.threshold_extra)));
+    } else {
     for (let k = 1; k <= n; k++) {
       const name = k === 1 ? this.T("info_corr_first", { n: N(1) }) : k === n ? this.T("info_corr_final", { n: N(n) }) : this.T("info_corr", { n: N(k) });
       corr.push(row(name, N(c.corridor_points[Math.min(k - 1, c.corridor_points.length - 1)])));
     }
     corr.push(row(this.T("info_gate"), P("+", c.gate_bonus)));
     corr.push(row(this.T("info_threshold"), P("+", c.threshold_bonus)));
+    }
     const brk = [row(this.T("info_wall"), P("+", c.wall_break))];
     if (c.castles && c.break_decl_on) brk.push(row(this.T("info_castle"), P("+", c.castle_break)));   // castles only break by declaration
     const ranks = [

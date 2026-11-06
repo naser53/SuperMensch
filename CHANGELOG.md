@@ -19,6 +19,10 @@ Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no 
   is not allowed already worked out (`server/frames.js`, read by `js/view.js`). Replay mode gets the
   past positions from the server. The page's own numbers moved to `js/look.js`.
 
+## v3.1.1 (2026-11-06)
+
+* **Capture points by field number** (owner's rule change). Every color counts the track from its own gate (1) to its own threshold (40 / 60 / 80); a capture gives the capturer the field's number in the victim's count, except 6 on the gate and the threshold's number + 20 on the threshold (4-color 60, 6-color 80; `SQUARE_POINTS`, `GATE_POINTS`, `THRESHOLD_EXTRA`). Ranks: general from 40 rank points, marshal from 60 (were 15 / 25). The old corridor points come back with `square_points: false`. The info table shows the new rule. Golden games re-recorded.
+
 ## v3.0.13 (2026-11-06)
 
 * Board: the nest field numbers are 30% fainter (ink alpha 0.2 to 0.14), as the owner asked.
