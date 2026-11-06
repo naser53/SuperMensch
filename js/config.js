@@ -40,8 +40,8 @@ export class Config {
       marshal_points: 140,      // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
-      general_bounty: 10,       // GENERAL_BOUNTY
-      marshal_bounty: 15,       // MARSHAL_BOUNTY
+      general_bounty: 20,       // GENERAL_BOUNTY
+      marshal_bounty: 30,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
       pushback_min: 7,          // PUSHBACK_MIN: a hit general or marshal is pushed back at least this far
       nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps

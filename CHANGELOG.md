@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.5 (2026-11-06)
+
+* Rule change (owner): bounties up with the new rank thresholds. Capturing a general gives +20 / −20 (was 10), a marshal +30 / −30 (was 15): `GENERAL_BOUNTY` / `MARSHAL_BOUNTY` in `js/config.js`. Golden records re-recorded.
+
 ## v3.2.4 (2026-11-06)
 
 * Rule change (owner): ranks need more rank points. General from 90 (was 40), marshal from 140 (was 60): `GENERAL_POINTS` / `MARSHAL_POINTS` in `js/config.js`, which the server uses. Golden records re-recorded.

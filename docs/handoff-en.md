@@ -190,7 +190,7 @@ threshold +20) is still in `config.js` and comes back with `square_points: false
   came in (rank multiplier included): **general** from `GENERAL_POINTS` = 90, **marshal** from
   `MARSHAL_POINTS` = 140. A star over the pawn shows the rank (general silver, marshal bright gold).
 * A general's captures score ×2, a marshal's ×3 (from the capture after promotion).
-* **Bounty:** capturing a general gives the capturer +10 and the owner −10; a marshal +15 / −15,
+* **Bounty:** capturing a general gives the capturer +20 and the owner −20; a marshal +30 / −30,
   on top of the normal points.
 * Breaks do not count towards rank points, and the multiplier does not apply to break bonuses
   (`RANK_MULT_ON_BREAK` = false).
@@ -519,7 +519,7 @@ npm run build       # server/public/index.html (the game page of the server)
 * **Single six:** a lone 6 always gives a bonus; a 6 paired with another number never does.
 * **Ranks by points** (90 / 140 since v3.2.4, owner; 40 / 60 before, 15 / 25 before field points) instead of capture counts (it started at 4 captures for marshal),
   so captures deep in the corridors count more.
-* **Bounties** went 50/70 → 40/60 → **10/15**, in proportion to the rank thresholds.
+* **Bounties** went 50/70 → 40/60 → 10/15 → **20/30** (v3.2.5), in proportion to the rank thresholds.
 * **Tunnel costs** 80 / 120 / 160.
 * **End bonuses, option C:** simulations showed the end bonuses dominated on the 4-color board.
   Per-board numbers were chosen so captures stay 60–80% of the points and finishing first is
