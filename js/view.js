@@ -61,11 +61,12 @@ export class ViewGame {
     this.over = d.over;
     this.places = d.places;
     this.cards = d.cards;
-    this.lastDice = d.lastDice;
+    this.lastDice = this._dice(d.lastDiceId, d.lastDice);
     this.noMove = d.noMove;
     this._stuck = d.stuck;
     this._complete = d.complete;
     const p = d.pending;
+    if (p) p.dice = this._dice(p.diceId, p.dice);
     if (p) {
       p.options = p.options || [];
       this.seqs = (p.seqs || []).map(q => ({ ...q, option: p.options[q.option] }));
@@ -77,6 +78,17 @@ export class ViewGame {
       this.tblock = { all: null, colors: {} };
     }
     this.pending = p;
+  }
+
+  // one throw, one array (main.js syncDice compares the arrays themselves): the server numbers them
+  _dice(id, a) {
+    if (id == null) return a;
+    this._diceKept = this._diceKept || new Map();
+    const old = this._diceKept.get(id);
+    if (old && old.length === a.length && old.every((x, k) => x === a[k])) return old;
+    this._diceKept.set(id, a);
+    if (this._diceKept.size > 16) this._diceKept.delete(this._diceKept.keys().next().value);
+    return a;
   }
 
   get L() { return this.cfg.track_len; }
