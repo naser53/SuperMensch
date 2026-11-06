@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.13 (2026-11-06)
+
+* Board: the nest field numbers are 30% fainter (ink alpha 0.2 to 0.14), as the owner asked.
+
 ## v3.0.12 (2026-11-06)
 
 * Board: the nest fields of every color now carry faint numbers 1 to 4 (1 at the nest entrance, 4 deepest), drawn like the faint numbers on the track fields.
