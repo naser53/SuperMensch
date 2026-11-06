@@ -36,8 +36,8 @@ export class Config {
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
       ranks: true,              // RANKS: generals and marshals (off by default in the one-color game)
-      general_points: 40,       // GENERAL_POINTS: a piece's own capture points to become a general
-      marshal_points: 60,       // MARSHAL_POINTS: ... to become a marshal
+      general_points: 90,       // GENERAL_POINTS: a piece's own capture points to become a general
+      marshal_points: 140,      // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
       general_bounty: 10,       // GENERAL_BOUNTY

@@ -187,8 +187,8 @@ threshold +20) is still in `config.js` and comes back with `square_points: false
 * Hunter captures and capturing a hunter both score; the hunter's corridor counts from its
   complete color.
 * **Ranks come from rank points**, the points a piece wins with its own captures since it last
-  came in (rank multiplier included): **general** from `GENERAL_POINTS` = 40, **marshal** from
-  `MARSHAL_POINTS` = 60. A star over the pawn shows the rank (general silver, marshal bright gold).
+  came in (rank multiplier included): **general** from `GENERAL_POINTS` = 90, **marshal** from
+  `MARSHAL_POINTS` = 140. A star over the pawn shows the rank (general silver, marshal bright gold).
 * A general's captures score ×2, a marshal's ×3 (from the capture after promotion).
 * **Bounty:** capturing a general gives the capturer +10 and the owner −10; a marshal +15 / −15,
   on top of the normal points.
@@ -517,7 +517,7 @@ npm run build       # server/public/index.html (the game page of the server)
 * **Six-first** was first too broad; the owner narrowed it to "an own piece of that color on its gate",
   and on 2026-11-01 to "one of the two moving pieces is that piece on the gate".
 * **Single six:** a lone 6 always gives a bonus; a 6 paired with another number never does.
-* **Ranks by points** (15 / 25) instead of capture counts (it started at 4 captures for marshal),
+* **Ranks by points** (90 / 140 since v3.2.4, owner; 40 / 60 before, 15 / 25 before field points) instead of capture counts (it started at 4 captures for marshal),
   so captures deep in the corridors count more.
 * **Bounties** went 50/70 → 40/60 → **10/15**, in proportion to the rank thresholds.
 * **Tunnel costs** 80 / 120 / 160.
