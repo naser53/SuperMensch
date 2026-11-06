@@ -138,6 +138,8 @@ export function checkSetup(su, users) {
   const max = mode === "two" ? colors / 2 : colors;
   if (seats.length < 2 || seats.length > max) throw new Error("bad number of players");
   const used = new Set(), seen = new Set();
+  const engines = seats.filter(s => s && s.ai).length;
+  let engineNo = 0;
   const players = seats.map((s, i) => {
     const cols = Array.isArray(s.colors) ? s.colors : [];
     if (cols.length !== (mode === "two" ? 2 : 1)) throw new Error("bad colors");
@@ -145,7 +147,8 @@ export function checkSetup(su, users) {
       if (!Number.isInteger(c) || c < 0 || c >= colors || used.has(c)) throw new Error("bad colors");
       used.add(c);
     }
-    if (s.ai) return { name: `Computer ${i + 1}`, colors: cols, isAi: true, user: null };
+    // Engine players (owner): "Engine" alone, or "Engine 1", "Engine 2" ... when there are several.
+    if (s.ai) return { name: engines > 1 ? `Engine ${++engineNo}` : "Engine", colors: cols, isAi: true, user: null };
     const u = users.find(x => x.id === s.user);
     if (!u || seen.has(u.id)) throw new Error("bad player");
     seen.add(u.id);
