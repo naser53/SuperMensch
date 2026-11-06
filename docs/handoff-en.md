@@ -16,10 +16,11 @@ everything. The castle-breaker piece and point loans go into later versions.
 ## 1. Project at a glance
 
 * A multi-color *Mensch ärgere dich nicht*-style board game with a 3D board, in **plain
-  JavaScript** (ES modules, Three.js 0.160.0). No server, works offline.
+  JavaScript** (ES modules, Three.js 0.160.0). **Online only since v3.2.0** (section 12.3): the server
+  throws the dice, checks the moves and plays the computers.
 * Repo: https://github.com/naser53/SuperMensch (branch `main`).
-* Deliverable: one self-contained file, `dist/supermensch.html`, with the code and the
-  Vazirmatn font inlined (esbuild 0.20.2).
+* Deliverable: the online server; its game page `server/public/index.html` is one self-contained file
+  with the code and the Vazirmatn font inlined (esbuild 0.20.2). No offline file any more.
 * Boards: **6 colors** (six arms, 60 fields, 10 per corridor; or 84 fields, 14 per corridor, chosen per
   game as `setup.corridor` in admin and offline setup, `Config.CORRIDORS`, geometry `boardFor()` in
   `js/boards.js`), **8 colors** (eight arms, 80 fields, or 112 with 14 per corridor; owner, 2026-11-02:
@@ -348,7 +349,7 @@ Two orders work, and you can switch at any time:
   second; greyed otherwise.
 * **Debug:** every throw waits for you to set the dice on the board (click a die +1, right-click −1,
   or *Random*), then *Continue*; the dice are then thrown with those numbers. Computer moves are shown first and wait for *Continue*.
-* **Debug console** (a text box at the bottom left in debug mode, `js/debugcmd.js`; commands defined by
+* (Offline only, removed in v3.2.0; `js/debugcmd.js` stays for `tools/replay.mjs`.) **Debug console** (a text box at the bottom left in debug mode, `js/debugcmd.js`; commands defined by
   the owner): `score 1 50` / `score 1 -50` adds or takes points from player 1; `move 1 s2R 33` puts
   player 1's Red pawn 2 on field 33 (color letters R B G Y P T, and N K for pink and black on the 8-color board; fields 1..L on the track, L+1..L+4
   in the nest, `y` = yard; a taken field is refused; the current decision is offered again);
@@ -495,11 +496,11 @@ the fingerprint.
 npm ci
 npm test            # 37 rule tests + fixed-game check + table and server tests
 npm run simulate    # computer-vs-computer games
-npm run build       # dist/supermensch.html
+npm run build       # server/public/index.html (the game page of the server)
 ```
 * During development serve the folder (`npx serve .`) and open `index.html`.
-* Every push to `main` runs CI: tests, 3 simulated games, build, then publishes
-  `supermensch.html` to the **latest** GitHub release (download and open it in a browser).
+* Every push to `main` runs CI: tests, 3 simulated games, build; a new version gets a release with its
+  notes only (no game file, no `latest` release since v3.2.0). `server.yml` deploys the server.
 * No GitHub Pages: its workflow was removed (owner, 2026-11-05); the game is the release file and the online server.
 * Browser checks were done with Playwright + Chromium (swiftshader WebGL); keep screenshots out
   of the repo (`*.png` is in `.gitignore`).
@@ -608,7 +609,7 @@ earlier sketch (browser dice, PINs).
   Reset game button, pressed twice).
   The events after that are dropped; open pages load the game again (`{t:"recolor"}`).
   `parseDebug`/`diceTurns`/`Room.debug` in `server/core.js`, `POST /api/admin/debug`.
-  **Replay mode** (owner, 2026-11-03; a test aid for any player): five quick taps on the turn pill
+  **Replay mode** (owner, 2026-11-03; since v3.2.0 for the admin only, section 12.3): five quick taps on the turn pill
   switch it on, five more switch it off. The page rebuilds the game from the events it has
   (`Table.replay`) and shows arrows over the dock: back jumps to the start of the turn before, forward
   plays the next whole turn with the usual animations; between them "Turn n of m", the player of
@@ -731,3 +732,19 @@ The owner wanted group voice like WhatsApp, also from countries that block direc
 * **v3.0.2**: still one Samsung (Android 10, Chrome) hears nothing although its log shows the voice
   arriving ("sound from"). `Voice.stats` adds a line every `Config.VOICE.STATS_MS` (KB in and level,
   each player's state, KB out, AudioContext state) and the sound outputs, to find where it stops.
+
+### 12.3 Online only, logic on the server (v3.2.0; owner, 2026-11-06)
+The owner learned that the page source shows all client code and wants as much as possible on the
+server; the offline game is dropped. The plan (in phases) is in the project note
+`notes/server-side-plan-fa.md`.
+* **Phase 0 (v3.2.0, done):** no offline setup, no debug console and no computer player (`SimpleAI`) in
+  the page; `npm run build` makes only `server/public/index.html`; releases carry notes only.
+  **Replay mode is the admin's:** the page enters it only when this browser keeps the admin key (the
+  admin page stores it in localStorage `adminKey`, same origin) and sends it with `{t:"debug", on, key}`;
+  the room refuses it otherwise (`refused`, "admin only"), so nobody else can rewind and throw again.
+* **Phase 1 (next):** the server sends the options of each decision ready to show; the page stops
+  working out the legal moves itself.
+* **Phase 2:** the server sends what to animate after each event; `js/engine.js`, `js/table.js`,
+  `js/ai.js` and the rule numbers of `js/config.js` leave the page. Replay comes from the server.
+* What must stay in the page: drawing and effects (`render3d.js`, `rolldie.js`), sounds, voice chat
+  (`js/voice.js`; its keys stay on the server).

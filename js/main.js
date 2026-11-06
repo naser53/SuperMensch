@@ -1,10 +1,8 @@
 // SuperMensch browser version: setup screen, side panel and game loop.
-import { Option, Player } from "./engine.js";
-import { SimpleAI } from "./ai.js";
+import { Option } from "./engine.js";
 import { Table, fingerprint } from "./table.js";
-import { COLOR_NAMES, LANGS, LANG_NAMES, M, RTL, num, shape, t, tr } from "./i18n.js";
+import { COLOR_NAMES, LANGS, LANG_NAMES, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS, setColors, setHunterWeapon, setPointsLook } from "./render3d.js";
-import { runCommand } from "./debugcmd.js";
 import { VERSION } from "./version.js";
 import { Config } from "./config.js";
 import { boardFor } from "./boards.js";
@@ -68,21 +66,13 @@ class App {
   constructor() {
     const st = load();
     this.lang = LANGS.includes(st.lang) ? st.lang : "en";
-    this.setup = Object.assign({ colors: 6, mode: "two", n: 3, pairing: "opposite",
-      seats: ["human", "ai", "ai", "ai", "ai", "ai", "ai", "ai"] }, st.setup || {});
-    // up to 8 seats (8-color board); a setup saved before has 6
-    while (this.setup.seats.length < 8) this.setup.seats.push("ai");
     this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
     this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
     this.sound = st.sound !== false;   // sound effects (js/sound.js), on unless switched off
     sound.setOn(this.sound);
-    this.offline = !!st.offline;       // the first page: rooms of the online server, or the offline game setup
     this.rooms = null;                 // null: loading · "error": no server · [rooms]
     this.pick = { id: null, seats: [] };
-    this.debug = false;
     this.game = null;
-    this.ais = {};
-    this.aiPlan = null;
     this.sel = null;
     this.nextAi = 0;
     this.board = new Board3D($("#stage"), { onPick: (hit, ev) => this.boardClick(hit, ev),
@@ -100,13 +90,6 @@ class App {
     $("#stage").appendChild(toast);
     this.toast = toast;
     this.toastHtml = "";
-    const cmd = document.createElement("form");         // debug console: score / move / dice
-    cmd.className = "cmdbox";
-    cmd.hidden = true;
-    cmd.innerHTML = '<input type="text" spellcheck="false" autocomplete="off" dir="ltr"><div class="cmd-out"></div>';
-    cmd.addEventListener("submit", e => { e.preventDefault(); this.command(cmd.querySelector("input")); });
-    $("#stage").appendChild(cmd);
-    this.cmdBox = cmd;
     setInterval(() => this.tick(), 40);
     window.addEventListener("keydown", e => {
       if (this.rp && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { this.replayStep(e.key === "ArrowLeft" ? -1 : 1); return; }
@@ -121,7 +104,7 @@ class App {
   T(key, params) { return esc(t(this.lang, key, params)); }
   S(x) { return esc(shape(tr(this.lang, x))); }
   get rtl() { return RTL.has(this.lang); }
-  persist() { save({ lang: this.lang, setup: this.setup, speed: this.speed, sound: this.sound, offline: this.offline }); }
+  persist() { save({ lang: this.lang, speed: this.speed, sound: this.sound }); }
 
   // the open rooms of the server, with their players and the seats in play right now
   async loadRooms() {
@@ -150,41 +133,7 @@ class App {
       "</select>";
   }
 
-  // ------------------------------------------------------------ setup screen
-  seatColors(i) {
-    const s = this.setup;
-    if (s.mode === "two") {
-      const half = s.colors / 2;
-      return s.pairing === "opposite" ? [i, i + half] : [2 * i, 2 * i + 1];
-    }
-    return [this.fixPicks()[i]];
-  }
-
-  // One color per player: each seat picks its own color. Keeps the picks of the seats in play
-  // valid and different; a seat without a valid pick gets the lowest free color.
-  fixPicks() {
-    const s = this.setup;
-    const p = Array.isArray(s.picks) ? s.picks.slice() : [];
-    const used = new Set();
-    for (let i = 0; i < s.n; i++) {
-      const c = p[i];
-      if (Number.isInteger(c) && c >= 0 && c < s.colors && !used.has(c)) used.add(c);
-      else p[i] = undefined;
-    }
-    for (let i = 0; i < s.n; i++)
-      if (p[i] === undefined) { let c = 0; while (used.has(c)) c++; p[i] = c; used.add(c); }
-    s.picks = p;
-    return p;
-  }
-
-  // a tap on a color: take it; if another seat has it, the two seats swap colors
-  pickColor(i, c) {
-    const p = this.fixPicks();
-    const j = p.findIndex((x, k) => k < this.setup.n && x === c);
-    if (j >= 0 && j !== i) p[j] = p[i];
-    p[i] = c;
-  }
-
+  // ------------------------------------------------------------ first page (the open rooms)
   // Leaving a running game for the menu asks first; a finished game just goes.
   askLeave(open) {
     let el = $("#confirm");
@@ -214,55 +163,11 @@ class App {
   }
 
   renderSetup() {
-    const s = this.setup, el = $("#setup");
+    const el = $("#setup");
     el.dir = this.rtl ? "rtl" : "ltr";
-    const choice = (label, act, val, sel) =>
-      `<button class="choice${sel ? " sel" : ""}" data-act="${act}" data-val="${val}">${label}</button>`;
-    const nRange = s.mode === "two" ? s.colors / 2 : s.colors;
     let h = `<div class="card"><div class="top"><div><h1>${this.T("title")}</h1>
       <div class="muted">${this.T("subtitle")} · v${VERSION}</div></div>${this.langSelect()}</div>`;
-    h += `<div class="choices">${choice((this.offline ? "☑ " : "☐ ") + this.T("offline_play"), "offline", "", this.offline)}</div>`;
-    if (!this.offline) { el.innerHTML = h + this.roomsHtml() + "</div>"; return; }
-    h += `<h2>${this.T("board")}</h2><div class="choices">` +
-      Config.BOARDS.map(n => choice(this.T("board" + n), "colors", n, s.colors === n)).join("") + "</div>";
-    if (s.colors !== 4) h += `<h2>${this.T("corridor")}</h2><div class="choices">` +
-      Config.CORRIDORS.map(k => choice(this.T("corridor_n", { n: num(this.lang, k) }), "corridor", k, (s.corridor || 10) === k)).join("") + "</div>";
-    h += `<h2>${this.T("dice_level")}</h2><div class="choices">` +
-      choice(this.T("level_beginner"), "level", "beginner", (s.level || "beginner") === "beginner") +
-      choice(this.T("level_intermediate"), "level", "intermediate", s.level === "intermediate") +
-      choice(this.T("level_difficult"), "level", "difficult", s.level === "difficult") + "</div>";
-    h += `<h2>${this.T("game_type")}</h2><div class="choices">` +
-      choice(this.T("mode_two"), "mode", "two", s.mode === "two") + choice(this.T("mode_one"), "mode", "one", s.mode === "one") + "</div>";
-    h += `<h2>${this.T("players")}</h2><div class="choices">`;
-    for (let n = 2; n <= nRange; n++) h += choice(num(this.lang, n), "n", n, s.n === n);
-    h += "</div>";
-    if (s.mode === "two") {
-      h += `<h2>${this.T("pairing")}</h2><div class="choices">` +
-        choice(this.T("opposite"), "pairing", "opposite", s.pairing === "opposite") +
-        choice(this.T("adjacent"), "pairing", "adjacent", s.pairing === "adjacent") + "</div>";
-    }
-    h += `<h2>${this.T("seats")}</h2>`;
-    if (s.mode === "one") h += `<div class="muted small pick-hint">${this.T("pick_color")}</div>`;
-    const picks = s.mode === "one" ? this.fixPicks() : null;
-    for (let i = 0; i < s.n; i++) {
-      const cols = this.seatColors(i);
-      const who = t(this.lang, s.seats[i] === "human" ? "human" : "computer");
-      const names = cols.map(c => COLOR_NAMES[this.lang][c]).join(tr(this.lang, M("and")));
-      const nm = (s.names && s.names[i]) || "";
-      const ph = t(this.lang, s.seats[i] === "ai" ? "player_ai" : "player_human", { n: i + 1 });
-      h += `<div class="seat">${choice(esc(shape(tr(this.lang, M("seat", { n: i + 1, who, colors: names })))), "seat", i, false)}` +
-        (picks
-          ? `<span class="picks">` + Array.from({ length: s.colors }, (_, c) => {
-              const mine = picks[i] === c, other = !mine && picks.slice(0, s.n).includes(c);
-              const nm = esc(COLOR_NAMES[this.lang][c]);
-              return `<button class="dot pick${mine ? " sel" : ""}${other ? " taken" : ""}" data-act="pick" data-val="${i}:${c}"` +
-                ` style="background:${COLORS[c]}" title="${nm}" aria-label="${nm}" aria-pressed="${mine}"></button>`;
-            }).join("") + "</span>"
-          : cols.map(c => `<span class="dot" style="background:${COLORS[c]}"></span>`).join("")) +
-        `<input class="name" type="text" maxlength="16" data-name="${i}" value="${esc(nm)}" placeholder="${esc(ph)}" aria-label="${this.T("name")}" autocomplete="off"></div>`;
-    }
-    h += `<button class="btn primary start" data-act="start">${this.T("start")}</button></div>`;
-    el.innerHTML = h;
+    el.innerHTML = h + this.roomsHtml() + "</div>";
   }
 
   // the first page online: every open room with its players; tap a room's names, then Play
@@ -343,8 +248,6 @@ class App {
   }
 
   setupAction(act, val) {
-    const s = this.setup;
-    if (act === "offline") { this.offline = !this.offline; this.persist(); if (!this.offline) this.loadRooms(); this.render(); return; }
     if (act === "rooms_reload") { this.rooms = null; this.render(); this.loadRooms(); return; }
     if (act === "who") {
       const [id, i] = [val.split(":")[0], +val.split(":")[1]];
@@ -356,48 +259,6 @@ class App {
     }
     if (act === "room_color") { const [id, i, c] = String(val).split(":"); this.pickRoomColor(id, +i, +c); return; }
     if (act === "join") { if (this.pick.seats.length) this.startOnline(this.pick.id, [...this.pick.seats].sort()); return; }
-    if (act === "colors") {
-      s.colors = +val;
-      s.n = Math.min(s.n, s.mode === "two" ? s.colors / 2 : s.colors);
-    } else if (act === "mode") {
-      s.mode = val;
-      s.n = s.mode === "two" ? s.colors / 2 : 4;
-    } else if (act === "n") s.n = +val;
-    else if (act === "pairing") s.pairing = val;
-    else if (act === "level") s.level = val;
-    else if (act === "corridor") s.corridor = +val;
-    else if (act === "seat") s.seats[+val] = s.seats[+val] === "human" ? "ai" : "human";
-    else if (act === "pick") { const [i, c] = String(val).split(":").map(Number); this.pickColor(i, c); }
-    else if (act === "start") { this.startGame(); return; }
-    this.persist();
-    this.render();
-  }
-
-  startGame() {
-    const s = this.setup;
-    const players = [];
-    for (let i = 0; i < s.n; i++) {
-      const ai = s.seats[i] === "ai";
-      const nm = ((s.names && s.names[i]) || "").trim();
-      players.push(Player(nm || M(ai ? "player_ai" : "player_human", { n: i + 1 }), this.seatColors(i), ai));
-    }
-    this.table = new Table({ players, mode: s.mode, colors: s.colors, level: s.level || "beginner", corridor: s.colors !== 4 ? s.corridor || 10 : 10 }, { autoDice: !this.debug });
-    this.game = this.table.game;
-    this.ais = {};
-    players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
-    this.aiPlan = null;
-    this.sel = null;
-    this.doneNests = new Set();
-    this.fireworksDone = false;
-    this.diceRef = null;
-    this.seenLast = null;
-    this.prevTurn = undefined;
-    $("#setup").hidden = true;
-    this.board.setGame(this.game, p => shape(tr(this.lang, this.game.players[p].name)));
-    const me = players.find(p => !p.isAi);              // start with my pieces in front, not far away
-    if (me) this.board.fitView(me.colors);
-    this.nextAi = performance.now() + this.delay;
-    this.render();
   }
 
   // ------------------------------------------------------------ ribbon
@@ -424,23 +285,15 @@ class App {
     };
     if (g.over) {
       status = `<b>${this.T("game_over")}</b>`;
-      // play again: online, a new room with the same players (the server makes it once); offline, the same setup
-      const again = !this.online || this.online.seats.length;
+      // play again: a new room with the same players (the server makes it once)
+      const again = this.online.seats.length;
       acts = (again ? btn('data-act="again"', this.T("play_again"), "primary") : "") + btn('data-act="menu"', this.T("new_game"), again ? "" : "primary");
     } else {
       const who = t(this.lang, this.online && this.online.remote.has(g.turn) ? "online_other" : p.isAi ? "thinking" : "your_turn");
       status = `<b class="rb-turn">${this.T("turn", { p: tr(this.lang, p.name), who })}</b> <span class="muted small">${this.T("round", { n: g.turnNo })}</span>`;
       if (dec && dec.note && !(human && dec.kind === "keep")) hint = this.S(dec.note);
-      if (dec && dec.kind === "dice" && this.online) {
-        // online: the table waits for the server's throw; nothing to set or press here
-      } else if (dec && dec.kind === "dice") {                  // debug: set the dice by hand
-        hint = `${hint} · ${this.T("dice_hint")}`;
-        acts = btn('data-act="dice_go"', this.T("continue"), "primary") + btn('data-act="dice_rand"', this.T("random"));
-      } else if (dec && p.isAi && this.debug) {
-        if (!this.aiPlan || this.aiPlan[0] !== dec) this.aiPlan = [dec, this.ais[g.turn].choose(g)];
-        const o = this.aiPlan[1], lines = Array.isArray(o.label) ? o.label : [o.label];
-        list = `<div class="muted small">${this.T("ai_will")}</div>` + lines.map(x => `<div>${this.S(x)}</div>`).join("");
-        acts = btn('data-act="ai_go"', this.T("continue"), "primary");
+      if (dec && dec.kind === "dice") {
+        // the table waits for the server's throw; nothing to set or press here
       } else if (human && dec.kind === "play" && !this.sel.list) {
         const sel = this.sel;
         shown = sel.picks.length ? sel.picks[sel.picks.length - 1].state : g.state;
@@ -517,8 +370,6 @@ class App {
     drop.innerHTML = list;
     drop.hidden = !list;
     this.showToast(hint, this.scoresMode);
-    this.cmdBox.hidden = !this.debug;
-    this.cmdBox.querySelector("input").placeholder = "score 1 50 · move 1 s2R 33 · dice 6 3 4";
     $("#stage").classList.toggle("has-drop", !!list);
     if (hunterPick) this.board.hunterChoice(...hunterPick);
     else this.board.hunterChoice(null);
@@ -534,12 +385,7 @@ class App {
     this.syncDice(dec, human);
     this.board.sync(shown, this.sel && this.sel.piece);
     this.board.showTargets(this.sel && this.sel.piece && human && dec.kind === "play" ? this.pieceTargets() : []);
-    if (dec && p.isAi && this.debug && this.aiPlan) {
-      const pl = this.aiPlan[1].payload;
-      this.board.preview(pl && pl.steps ? pl : null, Array.isArray(pl) && pl[0] === "tunnel" ? pl : null);
-    } else {
-      this.board.preview(null);
-    }
+    this.board.preview(null);
   }
 
   // one chip per player: colors, name, score, cards left, stuck / place
@@ -583,7 +429,6 @@ class App {
   drawerHtml() {
     return "" +
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
-      (this.online ? "" : `<label class="btn rb-btn icon check${this.debug ? " on" : ""}" title="${this.T("debug")}"><input type="checkbox" data-act="debug" ${this.debug ? "checked" : ""}>${ICON.bug}<span>${this.T("debug_short")}</span></label>`) +
       this.langSelect() +
       `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<select data-act="speed" aria-label="${this.T("speed")}">` +
         Object.keys(Config.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
@@ -993,7 +838,6 @@ class App {
       setTimeout(() => this.render(), 4020);
     }
     if (card) this.cardEffect();
-    this.aiPlan = null;
     this.render();
     let end = performance.now();
     if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
@@ -1008,34 +852,6 @@ class App {
     }
     this.nextAi = end + this.delay;
     this.moveEnd = entries && entries.length ? end + this.delay : end;   // online: the next throw waits for this
-  }
-
-  // A debug command was typed (js/debugcmd.js); the answer shows under the box.
-  command(input) {
-    const g = this.game;
-    if (!g || !input.value.trim()) return;
-    const text = input.value.trim(), at = this.table.events.length;
-    const r = runCommand(g, input.value, o => this.choose(o));
-    if (r.key === "cmd_score" || r.key === "cmd_moved")
-      (this.table.edits = this.table.edits || []).push({ at, cmd: text });     // score / move change the state outside the events
-    this.cmdBox.querySelector(".cmd-out").textContent = t(this.lang, r.key, r.params);
-    this.cmdBox.querySelector(".cmd-out").classList.toggle("bad", !/^cmd_(score|moved|dice|dice_next)$/.test(r.key));
-    if (!/usage|not_|no_|bad|taken|count/.test(r.key)) input.value = "";
-    this.aiPlan = null;
-    if (this.sel && g.pending !== this.sel.dec) this.resetSelection(g.pending);
-    this.render();
-  }
-
-  setDebug(on) {
-    const g = this.game;
-    this.debug = on;
-    this.table.autoDice = !on;
-    this.aiPlan = null;
-    if (!on && g.pending && g.pending.kind === "dice") {
-      this.table.choose(new Option(null, ["dice", g.roll(g.pending.dice.length)]));
-    }
-    this.nextAi = performance.now() + this.delay;
-    this.render();
   }
 
   // Click on the board. Both orders work:
@@ -1155,7 +971,6 @@ class App {
       "Players:",
       ...g.players.map((p, i) => `  ${i + 1}. ${en(p.name)} · ${p.isAi ? "computer" : "human"} · colors ${p.colors.map(cname).join(", ")} · score ${g.state.scores[i]}`),
       `Online: ${this.online ? `room ${this.online.id}, this device plays seats ${this.online.seats.map(i => i + 1).join(", ")}` : "no (one device)"}`,
-      `Debug mode: ${this.debug ? "on" : "off"} · debug edits: ${(tb.edits || []).length}`,
       `Language: ${this.lang} · round ${g.turnNo} · turn of player ${g.turn + 1} · pending ${g.pending ? g.pending.kind : "none"} · over ${!!g.over}`,
       `Fingerprint: ${fingerprint(g)} · events ${tb.events.length}`,
       ...(this.voice && this.voice.log.length ? [`Voice (speaker ${this.voice.speaker ? "on" : "off"}, mic ${this.voice.micState}, ${navigator.userAgent}):`, ...this.voice.log.map(x => "  " + x)] : []),
@@ -1190,10 +1005,9 @@ class App {
   // seats and plays every event the server sends, one by one, with the usual animations.
   // Seats played elsewhere (and the computer, which the server plays) count as computer
   // players here, so the panel offers nothing for them.
-  // the game is over: online, ask the server for the next room; offline, start the same setup again
+  // the game is over: ask the server for the next room
   playAgain() {
     const o = this.online;
-    if (!o) { this.startGame(); return; }
     if (o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify({ t: "again" }));
   }
 
@@ -1312,6 +1126,7 @@ class App {
       o.sent = null;
       this.showToast(m.reason === "debug" ? this.T("replay_locked_short") : esc(m.reason), true);
       if (m.reason === "stale") this.hello();
+      if (m.reason === "admin only" && this.rp) { this.exitReplay(); return; }   // a wrong admin key
       this.render();
     }
   }
@@ -1326,8 +1141,6 @@ class App {
     for (const ev of m.events) this.table.apply(ev);
     o.fp = m.fp;
     this.game = this.table.game;
-    this.ais = {};
-    this.aiPlan = null;
     this.sel = null;
     this.doneNests = new Set();
     this.fireworksDone = this.game.over;
@@ -1400,8 +1213,10 @@ class App {
     return out;
   }
 
+  // Replay mode is the admin's: it needs the admin key this browser keeps from the admin page,
+  // and the server checks it (anyone else could rewind the game and throw the dice again)
   tapStatus() {
-    if (!this.online || !this.table) return;
+    if (!this.online || !this.table || !adminKey()) return;
     const now = performance.now();
     this.statusTaps = (this.statusTaps || []).filter(x => now - x < 2500);
     this.statusTaps.push(now);
@@ -1412,7 +1227,7 @@ class App {
 
   sendDebug(on) {
     const ws = this.online.ws;
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "debug", on }));
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "debug", on, key: adminKey() }));
   }
 
   enterReplay() {
@@ -1438,7 +1253,6 @@ class App {
     this.game = table.game;
     this.board.game = table.game;
     this.sel = null;
-    this.aiPlan = null;
     this.hold = null;
     this.diceRef = null;
     this.seenLast = null;
@@ -1560,12 +1374,7 @@ class App {
       }
       if (g) this.render();
     }
-    if (this.online) { if (this.rp) this.replayTick(); else this.nextEvent(); return; }
-    if (!g || g.over || !g.pending || !g.players[g.turn].isAi) return;
-    if (this.debug || g.pending.kind === "dice") return;
-    if (this.busy()) { this.nextAi = Math.max(this.nextAi, performance.now() + this.delay * 0.5); return; }
-    if (performance.now() < this.nextAi) return;
-    this.choose(this.ais[g.turn].choose(g));
+    if (this.online) { if (this.rp) this.replayTick(); else this.nextEvent(); }
   }
 }
 
@@ -1611,11 +1420,7 @@ function wire(app) {
     const act = b.dataset.act;
     if (act === "rp_back" || act === "rp_fwd") { if (app.rp) app.replayStep(act === "rp_back" ? -1 : 1); return; }
     if (act === "rp_go") { if (app.rp) app.replayContinue(); return; }
-    if ((act === "dice_go" || act === "dice_rand") && app.online) return;
-    if (act === "dice_go") app.choose(new Option(null, ["dice", g.pending.dice.slice()]));
-    else if (act === "dice_rand") { g.pending.dice = g.roll(g.pending.dice.length); app.render(); }
-    else if (act === "ai_go") app.choose(app.aiPlan[1]);
-    else if (act === "undo") { app.resetSelection(g.pending); app.render(); }
+    if (act === "undo") { app.resetSelection(g.pending); app.render(); }
     else if (act === "list") { app.sel.list = true; app.render(); }
     else if (act === "tunnels") app.openTunnels(+b.dataset.val);
     else if (act === "clicks") { app.resetSelection(g.pending); app.render(); }
@@ -1633,17 +1438,9 @@ function wire(app) {
     else if (act === "info_close") app.showInfo(false);
     else if (act === "copy_log") app.copyLog();
   });
-  document.addEventListener("input", e => {
-    if (e.target.dataset.name === undefined) return;
-    const s = app.setup;
-    s.names = s.names || [];
-    s.names[+e.target.dataset.name] = e.target.value;
-    app.persist();
-  });
   document.addEventListener("change", e => {
     const act = e.target.dataset.act;
     if (act === "lang") app.setLang(e.target.value);
-    else if (act === "debug") app.setDebug(e.target.checked);
     else if (act === "speed" && Config.ANIM_SPEEDS[e.target.value]) {
       app.speed = e.target.value;
       app.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[app.speed];
@@ -1676,7 +1473,7 @@ async function main() {
   wire(app);
   app.setLang(app.lang);
   const q = new URLSearchParams(location.search);       // an online game: play?game=K7QX-42&seats=0,2
-  if (!app.offline) app.loadRooms(); else loadColors(app);
+  app.loadRooms();
   if (q.get("game")) app.startOnline(q.get("game").toUpperCase(), (q.get("seats") || "").split(",").filter(x => x !== "").map(Number));
 }
 main();
@@ -1696,7 +1493,7 @@ async function loadColors(app) {
     setHunterWeapon(hunter);
     setPointsLook(points);
     if (!app.game) app.render();
-  } catch { /* offline: the colors kept or the defaults */ }
+  } catch { /* no server: the colors kept or the defaults */ }
 }
 
 // where the online server is: this page's own host when the server serves it, else Config.SERVER_URL
@@ -1704,6 +1501,11 @@ function apiBase() {
   const h = location.hostname;
   const own = location.protocol.startsWith("http") && (h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
   return own ? location.origin : Config.SERVER_URL;
+}
+
+// the admin key, kept by the admin page (/admin, same origin) in this browser; null for everyone else
+function adminKey() {
+  try { return localStorage.getItem("adminKey") || null; } catch { return null; }
 }
 
 // a random id for this browser, kept between visits (online seats come back to it)

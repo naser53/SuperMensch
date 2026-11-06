@@ -9,6 +9,7 @@ Working rules:
 * All game numbers live in `js/config.js`.
 * Run `npm test` before every commit. After a deliberate rule change, run
   `node tests/golden.mjs --record`, and update `docs/rules-fa.*` and both handoff files.
-* `npm run build` makes `dist/supermensch.html`. Pushing to `main` publishes it to the `latest` release.
+* `npm run build` makes `server/public/index.html`, the game page of the server. Pushing to `main` deploys the
+  server. The game is online only (owner, 2026-11-06): no offline file, nothing in the releases but notes.
 * Keep screenshots and scratch files out of the repo.
 * Ask the owner before expensive or ambiguous changes; small clear ones, just do.

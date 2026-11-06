@@ -1,6 +1,6 @@
-// Builds dist/supermensch.html: one self-contained file (scripts, styles and the
-// Vazirmatn font inlined) that runs offline straight from the disk, and
-// dist/index.html, the same file under that name, and server/public/index.html (the online server's start page).
+// Builds server/public/index.html, the game page of the online server: one self-contained file
+// (scripts, styles and the Vazirmatn font inlined). There is no offline file any more (owner,
+// 2026-11-06): the game is played on the server only.
 import { build } from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,8 +23,5 @@ html = html.replace(/<!-- Development page[\s\S]*?<\/script>\n/, "")
   .replace('<link rel="stylesheet" href="css/style.css">', `<style>\n${css}</style>`)
   .replace('<script type="module" src="js/main.js"></script>',
            () => `<script>\n${js.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script>`);
-fs.mkdirSync(r("dist"), { recursive: true });
-fs.writeFileSync(r("dist/supermensch.html"), html);
-fs.writeFileSync(r("dist/index.html"), html);
-fs.writeFileSync(r("server/public/index.html"), html);     // the game page of the online server (v2)
-console.log("dist/supermensch.html", (html.length / 1024).toFixed(0), "KB");
+fs.writeFileSync(r("server/public/index.html"), html);
+console.log("server/public/index.html", (html.length / 1024).toFixed(0), "KB");

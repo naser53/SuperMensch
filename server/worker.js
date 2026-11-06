@@ -463,7 +463,10 @@ export class GameRoom extends DurableObject {
       return;
     }
     if (msg.t === "debug") {
-      ws.serializeAttachment({ ...(ws.deserializeAttachment() || {}), debug: !!msg.on });
+      // replay mode only with the admin key: in it a device may rewind the game and so throw again
+      const on = !!msg.on && !!this.env.ADMIN_KEY && msg.key === this.env.ADMIN_KEY;
+      if (msg.on && !on) { this._send(ws, { t: "refused", reason: "admin only", seq: room.events.length }); return; }
+      ws.serializeAttachment({ ...(ws.deserializeAttachment() || {}), debug: on });
       this._debugAll();
       return;
     }
@@ -525,7 +528,7 @@ export class GameRoom extends DurableObject {
     this._debugAll();
   }
 
-  // Replay (debug) mode (owner, 2026-11-03): any device may turn it on; while one is in it the
+  // Replay (debug) mode (owner, 2026-11-03; admin key only since 2026-11-06); while one is in it the
   // others are locked and told who. A device is named by the players of its seats.
   _debugBy(except) {
     const players = this._load().setup.players, out = [];

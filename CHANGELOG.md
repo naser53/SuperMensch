@@ -1,8 +1,18 @@
 # Changelog
 
 Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js/version.js`
-(a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
-attached. The `latest` release is always the newest build of `main`.
+(a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
+Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
+
+## v3.2.0 (2026-11-06)
+
+* Online only (owner): the offline game is gone. The first page lists the rooms; the offline setup, the
+  debug console and the computer players of the page are no longer in it (the server plays the computers).
+* No game file in the releases any more, and no `latest` release: the game is played on the server, so its
+  code is not handed out. `npm run build` makes only `server/public/index.html`.
+* Replay mode (five taps on the turn pill) needs the admin key now, the one the admin page keeps in the
+  same browser. The server refuses `{t:"debug"}` without it, so a player can no longer rewind a game and
+  throw the dice again.
 
 ## v3.0.13 (2026-11-06)
 
