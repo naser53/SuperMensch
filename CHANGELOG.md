@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.2 (2026-11-06)
+
+* Fix: after a throw with no move (burnt dice), the next throws showed those burnt dice again instead of the new ones (seen in game SSZY-19). The engine keeps `noMove` until the next one; the page used to clear it before each event, and since v3.2.0 the server does (`FrameRecorder.before`).
+
 ## v3.2.1 (2026-11-06)
 
 * Fix: the dice were thrown again after every move (and at the start of the next turn) since v3.2.0. The page tells a new throw from the same dice by the array itself; the server now numbers each dice array (`diceId` in `server/frames.js`) and the page keeps one array per throw (`ViewGame._dice`).
