@@ -428,7 +428,9 @@ the fingerprint.
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
-  locked until *Scores* is pressed again.
+  locked until *Scores* is pressed again. A piece that loses its points (a soldier captured to the
+  yard, a general pushed back as a soldier) starts again from 0 and × 0; a general or marshal that
+  goes to the yard with its rank keeps them (owner, 2026-11-06; `_capture` resets `earned`, `hits`).
 * **Sound effects** (`js/sound.js`, Web Audio API): the dice throw is a recording the owner chose,
   one for a single die (`sounds/dice-one.mp3`, 0.8 s) and one for two or three dice
   (`sounds/dice-many.mp3`, 1.25 s), carried as base64 in `js/dicesound.js` and played once per

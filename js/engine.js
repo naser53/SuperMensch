@@ -68,8 +68,9 @@ export class State {
     this.tmark = tmark || pos.map(x => x.map(() => false));
     // hit[color][i]: the piece has been captured at least once (no clean-piece bonus)
     this.hit = hit || pos.map(x => x.map(() => false));
-    // for the "scores" view only (no rule reads them): points each piece has won and
-    // how many pieces it has captured, over the whole game (not reset when it is captured)
+    // for the "scores" view only (no rule reads them): points each piece has won and how
+    // many pieces it has captured; both go back to 0 when the piece loses its points
+    // (a soldier captured to the yard, a general pushed back as a soldier: owner, 2026-11-06)
     this.earned = earned || pos.map(x => x.map(() => 0));
     this.hits = hits || pos.map(x => x.map(() => 0));
   }
@@ -430,12 +431,13 @@ export class Game {
         if (back !== null) {
           ns.pos[vc][vi] = back;
           ns.kills[vc][vi] = rank === 2 ? this.cfg.general_points : 0;
+          if (rank === 1) ns.earned[vc][vi] = ns.hits[vc][vi] = 0;
           cap.demoted = rank;
           return;
         }
       }
       ns.pos[vc][vi] = YARD;
-      if (rank === 0) ns.kills[vc][vi] = 0;
+      if (rank === 0) ns.kills[vc][vi] = ns.earned[vc][vi] = ns.hits[vc][vi] = 0;
       else cap.yardRank = true;
       ns.tmark[vc][vi] = false;
       ns.tunnels = ns.tunnels.filter(t => !(t[1] === vc && t[2] === vi));
@@ -999,7 +1001,7 @@ export class Game {
       const n = pos[col][i];
       if (n === r) return;
       a[i] = n;
-      if (n === YARD) st.kills[col][i] = 0;
+      if (n === YARD) st.kills[col][i] = st.earned[col][i] = st.hits[col][i] = 0;
       st.tmark[col][i] = false;
       st.tunnels = st.tunnels.filter(t => !(t[1] === col && t[2] === i));
     }));
