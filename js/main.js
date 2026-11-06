@@ -37,8 +37,8 @@ const ICON = {
   cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
   castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
   tunnel: svg('<path d="M3 20v-6a9 9 0 0 1 18 0v6"/><path d="M7 20v-6a5 5 0 0 1 10 0v6"/>'),
-  // Second try: three turning arrows round a die, drawn after the owner's picture (2026-11-06)
-  retry: svg('<path d="M18.51 6.54A8.5 8.5 0 0 0 9.37 3.92" stroke-width="2.3" stroke-linecap="butt"/><path d="M8.78 0.75L5.89 6.1L10.54 6.91z" fill="currentColor" stroke="none"/><path d="M4.01 9.09A8.5 8.5 0 0 0 6.31 18.32" stroke-width="2.3" stroke-linecap="butt"/><path d="M3.87 20.42L9.94 20.25L8.32 15.81z" fill="currentColor" stroke="none"/><path d="M13.48 20.37A8.5 8.5 0 0 0 20.31 13.77" stroke-width="2.3" stroke-linecap="butt"/><path d="M23.35 14.83L20.17 9.66L17.14 13.28z" fill="currentColor" stroke="none"/><path d="M12 7.1L16.24 9.55L16.24 14.45L12 16.9L7.76 14.45L7.76 9.55z" stroke-width="1.1"/><path d="M7.76 9.55L12 12L16.24 9.55M12 12L12 16.9" stroke-width="0.9"/><circle cx="12" cy="9.55" r="0.7" fill="currentColor" stroke="none"/><circle cx="9.24" cy="12.24" r="0.62" fill="currentColor" stroke="none"/><circle cx="10.51" cy="14.7" r="0.62" fill="currentColor" stroke="none"/><circle cx="13.49" cy="12.24" r="0.62" fill="currentColor" stroke="none"/><circle cx="14.76" cy="14.7" r="0.62" fill="currentColor" stroke="none"/>', 44),
+  // Second try: a turning arrow, open at its start so it does not read as a full circle (owner, 2026-11-06)
+  retry: svg('<path d="M19.37 17.16A9 9 0 1 1 18.4 5.6"/><path d="M21 3v5h-5"/>', 39),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
   list: svg('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
   star: svg('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),
