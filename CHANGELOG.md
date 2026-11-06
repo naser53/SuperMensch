@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.4 (2026-11-06)
+
+* Rule change (owner): ranks need more rank points. General from 90 (was 40), marshal from 140 (was 60): `GENERAL_POINTS` / `MARSHAL_POINTS` in `js/config.js`, which the server uses. Golden records re-recorded.
+* The machine players are called **Engine** (owner), not Computer: just "Engine" when a game has one, "Engine 1", "Engine 2" ... when it has more (`checkSetup` in `server/core.js`, `js/strings.js`, admin page).
+
 ## v3.2.3 (2026-11-06)
 
 * The Second try button shows only a turning arrow (no die), open at its start and 50% larger than before.

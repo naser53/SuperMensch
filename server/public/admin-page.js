@@ -88,7 +88,7 @@ function seatRows() {
   $("#gN").innerHTML = Array.from({ length: max - 1 }, (_, i) => `<option ${i + 2 === n ? "selected" : ""}>${i + 2}</option>`).join("");
   const old = [...document.querySelectorAll("[data-seat]")].map(s => s.value);
   const opts = sel => users.map(u => `<option value="${u.id}" ${String(u.id) === sel ? "selected" : ""}>${esc(u.name)}</option>`).join("") +
-    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Computer</option>`;
+    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Engine</option>`;
   $("#seats").innerHTML = Array.from({ length: n }, (_, i) =>
     `<div class="row">Seat ${i + 1} <select data-seat="${i}">${opts(old[i] || seatDefault(i))}</select></div>`).join("");
 }
@@ -132,7 +132,7 @@ function editRoom(g) {
   const box = $("#edit-" + g.id), su = g.setup, max = su.mode === "two" ? su.colors / 2 : su.colors;
   let seats = su.players.map(p => (p.isAi ? "ai" : String(p.user)));
   const opts = sel => users.map(u => `<option value="${u.id}" ${String(u.id) === sel ? "selected" : ""}>${esc(u.name)}</option>`).join("") +
-    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Computer</option>`;
+    `<option value="ai" ${sel === "ai" ? "selected" : ""}>Engine</option>`;
   const draw = () => {
     const full = seats.length >= max;
     box.innerHTML = `<section style="margin:6px 0 10px"><div class="muted">${seats.length} of ${max} places${full ? " (full: change a player, or remove one first)" : ""}</div>` +

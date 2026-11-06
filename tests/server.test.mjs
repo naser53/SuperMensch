@@ -72,8 +72,10 @@ test("names are trimmed and limited", () => {
 
 test("setup check: names from the users, colors and seats checked", () => {
   const su = checkSetup({ mode: "two", colors: 6, seats: twoSeats(2, "ai", 5) }, users);
-  assert.deepEqual(su.players.map(p => [p.name, p.isAi, p.user]), [["user2", false, 2], ["Computer 2", true, null], ["user5", false, 5]]);
+  assert.deepEqual(su.players.map(p => [p.name, p.isAi, p.user]), [["user2", false, 2], ["Engine", true, null], ["user5", false, 5]]);
   assert.equal(su.level, "beginner");
+  const two = checkSetup({ mode: "two", colors: 6, seats: twoSeats("ai", 2, "ai") }, users);
+  assert.deepEqual(two.players.map(p => p.name), ["Engine 1", "user2", "Engine 2"]);
   const bad = [
     { mode: "two", colors: 6, seats: twoSeats(2) },                       // one player
     { mode: "two", colors: 6, seats: twoSeats(2, 2) },                    // same user twice
