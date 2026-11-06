@@ -43,7 +43,8 @@ everything. The castle-breaker piece and point loans go into later versions.
   release yet, it tags the commit and publishes the release (built page, changelog section). `latest` stays the newest build of `main`.
 * After a **deliberate** rule change, re-record the fixed games:
   `node tests/golden.mjs --record`. Never re-record to hide an unintended change.
-* Every game number lives in `js/config.js`. Do not hard-code numbers elsewhere.
+* Every game number lives in `js/config.js`. Do not hard-code numbers elsewhere. Its values are the defaults:
+  the admin may change most of them for the whole server ("Game rules", section 12).
 * Before a change that is expensive or ambiguous, ask the owner. Small, clear changes: just do them.
 * When a rule changes, update the rules doc as well: the source is `docs/rules-fa.md` (see §9),
   then `docs/rules-fa.docx`, and these handoff files.
@@ -446,7 +447,7 @@ the fingerprint.
 
 | Path | Purpose |
 | --- | --- |
-| `js/config.js` | All rule parameters; `Config.forBoard(n, level)`, `Config.LEVELS` (server only) |
+| `js/config.js` | All rule parameters (defaults); `Config.forBoard(n, level, mode, corridor, rules)`, `Config.LEVELS`, `Config.RULES` (what the admin may set) (server only) |
 | `js/look.js` | The page's own numbers: animation, sound, colors, server address, voice (`Look`) |
 | `js/view.js` | The page's game: `ViewGame`, `RemoteTable`, `decode`; reads the server's views and frames (section 12.3) |
 | `js/engine.js` | Rules engine, no graphics (server only since v3.2.0) |
@@ -634,6 +635,14 @@ earlier sketch (browser dice, PINs).
   and each player's line with four dice, measured once per game and language (`fitReplayBar`).
   The arrows are small and ringless; a turn with more than four dice draws them smaller (`--ds`), so
   the line never wraps, and a long name is cut with "…".
+  **Game rules** (owner, 2026-11-06; v3.2.10): the admin page's "Game rules" section sets the rule values of
+  `js/config.js` for the whole server (not per room yet). `Config.RULES` lists what may be set (kind, range,
+  label; `board: true` for values whose defaults differ per board, set for 6, 8 and 4 colors). Not there: the
+  board itself (colors, corridor length, pieces, nest) and the dice level. `POST /api/admin/rules {rules?}`
+  (`cleanRules` in `server/core.js` checks every value and drops those equal to the default; Lobby
+  `settings` key `rules` = `{ all, 6, 8, 4 }`). A new room (and "Play again") copies the values of its board
+  into `setup.rules` (`rulesFor`); `Table` passes them to `Config.forBoard`, over the board's defaults and under
+  the one-color game's fixed rules. A running game keeps the rules it started with, so its events still replay.
   **Piece colors** (owner, 2026-11-02): the admin page has a color picker per piece color and saves them
   for the whole server (`POST /api/admin/colors`, `cleanColors` in `server/core.js`, the Lobby's
   `settings` table; null = the default `Config.PIECE_COLORS`). Every game page reads `GET /api/settings`

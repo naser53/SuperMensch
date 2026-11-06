@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, isGameId, newGameId, nextName } from "./core.js";
+import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, nextName, rulesFor } from "./core.js";
 import { adminApi } from "./admin.js";
 import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
 
@@ -65,6 +65,8 @@ async function api(req, env, url) {
       const name = cleanName(body.name);
       if (!name) return fail("the game needs a name");
       const setup = checkSetup(body.setup, users);
+      const rules = rulesFor(await lobby.rules(), setup.colors);    // the admin's game rules, kept with the room
+      if (rules) setup.rules = rules;
       const id = await lobby.addGame(name, setup);
       const room = env.ROOM.get(env.ROOM.idFromName(id));
       await room.init(id, name, setup);
@@ -176,6 +178,17 @@ export class Lobby extends DurableObject {
   setHunter(w) {
     this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('hunter', ?)`, JSON.stringify(w === "sword" ? "sword" : "arrow"));
     return this.hunter();
+  }
+
+  // the admin's game rules for every new room (cleanRules): { all, 6, 8, 4 }, only what differs from the default
+  rules() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'rules'`).toArray();
+    try { return cleanRules(r.length ? JSON.parse(r[0].v) : {}); } catch { return cleanRules({}); }
+  }
+
+  setRules(rules) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('rules', ?)`, JSON.stringify(rules));
+    return this.rules();
   }
 
   rename(id, name) {
@@ -520,6 +533,8 @@ export class GameRoom extends DurableObject {
       if (next) return next;
       const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
       const name = nextName(this._meta("name")), setup = JSON.parse(JSON.stringify(room.setup));
+      const rules = rulesFor(await lobby.rules(), setup.colors);    // the next game: the admin's rules of now
+      if (rules) setup.rules = rules; else delete setup.rules;
       next = await lobby.addGame(name, setup);
       await this.env.ROOM.get(this.env.ROOM.idFromName(next)).init(next, name, setup);
       this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('next', ?)`, JSON.stringify(next));

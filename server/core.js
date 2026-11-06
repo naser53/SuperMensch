@@ -58,6 +58,56 @@ export function cleanColors(list, defaults = Config.PIECE_COLORS) {
 // the board's own colors, [surface, edge], checked the same way (defaults Config.BOARD_COLORS)
 export const cleanBoard = list => cleanColors(list, Config.BOARD_COLORS);
 
+// The admin's game rules for the whole server (owner, 2026-11-06), as stored:
+//   { all: { key: value }, 6: { ... }, 8: { ... }, 4: { ... } }
+// "all" holds the rules of Config.RULES without `board`, the boards the rest. A value equal to
+// its default is left out, so a later default change reaches it. Throws on a bad value.
+export const RULE_BOARDS = [6, 8, 4];
+const ruleDefault = (n, key) => Config.forBoard(n)[key];
+
+export function cleanRules(input) {
+  const src = input && typeof input === "object" ? input : {};
+  const out = { all: {} };
+  for (const n of RULE_BOARDS) out[n] = {};
+  const value = (r, v, n) => {
+    const bad = () => { throw new Error(`bad value for ${r.key}`); };
+    const int = x => (Number.isInteger(x) && x >= r.min && x <= r.max ? x : bad());
+    if (r.kind === "bool") return typeof v === "boolean" ? v : bad();
+    if (r.kind === "int") return int(v);
+    const len = r.len === "n" ? n : r.len;
+    return Array.isArray(v) && v.length === len ? v.map(int) : bad();
+  };
+  for (const r of Config.RULES) {
+    for (const where of r.board ? RULE_BOARDS : ["all"]) {
+      const v = (src[where] || {})[r.key];
+      if (v === undefined || v === null) continue;
+      const n = where === "all" ? 6 : where, clean = value(r, v, n);
+      if (JSON.stringify(clean) !== JSON.stringify(ruleDefault(n, r.key))) out[where][r.key] = clean;
+    }
+  }
+  // what must hold together on every board
+  for (const n of RULE_BOARDS) {
+    const c = Config.forBoard(n, "beginner", "two", 10, rulesFor(out, n));
+    if (c.marshal_points <= c.general_points) throw new Error("a marshal needs more points than a general");
+    if (c.tunnel_last_corridor > n - 1) throw new Error(`${n}-color board: tunnels reach corridor ${n - 1} at most`);
+    if (c.tunnel_max_skip > n - 2) throw new Error(`${n}-color board: a tunnel skips ${n - 2} corridors at most`);
+  }
+  return out;
+}
+
+// the rules of one board (n colors) for a new room's setup: the admin's values only, or null
+export function rulesFor(stored, n) {
+  const r = { ...((stored && stored.all) || {}), ...((stored && stored[n]) || {}) };
+  return Object.keys(r).length ? r : null;
+}
+
+// every rule's default per board, for the admin page
+export function ruleDefaults() {
+  const out = {};
+  for (const n of RULE_BOARDS) out[n] = Object.fromEntries(Config.RULES.map(r => [r.key, ruleDefault(n, r.key)]));
+  return out;
+}
+
 // the name of the next game of a room ("Play again"): "Test" -> "Test (2)" -> "Test (3)"
 export function nextName(name) {
   const m = /^(.*) \((\d+)\)$/.exec(name || "");
@@ -82,6 +132,7 @@ export function seatColors(mode, colors, i) { return mode === "two" ? [i, i + co
 export function editSetup(old, seats, users) {
   const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level, corridor: old.corridor,
     seats: (seats || []).map((s, i) => ({ ...(s.ai ? { ai: true } : { user: s.user }), colors: seatColors(old.mode, old.colors, i) })) }, users);
+  if (old.rules) setup.rules = old.rules;          // the room keeps the rules it was made with
   return { setup, keep: setup.players.length === old.players.length };
 }
 

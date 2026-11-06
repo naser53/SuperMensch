@@ -79,6 +79,57 @@ $("#pointsBtn").onclick = async () => {
 };
 $("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
 
+// the game rules for the whole server (Config.RULES; server/core.js cleanRules): a row per rule, one box
+// for every board where the boards' defaults differ (6, 8, 4 colors), else one box for all
+const BOARDS = [6, 8, 4];
+let rulesInfo = null;
+const ruleText = (r, v) => (r.kind === "list" ? v.join(", ") : String(v));
+const ruleBox = (r, where, value, def) => {
+  const at = `data-rule="${r.key}" data-at="${where}" data-def='${esc(JSON.stringify(def))}'`;
+  if (r.kind === "bool") return `<input type="checkbox" ${at} ${value ? "checked" : ""}>`;
+  if (r.kind === "int") return `<input type="number" ${at} min="${r.min}" max="${r.max}" step="1" value="${value}" title="${r.min} to ${r.max}; default ${def}">`;
+  return `<input type="text" ${at} value="${esc(ruleText(r, value))}" title="default ${esc(ruleText(r, def))}">`;
+};
+const ruleValue = x => {
+  const r = rulesInfo.list.find(q => q.key === x.dataset.rule);
+  if (r.kind === "bool") return x.checked;
+  if (r.kind === "int") return x.value.trim() === "" ? null : Number(x.value);
+  return x.value.split(/[\s,،]+/).filter(Boolean).map(Number);
+};
+const markRule = x => x.classList.toggle("chg", JSON.stringify(ruleValue(x)) !== x.dataset.def);
+function showRules(d) {
+  rulesInfo = d;
+  let grp = "", rows = "";
+  for (const r of d.list) {
+    if (r.group !== grp) {
+      grp = r.group;
+      rows += `<tr class="grp"><td>${esc(grp)}</td>${BOARDS.map(n => `<th>${n} colors</th>`).join("")}</tr>`;
+    }
+    const cell = where => {
+      const n = where === "all" ? 6 : where, def = d.defaults[n][r.key];
+      const v = ((d.rules[where] || {})[r.key]) ?? def;
+      return ruleBox(r, where, v, def);
+    };
+    rows += `<tr><td>${esc(r.label)} <code>${r.key}</code></td>` +
+      (r.board ? BOARDS.map(n => `<td>${cell(n)}</td>`).join("") : `<td colspan="3">${cell("all")}</td>`) + "</tr>";
+  }
+  $("#rules").innerHTML = rows;
+  document.querySelectorAll("[data-rule]").forEach(x => { markRule(x); x.oninput = x.onchange = () => markRule(x); });
+}
+async function loadRules() { showRules(await api("admin/rules", {})); }
+$("#rulesBtn").onclick = async () => {
+  const rules = { all: {} };
+  for (const n of BOARDS) rules[n] = {};
+  document.querySelectorAll("[data-rule]").forEach(x => { rules[x.dataset.at][x.dataset.rule] = ruleValue(x); });
+  try { showRules(await api("admin/rules", { rules })); show("#rulesMsg", "Saved. New rooms use these rules."); }
+  catch (e) { show("#rulesMsg", e.message, true); }
+};
+$("#rulesReset").onclick = () => document.querySelectorAll("[data-rule]").forEach(x => {
+  const def = JSON.parse(x.dataset.def);
+  if (x.type === "checkbox") x.checked = def; else x.value = Array.isArray(def) ? def.join(", ") : def;
+  markRule(x);
+});
+
 // a new seat: the first is the computer (owner, 2026-11-02), the others the players in turn
 const seatDefault = i => (i === 0 ? "ai" : users[i - 1] ? String(users[i - 1].id) : "ai");
 
@@ -244,6 +295,7 @@ async function open() {
   $("#panel").hidden = false;
   await loadUsers();
   await loadColors();
+  await loadRules();
   seatRows();
   await loadRooms();
 }

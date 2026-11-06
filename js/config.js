@@ -73,24 +73,64 @@ export class Config {
   // The one-color game (one color per player) is the traditional game: no tunnels, no walls or
   // castles (so no castle-break declarations), no generals or marshals and so no nest swap (it only
   // carries rank points back into play). The game where a player has several colors keeps them all.
-  static forBoard(n, level = "beginner", mode = "two", corridor = 10) {
+  // rules: the admin's values for this board (server/core.js rulesFor, kept in the room's setup);
+  // they go over the board's defaults, and the one-color game stays the traditional game anyway.
+  static forBoard(n, level = "beginner", mode = "two", corridor = 10, rules = null) {
     const lv = level in Config.LEVELS ? level : "beginner";
     const dice = { six_chance: Config.LEVELS[lv], two_dice: Config.TWO_DICE[lv] || null, level: lv };
     const long = (n === 6 || n === 8) && Config.CORRIDORS.includes(corridor) ? { corridor_len: corridor } : {};
     const classic = mode === "one"
       ? { ranks: false, nest_swap: false, tunnels_on: false, walls: false, castles: false, break_decl_on: false } : {};
-    if (n === 4) {
-      // end bonuses in proportion to the smaller corridor points of this board
-      return new Config({ n_colors: 4, corridor_points: [1, 4, 8, 10],
-                          tunnel_max_skip: 2, tunnel_last_corridor: 3,
-                          color_bonus: 25, finish_bonus: [40, 20], ...classic, ...dice });
-    }
-    if (n === 8) {
-      return new Config({ n_colors: 8, corridor_points: [1, 3, 6, 10, 15, 21, 28, 36],
-                          tunnel_last_corridor: 6, ...classic, ...dice, ...long });
-    }
-    return new Config({ n_colors: 6, ...classic, ...dice, ...long });
+    // the 4-color board: end bonuses in proportion to its smaller corridor points
+    const board = n === 4 ? { n_colors: 4, corridor_points: [1, 4, 8, 10], tunnel_max_skip: 2, tunnel_last_corridor: 3,
+                              color_bonus: 25, finish_bonus: [40, 20] }
+      : n === 8 ? { n_colors: 8, corridor_points: [1, 3, 6, 10, 15, 21, 28, 36], tunnel_last_corridor: 6, ...long }
+      : { n_colors: 6, ...long };
+    return new Config({ ...board, ...(rules || {}), ...classic, ...dice });
   }
+
+  // The values the admin may set for the whole server (admin page "Game rules", server/core.js
+  // cleanRules). kind: int, bool, or list of ints (len, or "n": one per corridor of the board).
+  // board: set per board (6, 8, 4), because the boards' defaults differ. Not here: the board itself
+  // (colors, corridor length, pieces, nest) and the dice level, which every room picks.
+  static RULES = [
+    { group: "Dice", key: "gift_six_n", kind: "int", min: 1, max: 30, label: "One-color game: throws without a 6 before a gift 6" },
+    { group: "Dice", key: "gift_six_turns", kind: "int", min: 1, max: 30, label: "Two-color game: stuck turns without a 6 before a gift 6" },
+    { group: "Dice", key: "triple_dice_cards", kind: "int", min: 0, max: 20, label: "Triple-dice cards per player" },
+    { group: "Dice", key: "six_into_nest", kind: "bool", label: "A 6 into the nest may be played alone" },
+    { group: "Dice", key: "six_prize", kind: "bool", label: "A playable 6 never burns" },
+    { group: "Points", key: "square_points", kind: "bool", label: "A capture is worth its field number (off: corridor points)" },
+    { group: "Points", key: "gate_points", kind: "int", min: 0, max: 1000, label: "Capture on the gate" },
+    { group: "Points", key: "threshold_extra", kind: "int", min: 0, max: 1000, label: "Extra for a capture on the threshold" },
+    { group: "Points", key: "corridor_points", kind: "list", len: "n", min: 0, max: 1000, board: true, label: "Corridor points (field numbers off)" },
+    { group: "Points", key: "gate_bonus", kind: "int", min: 0, max: 1000, label: "Gate bonus (field numbers off)" },
+    { group: "Points", key: "threshold_bonus", kind: "int", min: 0, max: 1000, label: "Threshold bonus (field numbers off)" },
+    { group: "Points", key: "color_bonus", kind: "int", min: 0, max: 1000, board: true, label: "A nest is full" },
+    { group: "Points", key: "finish_bonus", kind: "list", len: 2, min: 0, max: 1000, board: true, label: "First and second to finish" },
+    { group: "Points", key: "clean_piece_bonus", kind: "int", min: 0, max: 1000, label: "A piece reaches the nest never captured" },
+    { group: "Ranks", key: "ranks", kind: "bool", label: "Generals and marshals" },
+    { group: "Ranks", key: "general_points", kind: "int", min: 1, max: 1000, label: "Own points to become a general" },
+    { group: "Ranks", key: "marshal_points", kind: "int", min: 1, max: 1000, label: "Own points to become a marshal" },
+    { group: "Ranks", key: "general_mult", kind: "int", min: 1, max: 10, label: "General's multiplier" },
+    { group: "Ranks", key: "marshal_mult", kind: "int", min: 1, max: 10, label: "Marshal's multiplier" },
+    { group: "Ranks", key: "general_bounty", kind: "int", min: 0, max: 1000, label: "Head bounty of a general" },
+    { group: "Ranks", key: "marshal_bounty", kind: "int", min: 0, max: 1000, label: "Head bounty of a marshal" },
+    { group: "Ranks", key: "rank_mult_on_break", kind: "bool", label: "Multiplier on wall and castle breaks too" },
+    { group: "Ranks", key: "pushback_min", kind: "int", min: 0, max: 30, label: "A hit general or marshal goes back at least" },
+    { group: "Ranks", key: "nest_swap", kind: "bool", label: "Nest swap with a 6" },
+    { group: "Walls", key: "walls", kind: "bool", label: "Walls" },
+    { group: "Walls", key: "castles", kind: "bool", label: "Castles (3 or more in a row)" },
+    { group: "Walls", key: "wall_break", kind: "int", min: 0, max: 1000, label: "Breaking a wall" },
+    { group: "Walls", key: "castle_break", kind: "int", min: 0, max: 1000, label: "Breaking a castle" },
+    { group: "Walls", key: "break_decl_on", kind: "bool", label: "Castle-break declarations" },
+    { group: "Walls", key: "hunter_can_break", kind: "bool", label: "The hunter may break walls" },
+    { group: "Tunnels", key: "tunnels_on", kind: "bool", label: "Tunnels" },
+    { group: "Tunnels", key: "tunnel_costs", kind: "list", len: 3, min: 0, max: 1000, label: "Cost to skip 1, 2, 3 corridors" },
+    { group: "Tunnels", key: "tunnel_max_skip", kind: "int", min: 1, max: 3, board: true, label: "Most corridors a tunnel skips" },
+    { group: "Tunnels", key: "tunnel_last_corridor", kind: "int", min: 2, max: 7, board: true, label: "Last corridor a tunnel reaches" },
+    { group: "Tunnels", key: "max_active_tunnels", kind: "int", min: 1, max: 10, label: "Open tunnels per player" },
+    { group: "Tunnels", key: "tunnel_declare_range", kind: "int", min: 1, max: 20, label: "Fields before the entrance to declare" },
+  ];
 
   // dice levels for everybody at the table (same dice for people and computers)
   // (chance of a 6 on one die; null = fair). Difficult is half of intermediate (owner, 2026-11-02):

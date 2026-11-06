@@ -21,6 +21,15 @@
   .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; }
   .colors label { display: flex; align-items: center; gap: 6px; }
   .colors input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+  .rules { border-collapse: collapse; width: 100%; }
+  .rules td, .rules th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  .rules th { font-weight: 600; font-size: 13px; }
+  .rules tr.grp td { font-weight: 600; padding-top: 10px; border-bottom: none; }
+  .rules input[type=number] { width: 64px; }
+  .rules input[type=text] { width: 100%; min-width: 90px; box-sizing: border-box; }
+  .rules td[colspan] input[type=text] { width: 220px; }
+  .rules .chg { background: #fff3c4; }
+  .rules code { font-size: 11px; color: var(--muted); background: none; padding: 0; }
 </style>
 </head>
 <body>
@@ -72,6 +81,17 @@
       <div id="boardColors" class="colors"></div>
       <div class="row"><button class="primary" id="colorsBtn">Save colors</button> <button id="colorsReset">All to default</button>
         <span id="colorsMsg"></span></div>
+    </section>
+
+    <section>
+      <h2>Game rules</h2>
+      <div class="muted">For the whole server. Rooms made after saving (and "Play again") use these values; a game
+        already running keeps the rules it started with. Some values differ per board: one box for each. A yellow box
+        differs from the default. Lists are numbers with commas. The one-color game always stays the traditional game
+        (no ranks, walls, castles or tunnels).</div>
+      <div style="overflow-x:auto"><table class="rules" id="rules"></table></div>
+      <div class="row"><button class="primary" id="rulesBtn">Save rules</button> <button id="rulesReset">All to default</button>
+        <span id="rulesMsg"></span></div>
     </section>
 
     <section>

@@ -2,7 +2,8 @@
 // Every route here is a setting for the whole server or a test aid for one room.
 // Returns a Response, or null when <what> is not an admin route (the worker answers 404).
 
-import { cleanBoard, cleanColors, cleanName, editSetup, isGameId } from "./core.js";
+import { Config } from "../js/config.js";
+import { cleanBoard, cleanColors, cleanName, cleanRules, editSetup, isGameId, ruleDefaults } from "./core.js";
 
 export async function adminApi(what, body, { env, lobby, settings, json, fail }) {
   if (what === "check") return json({ ok: true });
@@ -32,6 +33,11 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
   if (what === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"
     await lobby.setHunter(body.hunter);
     return json(await settings());
+  }
+  // the game rules (Config.RULES) for every room made from now on; no rules in the body: just read them
+  if (what === "rules" && body) {
+    if (body.rules !== undefined) await lobby.setRules(cleanRules(body.rules));
+    return json({ rules: await lobby.rules(), list: Config.RULES, defaults: ruleDefaults() });
   }
   if (what === "edit" && body && isGameId(body.id)) {        // who plays in a room (a test aid)
     const old = await lobby.setupOf(body.id);
