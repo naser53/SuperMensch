@@ -53,8 +53,10 @@ export class ViewGame {
   }
 
   // the game after an event (or the first view); the object stays the same, so the page may hold it
-  load(v, table) {
+  // keep: the dice arrays a frame without a throw shows again (see RemoteTable.apply)
+  load(v, table, keep = []) {
     const d = decode(v, table);
+    this._keep = keep;
     this.state = d.state;
     this.turn = d.turn;
     this.turnNo = d.turnNo;
@@ -82,10 +84,12 @@ export class ViewGame {
 
   // one throw, one array (main.js syncDice compares the arrays themselves): the server numbers them
   _dice(id, a) {
-    if (id == null) return a;
+    if (!Array.isArray(a)) return a;
+    const same = b => Array.isArray(b) && b.length === a.length && b.every((x, k) => x === a[k]);
     this._diceKept = this._diceKept || new Map();
-    const old = this._diceKept.get(id);
-    if (old && old.length === a.length && old.every((x, k) => x === a[k])) return old;
+    const old = (this._keep || []).find(same) || (id == null ? null : this._diceKept.get(id));
+    if (same(old)) { if (id != null) this._diceKept.set(id, old); return old; }
+    if (id == null) return a;
     this._diceKept.set(id, a);
     if (this._diceKept.size > 16) this._diceKept.delete(this._diceKept.keys().next().value);
     return a;
@@ -150,7 +154,11 @@ export class RemoteTable {
   apply(ev, frame) {
     this.events.push(ev);
     this.game.log.push(...frame.log);
-    this.game.load(frame.view, frame.states);
+    // Only a dice event throws. The server numbers a throw anew when it builds the game again (the
+    // frames of replay mode, a room woken from sleep), so after any other event the dice the page
+    // already shows stay the same arrays: not thrown again, crossed out, beside the next player.
+    const g = this.game, keep = ev.dice ? [] : [g.lastDice, g.pending && g.pending.dice];
+    this.game.load(frame.view, frame.states, keep);
   }
 }
 
