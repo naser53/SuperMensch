@@ -3,12 +3,12 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { boardFor } from "./boards.js";
-import { TUN, YARD } from "./engine.js";
+import { TUN, YARD } from "./view.js";
 import { sound, rollLead } from "./sound.js";
-import { Config } from "./config.js";
+import { Look } from "./look.js";
 
 // the 8-color board adds pink and black (owner, 2026-11-02); the other boards use the first 6 or 4
-export const COLORS = Config.PIECE_COLORS.slice();
+export const COLORS = Look.PIECE_COLORS.slice();
 const LIGHT_DEFAULT = ["#fbe3e2", "#dceafb", "#e3f1d8", "#fdf5cf", "#e9e6fb", "#d8f2ea", "#fce2f0", "#dcdcde"];
 export const LIGHT = LIGHT_DEFAULT.slice();
 
@@ -30,7 +30,7 @@ export function setColors(list, board) {
     .toString(16).padStart(2, "0")).join("");
   for (let i = 0; i < COLORS.length; i++) {
     const c = Array.isArray(list) && typeof list[i] === "string" && /^#[0-9a-f]{6}$/i.test(list[i]) ? list[i].toLowerCase() : null;
-    COLORS[i] = c || Config.PIECE_COLORS[i];
+    COLORS[i] = c || Look.PIECE_COLORS[i];
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
 }
@@ -486,8 +486,8 @@ export class Board3D {
     const slab = new THREE.Mesh(
       new THREE.ExtrudeGeometry(shape, { depth: 0.55, bevelEnabled: true, bevelThickness: 0.05,
         bevelSize: 0.06, bevelSegments: 3 }),
-      [new THREE.MeshStandardMaterial({ color: BOARD[0] || (n === 4 ? "#f7e8c4" : Config.BOARD_COLORS[0]), roughness: 0.85 }),
-       new THREE.MeshStandardMaterial({ color: BOARD[1] || (n === 4 ? "#c83c32" : Config.BOARD_COLORS[1]), roughness: 0.7 })]);
+      [new THREE.MeshStandardMaterial({ color: BOARD[0] || (n === 4 ? "#f7e8c4" : Look.BOARD_COLORS[0]), roughness: 0.85 }),
+       new THREE.MeshStandardMaterial({ color: BOARD[1] || (n === 4 ? "#c83c32" : Look.BOARD_COLORS[1]), roughness: 0.7 })]);
     slab.rotation.x = -Math.PI / 2;
     slab.position.y = TOP - 0.6;
     slab.castShadow = true;

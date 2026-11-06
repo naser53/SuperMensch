@@ -23,6 +23,7 @@ export class Table {
     if (rng) this.game.rng = rng;
     this.events = [];
     this.autoDice = autoDice;
+    this.observer = null;           // the server's FrameRecorder (server/frames.js): before / after each event
     this._settle();
   }
 
@@ -59,8 +60,11 @@ export class Table {
     // dice set with the debug command "dice" become events too, so the list stays complete
     const queued = g.queuedDice;
     g.queuedDice = null;
-    this.events.push(dec.kind === "dice" ? { dice: ev.dice.slice() } : { pick: ev.pick });
+    const e = dec.kind === "dice" ? { dice: ev.dice.slice() } : { pick: ev.pick };
+    this.events.push(e);
+    if (this.observer) this.observer.before(g, e, opt, dec);
     g.choose(opt);
+    if (this.observer) this.observer.after(g, e);
     this._settle(queued);
   }
 

@@ -13,6 +13,11 @@ Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no 
 * Replay mode (five taps on the turn pill) needs the admin key now, the one the admin page keeps in the
   same browser. The server refuses `{t:"debug"}` without it, so a player can no longer rewind a game and
   throw the dice again.
+* **The rules live on the server only.** The page has no rules engine, no computer player and no rule
+  numbers any more: after every move the server sends the game as the page shows it, with the legal
+  moves, the click-by-click steps, the walls and castles, the hunter and the reasons a move or a tunnel
+  is not allowed already worked out (`server/frames.js`, read by `js/view.js`). Replay mode gets the
+  past positions from the server. The page's own numbers moved to `js/look.js`.
 
 ## v3.0.13 (2026-11-06)
 

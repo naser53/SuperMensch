@@ -441,18 +441,20 @@ the fingerprint.
 
 | Path | Purpose |
 | --- | --- |
-| `js/config.js` | All game parameters; `Config.forBoard(n, level)`, `Config.LEVELS` |
-| `js/engine.js` | Rules engine, no graphics |
-| `js/debugcmd.js` | Debug console commands: score, move, dice |
+| `js/config.js` | All rule parameters; `Config.forBoard(n, level)`, `Config.LEVELS` (server only) |
+| `js/look.js` | The page's own numbers: animation, sound, colors, server address, voice (`Look`) |
+| `js/view.js` | The page's game: `ViewGame`, `RemoteTable`, `decode`; reads the server's views and frames (section 12.3) |
+| `js/engine.js` | Rules engine, no graphics (server only since v3.2.0) |
+| `js/debugcmd.js` | Debug console commands: score, move, dice (`tools/replay.mjs` only) |
 | `js/table.js` | `Table`: a game plus its event list (`{dice}`, `{pick}`); `Table.replay`, `fingerprint` (v2 online groundwork) |
-| `js/ai.js` | Simple computer player (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
+| `js/ai.js` | Simple computer player (server only) (saves its triple-dice cards for good moments; `AI_WEIGHTS`) |
 | `js/boards.js` | Board geometry (six or eight arms, classic cross), name spots, dice rows between yard and corridor |
 | `js/strings.js`, `js/i18n.js` | Texts in en / fa / de, translation; `shape()` and `num()` for Farsi digits |
 | `js/sound.js` | Sound effects: the dice recording, the rest synthesized (move, capture, knock, gate, fireworks) |
 | `js/dicesound.js` | The dice-throw recordings (`sounds/dice-one.mp3`, `sounds/dice-many.mp3`) as base64 |
 | `js/rolldie.js` | The roll button's Dice3D die: one persistent face layer over the button, one animation loop, spring-eased on/off |
 | `js/render3d.js` | `Board3D`: 3D board with Three.js, animations, effects |
-| `js/main.js` | `App`: setup screen, ribbon, click state machine, game loop |
+| `js/main.js` | `App`: room list, ribbon, click state machine, online game loop |
 | `css/style.css` | Layout, ribbon, card, menus, responsive rules |
 | `tests/rules.test.mjs` | 37 rule tests (`node:test`) |
 | `tests/table.test.mjs` | Table tests: events rebuild the same game |
@@ -460,10 +462,11 @@ the fingerprint.
 | `tests/server.test.mjs` | Server logic tests |
 | `tests/golden.mjs`, `tests/golden.json` | Fingerprints of fixed games (regression) |
 | `tests/simulate.mjs` | Computer-vs-computer games |
-| `tools/build.mjs` | Builds `dist/supermensch.html` |
+| `tools/build.mjs` | Builds `server/public/index.html` |
 | `tools/replay.mjs` | Rebuilds a game from the report of the Copy button in Info |
 | `docs/` | Rules (docx, md) and these handoff files |
-| `.github/workflows/ci.yml` | Tests, simulation, build, publish to the `latest` release |
+| `.github/workflows/ci.yml` | Tests, simulation, build, a notes-only release for a new version |
+| `server/frames.js` | Views and frames for the page: the game as the page reads it, with the rules' answers worked out |
 
 ### Engine model
 * A state machine. `Game.pending` is the current Decision; its kinds are `pre_roll`, `keep`,
@@ -742,9 +745,26 @@ server; the offline game is dropped. The plan (in phases) is in the project note
   **Replay mode is the admin's:** the page enters it only when this browser keeps the admin key (the
   admin page stores it in localStorage `adminKey`, same origin) and sends it with `{t:"debug", on, key}`;
   the room refuses it otherwise (`refused`, "admin only"), so nobody else can rewind and throw again.
-* **Phase 1 (next):** the server sends the options of each decision ready to show; the page stops
-  working out the legal moves itself.
-* **Phase 2:** the server sends what to animate after each event; `js/engine.js`, `js/table.js`,
-  `js/ai.js` and the rule numbers of `js/config.js` leave the page. Replay comes from the server.
+* **Phases 1 and 2 (v3.2.0, done): the page has no rules engine.** `js/engine.js`, `js/table.js`, `js/ai.js`
+  and `js/config.js` are not in the page any more (the page's own numbers moved to `js/look.js`).
+  * `server/frames.js`: `gameView(g)` is the game as the page reads it (players, config, log, state,
+    turn, cards, places, pending decision ...). Every state is written once in a table (`{ $s: n }`)
+    and carries `x`: `he` (`hunterEligible` per player), `cc` (`_completedColor` per player), `s`
+    (`structures`), and for a state the player clicks through `b` (`blockerOf` for each own piece and
+    die). A person's decision also carries its options, `seqs` (`Game.sequences`, each step with its
+    words `desc`) and `tblock` (`tunnelBlockers`) before the roll.
+  * `FrameRecorder` (`Table.observer`) makes one frame per event while the server applies them:
+    `o` the chosen option, `e` the steps to animate (`playEntries`), `log` the new lines, `view` the game
+    after it; only the last frame of a batch carries the options. `{t:"events"}` has `frames` next to
+    `events`; `{t:"state"}` has `game` (the whole view).
+  * `js/view.js`: `ViewGame` has the fields and methods the page and the board always used
+    (`state`, `pending`, `structures(st)`, `hunterEligible(p, st)`, `blockerOf`, `sequences()` ...), but
+    they only read what the server sent; geometry (`absOf`, `tunnelGeom`) and the rank thresholds stay.
+    `RemoteTable.apply(ev, frame)` follows the game. A missed event loads the game again from `{t:"state"}`.
+  * Replay mode asks the room `{t:"history", n, m}` (debugging devices only): the game after n events,
+    the frames of the events n..m and the turns (`Room.history`, `Room.turns`).
+  * Sizes (6-color game, measured): a move with the computers' answers about 30 KB (at most about
+    90 KB); the whole view on connecting up to about 350 KB late in a game (mostly the move log).
+    Server work per move at most about 20 ms in Node.
 * What must stay in the page: drawing and effects (`render3d.js`, `rolldie.js`), sounds, voice chat
   (`js/voice.js`; its keys stay on the server).

@@ -448,7 +448,7 @@ export class GameRoom extends DurableObject {
         if (token && o.token === token && (o.seats || []).some(s => seats.includes(s)))
           o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)), debug: !!o.debug, ...keepVoice(o) });
       ws.serializeAttachment({ device, token, seats, debug: !!msg.debug, ...keepVoice(old) });
-      this._send(ws, { t: "state", ...this.snapshot(), mine: seats, taken, debug: this._debugBy(ws),
+      this._send(ws, { t: "state", ...this.snapshot(), game: room.gameView(), mine: seats, taken, debug: this._debugBy(ws),
         voice: { on: vi.on, can: voiceCan(room.setup.players, seats, vi.users, vi.on) }, voices: this._voices() });
       this._all({ t: "seats", seats: this._seats() });
       this._debugAll();
@@ -481,6 +481,13 @@ export class GameRoom extends DurableObject {
       this._debugAll();
       return;
     }
+    if (msg.t === "history") {            // replay mode (the admin): the game at a point and the frames after it
+      const a = ws.deserializeAttachment() || {};
+      if (!a.debug) { this._send(ws, { t: "refused", reason: "not debugging", seq: room.events.length }); return; }
+      if (this._turnsOf !== room || this._turnsFor !== room.events.length) { this._turns = room.turns(); this._turnsOf = room; this._turnsFor = room.events.length; }
+      this._send(ws, { t: "history", ...room.history(msg.n, msg.m), turns: this._turns });
+      return;
+    }
     if (msg.t === "mute") {
       const a = ws.deserializeAttachment() || {};
       if (a.voice) { ws.serializeAttachment({ ...a, voice: { ...a.voice, muted: !!msg.on } }); this._voicesAll(); }
@@ -494,7 +501,8 @@ export class GameRoom extends DurableObject {
       try { r = room.move(msg.seq, msg.ev, a.seats || []); }
       catch (e) { this._send(ws, { t: "refused", reason: String(e.message || e), seq: room.events.length }); return; }
       this._save(r.from);
-      this._all({ t: "events", from: r.from, events: r.events, fp: room.fingerprint(), view: room.view() });
+      // with the frames: the page has no rules, it shows what the server worked out (server/frames.js)
+      this._all({ t: "events", from: r.from, events: r.events, frames: r.frames, fp: room.fingerprint(), view: room.view() });
       await this._report();
     }
   }

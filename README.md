@@ -70,14 +70,16 @@ and TURN together; a speaker uses about 15 MB an hour.
 
 | Path | Purpose |
 | --- | --- |
-| `js/config.js` | All game parameters |
-| `js/engine.js` | Rules engine (no graphics) |
-| `js/ai.js` | Simple computer player |
+| `js/config.js` | All rule parameters (server only) |
+| `js/look.js` | The page's own numbers (animation, sound, colors) |
+| `js/view.js` | The game as the page sees it, from the server's views and frames |
+| `js/engine.js` | Rules engine (no graphics; server only) |
+| `js/ai.js` | Simple computer player (server only) |
 | `js/boards.js` | Board geometry (six arms, classic cross) |
 | `js/strings.js`, `js/i18n.js` | Texts and translation |
 | `js/render3d.js` | 3D board with Three.js |
-| `js/main.js` | Setup screen, ribbon, game loop |
-| `js/debugcmd.js` | Debug console commands |
+| `js/main.js` | Room list, ribbon, online game loop |
+| `js/debugcmd.js` | Debug console commands (for `tools/replay.mjs`) |
 | `js/table.js` | A game plus its event list, for replay and the online game |
 | `js/voice.js` | Voice chat in online games (WebRTC through Cloudflare Realtime) |
 | `server/` | The online server (Cloudflare Worker); `server/voice.js` talks to Cloudflare Realtime |

@@ -1,10 +1,9 @@
 // SuperMensch browser version: setup screen, side panel and game loop.
-import { Option } from "./engine.js";
-import { Table, fingerprint } from "./table.js";
+import { RemoteTable, frameParts } from "./view.js";
 import { COLOR_NAMES, LANGS, LANG_NAMES, RTL, num, shape, t, tr } from "./i18n.js";
 import { Board3D, COLORS, setColors, setHunterWeapon, setPointsLook } from "./render3d.js";
 import { VERSION } from "./version.js";
-import { Config } from "./config.js";
+import { Look } from "./look.js";
 import { boardFor } from "./boards.js";
 import { sound } from "./sound.js";
 import { Voice } from "./voice.js";
@@ -66,8 +65,8 @@ class App {
   constructor() {
     const st = load();
     this.lang = LANGS.includes(st.lang) ? st.lang : "en";
-    this.speed = Config.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
-    this.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[this.speed];
+    this.speed = Look.ANIM_SPEEDS[st.speed] ? st.speed : "fast";
+    this.delay = Look.ANIM_PAUSE * Look.ANIM_SPEEDS[this.speed];
     this.sound = st.sound !== false;   // sound effects (js/sound.js), on unless switched off
     sound.setOn(this.sound);
     this.rooms = null;                 // null: loading · "error": no server · [rooms]
@@ -301,7 +300,7 @@ class App {
         const hunterAmbig = sel.ambig && sel.ambig.every(c => c.cand.step.mover[0] === "hn");
         hint = this.T(hunterAmbig ? "pick_hunter_dir" : sel.ambig ? "pick_which" : sel.piece ? "pick_die_for_piece" : (sel.die === null ? "pick_die" : "pick_piece"));
         if (!sel.ambig && sel.seqs.some(q => q.steps.some(x => x.mover[0] === "hn"))) hint += ` <span class="muted">${this.T("hunter_ready")}</span>`;
-        if (sel.picks.length) hint += `<div class="muted small">${sel.picks.map(x => this.S(g.describe({ steps: [x.step] })[0])).join(" · ")}</div>`;
+        if (sel.picks.length) hint += `<div class="muted small">${sel.picks.map(x => this.S(x.step.desc)).join(" · ")}</div>`;
         if (hunterAmbig) {
           opts = sel.ambig;
           const pl = opts[0].cand.step.mover[1];
@@ -431,7 +430,7 @@ class App {
       `<button class="btn rb-btn icon" data-act="info" title="${this.T("info")}">${ICON.info}<span>${this.T("info")}</span></button>` +
       this.langSelect() +
       `<label class="rb-speed" title="${this.T("speed")}">${ICON.speed}<select data-act="speed" aria-label="${this.T("speed")}">` +
-        Object.keys(Config.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
+        Object.keys(Look.ANIM_SPEEDS).map(k => `<option value="${k}" ${k === this.speed ? "selected" : ""}>${this.T("speed_" + k)}</option>`).join("") + "</select></label>" +
       `<button class="btn rb-btn icon${this.sound ? "" : " off"}" data-act="sound" aria-pressed="${this.sound}" title="${this.T(this.sound ? "sound_off" : "sound_on")}">${this.sound ? ICON.soundOn : ICON.soundOff}<span>${this.T("sound")}</span></button>` +
       `<button class="btn rb-btn icon" data-act="menu" title="${this.T("menu")}">${ICON.menu}<span>${this.T("menu")}</span></button>`;
   }
@@ -491,7 +490,7 @@ class App {
     this.board.animateSteps(entry, this.hop());
   }
 
-  hop() { return this.delay * Config.HOP_SHARE; }
+  hop() { return this.delay * Look.HOP_SHARE; }
 
   // a nest that has just been filled shines (after the piece has landed)
   checkNests(when = performance.now()) {
@@ -505,18 +504,6 @@ class App {
   }
 
   // the play step by step, for the animation: [{before, after, step}]
-  replay(play) {
-    const g = this.game, structs = g.structures(g.state), out = [];
-    let cur = g.state;
-    for (const s of play.steps) {
-      const r = g.step(cur, g.turn, s.mover, s.die, structs, play.target);
-      if (!r) break;
-      out.push({ before: cur, after: r[0], step: r[1] });
-      cur = r[0];
-    }
-    return out;
-  }
-
   // waiting for an animation (move, dice or card), or locked by the scores view
   busy() {
     const now = performance.now();
@@ -739,7 +726,7 @@ class App {
     const mine = this.candidates().filter(c => isMe(c.step.mover));
     if (mine.length === 1) this.pickCandidate(mine[0]);
     else if (mine.length > 1) {
-      sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+      sel.ambig = mine.map(x => ({ cand: x, label: x.step.desc }));
       this.render();
     } else {
       this.forbidMove(ev, pc, [sel.die]);
@@ -817,11 +804,12 @@ class App {
   }
 
   // ------------------------------------------------------------ actions
-  choose(opt, entries = null) {
+  // A move of this device goes to the server (sendMove). An event from the server comes with its
+  // frame (server/frames.js): the chosen option, the steps to animate and the game after it.
+  choose(opt, entries = null, item = null) {
     const g = this.game, dec = g.pending;
-    if (this.online && !this.online.applying) { this.sendMove(opt, entries); return; }
+    if (!item) { this.sendMove(opt, entries); return; }
     const card = dec && dec.kind === "pre_roll" && opt.payload === "triple";
-    if (!entries && dec && dec.kind === "play" && opt.payload && opt.payload.steps) entries = this.replay(opt.payload);
     if (dec && dec.kind === "play") { this.usedFrom = dec.dice; this.usedIdx = this.usedDice(dec.dice, opt.payload); }
     if (dec && dec.kind === "keep" && Array.isArray(opt.payload)) {
       this.keptFrom = dec.dice;
@@ -829,7 +817,7 @@ class App {
     }
     g.noMove = null;
     const earned = g.state.earned.map(r => r.slice()), logFrom = g.log.length;
-    this.table.choose(opt);
+    this.table.apply(item.ev, item.frame);
     this.throwBanners(logFrom);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
@@ -900,13 +888,13 @@ class App {
       });
       if (lands.length === 1) { this.pickCandidate(lands[0]); return; }
       if (lands.length > 1) {
-        sel.ambig = lands.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+        sel.ambig = lands.map(x => ({ cand: x, label: x.step.desc }));
         this.render();
         return;
       }
       const mine = this.candidates().filter(c => c.step.mover[0] === "hn" && g.gate(g._completedColor(g.turn, shown)) === hit.field);
       if (mine.length) {
-        sel.ambig = mine.map(x => ({ cand: x, label: g.describe({ steps: [x.step] })[0] }));
+        sel.ambig = mine.map(x => ({ cand: x, label: x.step.desc }));
         this.render();
       } else this.board.forbid(ev);
     }
@@ -972,14 +960,14 @@ class App {
       ...g.players.map((p, i) => `  ${i + 1}. ${en(p.name)} · ${p.isAi ? "computer" : "human"} · colors ${p.colors.map(cname).join(", ")} · score ${g.state.scores[i]}`),
       `Online: ${this.online ? `room ${this.online.id}, this device plays seats ${this.online.seats.map(i => i + 1).join(", ")}` : "no (one device)"}`,
       `Language: ${this.lang} · round ${g.turnNo} · turn of player ${g.turn + 1} · pending ${g.pending ? g.pending.kind : "none"} · over ${!!g.over}`,
-      `Fingerprint: ${fingerprint(g)} · events ${tb.events.length}`,
+      `Fingerprint: ${this.online.fp} · events ${tb.events.length}`,
       ...(this.voice && this.voice.log.length ? [`Voice (speaker ${this.voice.speaker ? "on" : "off"}, mic ${this.voice.micState}, ${navigator.userAgent}):`, ...this.voice.log.map(x => "  " + x)] : []),
       "",
       "Moves (oldest first):",
       ...g.log.map((m, i) => `${i + 1}. ${en(m)}`),
       "",
       "Replay data (node tools/replay.mjs <file>):",
-      JSON.stringify({ version: VERSION, setup, events: tb.events, edits: tb.edits || [], fp: fingerprint(g) }),
+      JSON.stringify({ version: VERSION, setup, events: tb.events, edits: [], fp: this.online.fp }),
     ];
     return lines.join("\n");
   }
@@ -1012,7 +1000,7 @@ class App {
   }
 
   startOnline(id, seats) {
-    this.online = { id, seats, remote: new Set(), queue: [], sent: null, applying: false, fp: null, ws: null };
+    this.online = { id, seats, remote: new Set(), queue: [], sent: null, fp: null, ws: null };
     this.startVoice(id, seats);
     $("#setup").hidden = true;
     this.connect();
@@ -1107,18 +1095,24 @@ class App {
     }
     if (m.t === "state") {
       o.debugBy = m.debug || [];
+      o.fp = m.fp;
       if (!this.table) { this.openOnline(m); return; }
       const have = this.liveTable().events.length + o.queue.length;
-      if (m.events.length < have) { location.reload(); return; }     // should not happen: start again from the server
-      o.queue.push(...m.events.slice(have));
-      o.fp = m.fp;
+      if (m.events.length === have) return;
+      // missed some events (a lost connection): the game as it is now, without the moves in between
+      o.queue = [];
+      o.sent = null;
+      if (this.rp) { this.rp.live.table = this.onlineTable(m); return; }
+      this.showTable(this.onlineTable(m));
     } else if (m.t === "events") {
       if (!this.table) return;                 // the new state is on its way
       const have = this.liveTable().events.length + o.queue.length;
-      if (m.from !== have) { this.hello(); return; }   // missed some: ask again
-      o.queue.push(...m.events);
+      if (m.from !== have || !m.frames || m.frames.length !== m.events.length) { this.hello(); return; }   // missed some: ask again
+      o.queue.push(...m.events.map((ev, k) => ({ ev, frame: m.frames[k] })));
       o.fp = m.fp;
       if (this.rp) this.render();             // the replay bar counts the new events too
+    } else if (m.t === "history") {
+      this.replayAnswer(m);
     } else if (m.t === "debug") {
       o.debugBy = m.by || [];
       this.render();
@@ -1131,15 +1125,20 @@ class App {
     }
   }
 
-  // the first state: replay the game so far without animations
+  // The game from the server (no rules on this page): seats played elsewhere count as computer
+  // players here, so the panel offers nothing for them.
+  onlineTable(m, view = m.game, events = m.events) {
+    const o = this.online, t = new RemoteTable(m.setup || this.table.setup, events, view);
+    t.game.players = t.game.players.map((p, i) => ({ ...p, isAi: p.isAi || !o.seats.includes(i) }));
+    return t;
+  }
+
+  // the first state, without animations
   openOnline(m) {
     const o = this.online;
     o.name = m.name;
-    const players = m.setup.players.map((p, i) => ({ ...p, isAi: p.isAi || !o.seats.includes(i) }));
     m.setup.players.forEach((p, i) => { if (!p.isAi && !o.seats.includes(i)) o.remote.add(i); });
-    this.table = new Table({ ...m.setup, players }, { autoDice: false });
-    for (const ev of m.events) this.table.apply(ev);
-    o.fp = m.fp;
+    this.table = this.onlineTable(m);
     this.game = this.table.game;
     this.sel = null;
     this.doneNests = new Set();
@@ -1161,7 +1160,6 @@ class App {
     if (this.rp || (o.debugBy && o.debugBy.length) || o.sent || o.queue.length || !g.pending || !o.seats.includes(g.pending.player)) return;
     let ev;
     try { ev = this.table.eventFor(opt); } catch { return; }
-    if (ev.dice) return;
     o.sent = { seq: this.table.events.length, pick: ev.pick, entries };
     o.ws.send(JSON.stringify({ t: "move", seq: o.sent.seq, ev }));
   }
@@ -1170,47 +1168,59 @@ class App {
   nextEvent() {
     const o = this.online, g = this.game;
     if (!g || this.rp || !o.queue.length || this.busy()) return;
-    const ev = o.queue[0], dec = g.pending;
+    const item = o.queue[0], ev = item.ev, dec = g.pending;
     if (ev.place) { location.reload(); return; }     // the admin has put the pieces somewhere else: load the game again
     const mine = dec && o.seats.includes(dec.player);
     if (!ev.dice && !mine && performance.now() < this.nextAi) return;
     if (ev.dice && performance.now() < (this.moveEnd || 0)) return;    // let the last move land before the next throw
     o.queue.shift();
-    let opt, entries = null;
-    if (ev.dice) opt = new Option(null, ["dice", ev.dice]);
-    else {
-      opt = dec.options[ev.pick];
-      if (o.sent && o.sent.seq === this.table.events.length && o.sent.pick === ev.pick) entries = o.sent.entries;
+    let { opt, entries } = frameParts(item.frame);
+    if (ev.dice) opt = { label: null, payload: ["dice", ev.dice] };
+    else if (o.sent && o.sent.seq === this.table.events.length && o.sent.pick === ev.pick) {
+      if (o.sent.entries) entries = o.sent.entries;               // shown already while clicking
+      opt = dec.options[ev.pick] || opt;
     }
     if (!ev.dice) o.sent = null;
-    o.applying = true;
-    try { this.choose(opt, entries); }
-    catch { location.reload(); return; }                          // out of step with the server: start again
-    finally { o.applying = false; }
-    if (!o.queue.length && o.fp && fingerprint(g) !== o.fp) location.reload();
+    try { this.choose(opt, entries, item); }
+    catch (e) { console.error(e); location.reload(); }           // out of step with the server: start again
   }
 
   // ------------------------------------------------------------ replay (online debug mode)
-  // Five quick taps on the turn pill switch it on and off (owner, 2026-11-03). Any player may
-  // do it. The game is rebuilt on this device from the events the server sent, and the arrows
-  // over the dock step one whole turn back (at once) or forward (played as in the game). The
-  // server locks the other devices meanwhile and tells them who is debugging. Off: the live game.
+  // Five quick taps on the turn pill switch it on and off (owner, 2026-11-03; the admin only since
+  // 2026-11-06). The server sends the game at any point and the frames of the moves after it (this
+  // page has no rules), and the arrows over the dock step one whole turn back (at once) or forward
+  // (played as in the game). The server locks the other devices meanwhile and tells them who is
+  // debugging. Off: the live game.
   liveTable() { return this.rp ? this.rp.live.table : this.table; }
-  replayEvents() { return this.rp.live.table.events.concat(this.online.queue); }
+  replayEvents() { return this.rp.live.table.events.concat(this.online.queue.map(x => x.ev)); }
 
-  // where each turn starts in the events: [{ at, player }], and the end of the list
-  replayTurns() {
-    const all = this.replayEvents(), rp = this.rp;
-    if (rp.turns && rp.turnsFor === all.length) return rp.turns;
-    const t = Table.replay(rp.live.table.setup, []), out = [{ at: 0, player: t.game.turn }];
-    all.forEach((ev, k) => {
-      const before = t.game.turn;
-      t.apply(ev);
-      if (t.game.turn !== before || ev.place || k === all.length - 1) out.push({ at: k + 1, player: t.game.turn });
-    });
-    rp.turns = out;
-    rp.turnsFor = all.length;
-    return out;
+  // where each turn starts in the events: [{ at, player }] (from the server)
+  replayTurns() { return this.rp.turns || [{ at: 0, player: this.game.turn }]; }
+
+  // ask the server for the game after n events (goto) or the frames of the events n..m
+  replayAsk(n, m, goto) {
+    const ws = this.online.ws;
+    if (!ws || ws.readyState !== 1) { this.showToast(this.T("online_lost"), true); return; }
+    this.rp.wait = { n, m, goto };
+    ws.send(JSON.stringify({ t: "history", n, m }));
+  }
+
+  replayAnswer(m) {
+    const rp = this.rp, w = rp && rp.wait;
+    if (!w || w.n !== m.at) return;
+    rp.wait = null;
+    rp.turns = m.turns;
+    const all = this.replayEvents();
+    if (w.goto || m.frames.length < w.m - w.n) {        // a jump (or the admin placed pieces in between)
+      const at = w.goto ? m.at : w.m;
+      if (!w.goto) { this.replayGoto(at); return; }
+      this.showTable(this.onlineTable({}, m.view, all.slice(0, at)));
+      rp.at = rp.target = at;
+      rp.frames = [];
+      return;
+    }
+    rp.frames.push(...m.frames.map((frame, k) => ({ ev: all[m.at + k], frame })));
+    this.render();
   }
 
   // Replay mode is the admin's: it needs the admin key this browser keeps from the admin page,
@@ -1232,7 +1242,7 @@ class App {
 
   enterReplay() {
     const n = this.table.events.length + this.online.queue.length;
-    this.rp = { live: { table: this.table, game: this.game }, at: n, target: n };
+    this.rp = { live: { table: this.table, game: this.game }, at: n, target: n, frames: [], turns: null, wait: null };
     this.sendDebug(true);
     this.replayGoto(n);
     this.flash(this.T("replay_on"));
@@ -1265,23 +1275,27 @@ class App {
 
   // the game after the first n events, at once
   replayGoto(n) {
-    const all = this.replayEvents();
-    n = Math.max(0, Math.min(all.length, n));
-    const t = Table.replay(this.rp.live.table.setup, all.slice(0, n));
-    this.rp.at = this.rp.target = n;
-    this.showTable(t);
+    const rp = this.rp;
+    n = Math.max(0, Math.min(this.replayEvents().length, n));
+    rp.frames = [];
+    this.replayAsk(n, n, true);
   }
 
   // back: to the start of the turn before (at once); forward: play up to the start of the next turn
   replayStep(d) {
     const rp = this.rp, turns = this.replayTurns();
+    if (rp.wait) return;
     if (d < 0) {
       const prev = turns.filter(x => x.at < rp.target).pop();
       if (prev) this.replayGoto(prev.at);
       return;
     }
     const next = turns.find(x => x.at > rp.target);
-    if (next) { rp.target = next.at; this.render(); }
+    if (!next) return;
+    const from = rp.at + rp.frames.length;
+    rp.target = next.at;
+    this.replayAsk(from, next.at, false);
+    this.render();
   }
 
   // Continue (owner, 2026-11-05): the game goes on from the position shown; the moves after it
@@ -1329,17 +1343,16 @@ class App {
   // forward steps are played one event at a time, at the pace of the game (from tick)
   replayTick() {
     const rp = this.rp;
-    if (rp.at >= rp.target || this.busy()) return;
-    const ev = this.replayEvents()[rp.at], dec = this.game.pending, now = performance.now();
+    if (!rp.frames.length || this.busy()) return;
+    const item = rp.frames[0], ev = item.ev, now = performance.now();
     if (ev.dice ? now < (this.moveEnd || 0) : now < this.nextAi) return;
-    if (ev.place || !dec) { const tg = rp.target; this.replayGoto(rp.at + 1); rp.target = tg; return; }
+    rp.frames.shift();
+    let { opt, entries } = frameParts(item.frame);
+    if (ev.dice) opt = { label: null, payload: ["dice", ev.dice] };
     rp.at++;
-    const o = this.online;
-    o.applying = true;
-    try { this.choose(ev.dice ? new Option(null, ["dice", ev.dice.slice()]) : dec.options[ev.pick]); }
-    catch { const tg = rp.target; this.replayGoto(rp.at); rp.target = tg; }
-    finally { o.applying = false; }
-    if (rp.at >= rp.target) this.render();
+    try { this.choose(opt, entries, item); }
+    catch (e) { console.error(e); const tg = rp.target; this.replayGoto(rp.at); rp.target = tg; }
+    if (!rp.frames.length) this.render();
   }
 
   // the arrows over the dock; between them the turn's number, its player and its dice
@@ -1441,9 +1454,9 @@ function wire(app) {
   document.addEventListener("change", e => {
     const act = e.target.dataset.act;
     if (act === "lang") app.setLang(e.target.value);
-    else if (act === "speed" && Config.ANIM_SPEEDS[e.target.value]) {
+    else if (act === "speed" && Look.ANIM_SPEEDS[e.target.value]) {
       app.speed = e.target.value;
-      app.delay = Config.ANIM_PAUSE * Config.ANIM_SPEEDS[app.speed];
+      app.delay = Look.ANIM_PAUSE * Look.ANIM_SPEEDS[app.speed];
       app.persist();
     }
   });
@@ -1496,11 +1509,11 @@ async function loadColors(app) {
   } catch { /* no server: the colors kept or the defaults */ }
 }
 
-// where the online server is: this page's own host when the server serves it, else Config.SERVER_URL
+// where the online server is: this page's own host when the server serves it, else Look.SERVER_URL
 function apiBase() {
   const h = location.hostname;
   const own = location.protocol.startsWith("http") && (h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
-  return own ? location.origin : Config.SERVER_URL;
+  return own ? location.origin : Look.SERVER_URL;
 }
 
 // the admin key, kept by the admin page (/admin, same origin) in this browser; null for everyone else
