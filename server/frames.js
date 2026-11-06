@@ -12,6 +12,17 @@
 
 import { State } from "../js/engine.js";
 
+// The page tells a new throw from the same dice by the array itself (main.js syncDice: the
+// engine keeps one array per throw, shared by lastDice and the decision's dice). Every dice array
+// gets a number, so the page can give one throw one array again.
+const diceIds = new WeakMap();
+let nextDiceId = 1;
+function diceId(a) {
+  if (!Array.isArray(a)) return null;
+  if (!diceIds.has(a)) diceIds.set(a, nextDiceId++);
+  return diceIds.get(a);
+}
+
 // the part of the config the page shows (the info card) or draws with
 export function cfgView(cfg) {
   const out = {};
@@ -88,7 +99,7 @@ function gameData(g, enc, full) {
   const human = dec && !g.over && !g.players[dec.player].isAi;
   let pending = null;
   if (dec) {
-    pending = { kind: dec.kind, player: dec.player, dice: dec.dice.slice(), note: dec.note };
+    pending = { kind: dec.kind, player: dec.player, dice: dec.dice.slice(), diceId: diceId(dec.dice), note: dec.note };
     if (full && human) {
       pending.options = enc.enc(dec.options);
       if (dec.kind === "play") {
@@ -104,7 +115,7 @@ function gameData(g, enc, full) {
   }
   return {
     state: enc.ref(g.state), turn: g.turn, turnNo: g.turnNo, over: g.over, places: g.places.slice(),
-    cards: g.cards.slice(), lastDice: g.lastDice.slice(), noMove: g.noMove ? enc.enc(g.noMove) : null,
+    cards: g.cards.slice(), lastDice: g.lastDice.slice(), lastDiceId: diceId(g.lastDice), noMove: g.noMove ? enc.enc(g.noMove) : null,
     stuck: g.players.map((_, p) => g.stuck(p)),
     complete: Array.from({ length: g.cfg.n_colors }, (_, c) => g.colorComplete(g.state, c)),
     pending,
