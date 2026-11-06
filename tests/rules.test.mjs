@@ -186,8 +186,17 @@ test("no overshooting the nest", () => {
   for (const p of g.playsFor(0, [5, 6])) assert.ok(p.state.pos[0][0] <= g.L + 3);
 });
 
-test("points by corridor", () => {
+test("points by field number (SQUARE_POINTS)", () => {
   const g = make();
+  assert.equal(g.piecePoints(1, 0), 6);           // gate
+  assert.equal(g.piecePoints(1, 1), 2);
+  assert.equal(g.piecePoints(1, 45), 46);
+  assert.equal(g.piecePoints(1, g.L - 2), g.L - 1);
+  assert.equal(g.piecePoints(1, g.L - 1), 60);    // threshold
+});
+
+test("points by corridor (SQUARE_POINTS off)", () => {
+  const g = make(); g.cfg.square_points = false;
   assert.equal(g.piecePoints(1, 0), 1 + 5);
   assert.equal(g.piecePoints(1, g.L - 1), 23 + 20);
   assert.equal(g.piecePoints(1, 45), 15);

@@ -17,7 +17,13 @@ export class Config {
       six_prize: true,          // SIX_PRIZE: two-color game, a 6 never burns when it can be played, and with
                                 // a 6 a color that alone can move plays both dice when it can (owner, 2026-11-03)
 
-      corridor_points: [1, 3, 6, 10, 15, 23],  // CORRIDOR_POINTS
+      // SQUARE_POINTS (owner, 2026-11-06): a capture is worth the number of the field in the captured
+      // piece's own count, from 1 on its gate to the track length on its threshold, except
+      // GATE_POINTS on the gate and THRESHOLD_POINTS on the threshold. Off: the corridor points below.
+      square_points: true,      // SQUARE_POINTS
+      gate_points: 6,           // GATE_POINTS
+      threshold_points: 60,     // THRESHOLD_POINTS
+      corridor_points: [1, 3, 6, 10, 15, 23],  // CORRIDOR_POINTS (when SQUARE_POINTS is off)
       gate_bonus: 5,            // GATE_BONUS
       threshold_bonus: 20,      // THRESHOLD_BONUS
       wall_break: 15,           // WALL_BREAK

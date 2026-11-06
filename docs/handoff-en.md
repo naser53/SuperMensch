@@ -169,17 +169,19 @@ use a card.
 ### 3.10 Scoring and ranks
 | Source | Points (6-color) | Points (4-color) |
 | --- | --- | --- |
-| Capture in the victim's corridor start / 2 / 3 / 4 / 5 / final | 1 / 3 / 6 / 10 / 15 / 23 | 1 / 4 / 8 / 10 |
-| Extra: victim on its own gate | +5 | +5 |
-| Extra: victim on its own threshold | +20 | +20 |
+| Capture on the victim's own field 2 ... 59 (4-color: 2 ... 39) | the field's number | the field's number |
+| Capture on the victim's own gate (field 1) | 6 | 6 |
+| Capture on the victim's own threshold (last field) | 60 | 60 |
 | Break a wall / castle (once per structure, plus the best captured piece) | +15 / +40 | +15 / +40 |
 | Clean piece reaches the nest (never captured) | +5 | +5 |
 | A nest is full (a color complete; the nest glows) | +60 | +25 |
 | Finishing first / second | +100 / +50 | +40 / +20 |
 
-The 8-color board scores as the 6-color one, but its eight corridors give 1 / 3 / 6 / 10 / 15 /
-21 / 28 / 36 (the same steps go on, so a piece that has come 50 fields is worth about as much as
-on the 6-color board).
+Square points (`SQUARE_POINTS`, owner 2026-11-06): every color counts the track from its own gate
+(field 1) to its own threshold (the last field: 40, 60, 80 or 112). A capture gives the field's
+number in the victim's count, except `GATE_POINTS` = 6 on the gate and `THRESHOLD_POINTS` = 60 on
+the threshold. The old corridor table (1 / 3 / 6 / 10 / 15 / 23, 8-color 1 ... 36, gate +5,
+threshold +20) is still in `config.js` and comes back with `square_points: false`.
 
 * Hunter captures and capturing a hunter both score; the hunter's corridor counts from its
   complete color.
@@ -371,7 +373,8 @@ Two orders work, and you can switch at any time:
 * Responsive layout for landscape and portrait tablets and phones.
 
 ### Info
-Scoring tables for the current board (corridor points, gate/threshold extras, breaks, ranks and
+Scoring tables for the current board (capture points by field number with the gate and threshold
+exceptions, or the old corridor points, breaks, ranks and
 bounties, end bonuses, tunnel costs), a line with the dice level, and the move log. Signed Farsi
 numbers are wrapped in `<bdi dir="ltr">`. A **Copy** button by the move log copies a game report for
 debugging: version, board, mode, level, players and colors, online room and seats, debug mode, the
