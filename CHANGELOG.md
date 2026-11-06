@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.11 (2026-11-06)
+
+* Tapping the roll die (or any dock button) on a phone no longer flashes a square box around it: the browser's tap highlight and the mouse-focus ring are off for the round dock buttons; keyboard focus still shows a ring.
+
 ## v3.0.10 (2026-11-05)
 
 * Panel dock: the Undo button keeps its place even when it is not shown (an invisible slot), so the dock has one fixed width and the tunnel, card, die and Second try icons no longer shift when Undo comes and goes during a two-dice move.

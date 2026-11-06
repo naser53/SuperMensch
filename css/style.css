@@ -393,6 +393,12 @@ label.check.on { color: var(--accent); }
   animation: rollhint 1.6s ease-in-out infinite; transition: opacity .45s ease; }
 .dice3d-face.off::after { opacity: 0; }
 .dice3d-cv { display: block; border-radius: 50%; }
+/* no square on tap: phones draw a rectangular tap highlight (and a focus ring) around a tapped
+   button, which showed as a box around the round die. The dock buttons are round, so turn the
+   highlight off and keep a round ring only for keyboard focus. */
+.rb-actions button, .dice3d-face, .dice3d-cv { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.rb-actions button:focus { outline: none; }
+.rb-actions button:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
 @media (max-width: 640px) { .btn.rb-roll.has-face .dice3d { width: 56px; height: 56px; } }
 
 /* a short message at the top for 2 s (no tunnel for this color...) */
