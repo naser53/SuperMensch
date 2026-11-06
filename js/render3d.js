@@ -526,7 +526,7 @@ export class Board3D {
       this.nestFields[c] = [];
       d.home[c].forEach((p, i) => {
         this.nestFields[c].push(this.field(p, null, { side: LIGHT[c],
-          top: this.numberTexture(i + 1, null, LIGHT[c], "rgba(0,0,0,0.2)") }));
+          top: this.numberTexture(i + 1, null, LIGHT[c], "rgba(0,0,0,0.14)") }));
         this.ring(p, COLORS[c], FIELD_R, 0.04);
       });
       for (const p of d.yard[c]) {
