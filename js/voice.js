@@ -12,9 +12,9 @@
 // for the loudspeaker where the browser allows it (navigator.audioSession on iOS, setSinkId
 // elsewhere); a paused voice is played again, and a broken connection is made again.
 // The last voice events are kept in log (Info > Copy adds them to the game report).
-import { Config } from "./config.js";
+import { Look } from "./look.js";
 
-const V = Config.VOICE;
+const V = Look.VOICE;
 const key = (sid, track) => `${sid}/${track}`;
 const rnd = () => Math.random().toString(36).slice(2, 10);
 const SPEAKER_KEY = "supermensch-speaker";

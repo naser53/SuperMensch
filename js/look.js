@@ -1,0 +1,25 @@
+// The page's own numbers: animation, sound, colors, the server's address and voice chat.
+// The rules' numbers are in js/config.js, which only the server loads (owner, 2026-11-06).
+export const Look = {
+  // animation speed in the panel: the pause between moves (ms) times the factor; a piece's
+  // hop takes HOP_SHARE of that pause. "fast" is the speed of version 1.
+  ANIM_PAUSE: 650,
+  ANIM_SPEEDS: { slow: 2.4, medium: 1.6, fast: 1 },
+  HOP_SHARE: 0.22,
+  // loudness of the sound effects (js/sound.js), 0..1; players switch them on or off in the ribbon
+  SOUND_VOLUME: 0.7,
+  // piece colors (red, blue, green, yellow, purple, teal, pink, black); the 8-color board uses all,
+  // the others the first 6 or 4. Yellow is 15% darker than before (owner, 2026-11-02). The admin may
+  // change each one for every game (admin page, saved on the server: GET /api/settings).
+  PIECE_COLORS: ["#d9534f", "#2f7fd0", "#4f9a2a", "#cea70d", "#6a5ccf", "#159a7a", "#ec5fa8", "#2a2a2e"],
+  // the board's own colors on the 6- and 8-color boards: its surface and its edge (the 4-color board
+  // keeps its classic cream and red unless the admin sets them). The admin may change both too.
+  BOARD_COLORS: ["#f0e6c8", "#b59c6c"],
+  // the online server (v2); a page served by another host (such as the downloaded file) asks it
+  SERVER_URL: "https://supermensch-dev.ndaneshi.workers.dev",
+  // voice chat in online games (js/voice.js): the microphone's bit rate (Opus, bit/s; about 15 MB an
+  // hour), the loudness that lights a speaker's chip (0..1, RMS), how long it stays lit (ms), and how
+  // often the loudness is measured (ms); RETRY_MS: how long a broken connection or a stopped voice
+  // waits before it is started again (ms); STATS_MS: how often a line of numbers goes to the voice log
+  VOICE: { BITRATE: 32000, SPEAK_LEVEL: 0.02, SPEAK_HOLD_MS: 400, TICK_MS: 120, RETRY_MS: 3000, STATS_MS: 10000 },
+};

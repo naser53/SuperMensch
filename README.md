@@ -47,16 +47,16 @@ The fortress (four pieces in a row) is planned for the Pro version.
 npm ci
 npm test            # rule tests and the fixed-game regression check
 npm run simulate    # computer-vs-computer games
-npm run build       # dist/supermensch.html, the single-file game
+npm run build       # server/public/index.html, the game page of the online server
 ```
 
 While working on the code, serve the folder (`npx serve .` or any static server) and open
-`index.html`; it loads the modules from `js/` directly. Every push runs the tests, builds the
-page and publishes it to the `latest` release.
+`index.html`; it loads the modules from `js/` directly. Every push runs the tests and builds the
+page; a push to `main` deploys the online server. The game is online only (since v3.2.0).
 
 **Versions:** raise the version in `package.json` (and `package-lock.json`) and `js/version.js`,
 add a section to `CHANGELOG.md` and push to `main`. When CI sees a version with no release yet,
-it tags that commit `v<version>` and publishes a release with the built page and the changelog section.
+it tags that commit `v<version>` and publishes a release with the changelog section (no game file).
 
 After a deliberate rule change, record the fixed games again with
 `node tests/golden.mjs --record`.
@@ -70,14 +70,16 @@ and TURN together; a speaker uses about 15 MB an hour.
 
 | Path | Purpose |
 | --- | --- |
-| `js/config.js` | All game parameters |
-| `js/engine.js` | Rules engine (no graphics) |
-| `js/ai.js` | Simple computer player |
+| `js/config.js` | All rule parameters (server only) |
+| `js/look.js` | The page's own numbers (animation, sound, colors) |
+| `js/view.js` | The game as the page sees it, from the server's views and frames |
+| `js/engine.js` | Rules engine (no graphics; server only) |
+| `js/ai.js` | Simple computer player (server only) |
 | `js/boards.js` | Board geometry (six arms, classic cross) |
 | `js/strings.js`, `js/i18n.js` | Texts and translation |
 | `js/render3d.js` | 3D board with Three.js |
-| `js/main.js` | Setup screen, ribbon, game loop |
-| `js/debugcmd.js` | Debug console commands |
+| `js/main.js` | Room list, ribbon, online game loop |
+| `js/debugcmd.js` | Debug console commands (for `tools/replay.mjs`) |
 | `js/table.js` | A game plus its event list, for replay and the online game |
 | `js/voice.js` | Voice chat in online games (WebRTC through Cloudflare Realtime) |
 | `server/` | The online server (Cloudflare Worker); `server/voice.js` talks to Cloudflare Realtime |

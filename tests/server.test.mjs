@@ -284,3 +284,49 @@ test("voice: the SFU is asked with the server's token; its errors become errors"
   assert.equal((await api.ice())[0].urls, "stun:stun.cloudflare.com:3478");              // no TURN key: STUN only
   assert.equal((await sfu({ ...env, TURN_KEY_ID: "K", TURN_KEY_TOKEN: "T" }, fake).ice())[0].urls, "turns:x:443");
 });
+
+test("a page without rules follows the game from the server's frames (server/frames.js, js/view.js)", async () => {
+  const { RemoteTable, frameParts } = await import("../js/view.js");
+  const { fingerprint: fp } = await import("../js/table.js");
+  for (const [colors, mode, seats] of [[6, "two", twoSeats(1, "ai", 2)], [4, "one", [{ user: 1, colors: [0] }, { ai: true, colors: [1] }, { user: 2, colors: [2] }]]]) {
+    const setup = checkSetup({ mode, colors, seats }, users);
+    const room = new Room(setup, [], mulberry32(7));
+    const page = new RemoteTable(setup, room.events, JSON.parse(JSON.stringify(room.gameView())));
+    const rnd = mulberry32(3);
+    const same = () => {
+      const g = room.table.game, v = page.game;
+      assert.deepEqual(v.state.pos, g.state.pos);
+      assert.deepEqual(v.state.scores, g.state.scores);
+      assert.equal(v.turn, g.turn);
+      assert.equal(v.over, g.over);
+      assert.deepEqual(v.log.length, g.log.length);
+      assert.deepEqual(v.structures(v.state), g.structures(g.state));
+      if (g.pending && !g.over) {
+        assert.equal(v.pending.kind, g.pending.kind);
+        assert.equal(v.pending.options.length, g.pending.options.length);
+        if (g.pending.kind === "play") assert.equal(v.sequences().length, g.sequences(g.pending).length);
+      }
+    };
+    same();
+    for (let k = 0; k < 400 && !room.table.game.over; k++) {
+      const d = room.table.game.pending, pick = Math.floor(rnd() * d.options.length);
+      const r = JSON.parse(JSON.stringify(room.move(room.events.length, { pick }, [0, 2])));
+      assert.equal(r.frames.length, r.events.length);
+      r.events.forEach((ev, i) => {
+        const { opt, entries } = frameParts(r.frames[i]);
+        if (ev.pick !== undefined) assert.ok(opt);
+        if (entries) for (const e of entries) assert.ok(e.before.pos && e.after.pos && e.step.mover);
+        page.apply(ev, r.frames[i]);
+      });
+      same();
+    }
+    assert.equal(fp(room.table.game), room.fingerprint());
+    // replay mode: the game at a point and the frames after it agree with the live game
+    const h = room.history(10, 20);
+    assert.equal(h.frames.length, 10);
+    const back = new RemoteTable(setup, room.events.slice(0, 10), JSON.parse(JSON.stringify(h.view)));
+    room.events.slice(10, 20).forEach((ev, i) => back.apply(ev, JSON.parse(JSON.stringify(h.frames[i]))));
+    assert.deepEqual(back.game.state.pos, Table.replay(setup, room.events.slice(0, 20)).game.state.pos);
+    assert.ok(room.turns().length > 2);
+  }
+});

@@ -7,7 +7,7 @@
 //   gate      a short rising chime: a piece comes out of the yard onto its gate
 //   fireworks a whistle per rocket and a crackling burst, timed with the rockets on the board
 // The browser starts audio only after a click or a key, so the context is made on the first one.
-import { Config } from "./config.js";
+import { Look } from "./look.js";
 import { DICE_SOUNDS } from "./dicesound.js";
 
 class Sound {
@@ -27,7 +27,7 @@ class Sound {
       try { this.ctx = new AC(); } catch { return null; }
       const c = this.ctx;
       this.master = c.createGain();
-      this.master.gain.value = Config.SOUND_VOLUME;
+      this.master.gain.value = Look.SOUND_VOLUME;
       const comp = c.createDynamicsCompressor();          // keeps a big blast from clipping
       comp.threshold.value = -12; comp.ratio.value = 6;
       this.master.connect(comp).connect(c.destination);

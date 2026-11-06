@@ -5,6 +5,7 @@ import { SimpleAI } from "../js/ai.js";
 import { Config } from "../js/config.js";
 import { tr } from "../js/i18n.js";
 import { Table, fingerprint } from "../js/table.js";
+import { FrameRecorder, gameView } from "./frames.js";
 
 export const USERS = 10;                 // user1 .. user10 at the first start
 export const NAME_MAX = 24;
@@ -271,9 +272,48 @@ export class Room {
     if (!g.pending || g.over) throw new Error("no decision");
     if (!seats.includes(g.pending.player) || this.setup.players[g.pending.player].isAi) throw new Error("not your turn");
     if (!ev || !Number.isInteger(ev.pick)) throw new Error("dice come from the server");
-    this.table.apply({ pick: ev.pick });
-    this._advance();
-    return { from, events: this.events.slice(from) };
+    if (!g.pending.options[ev.pick]) throw new Error("no such option");
+    const frames = this._record(() => { this.table.apply({ pick: ev.pick }); this._advance(); });
+    return { from, events: this.events.slice(from), frames };
+  }
+
+  // run fn and collect one frame per event it makes (server/frames.js)
+  _record(fn) {
+    const rec = new FrameRecorder();
+    this.table.observer = rec;
+    try { fn(); } finally { this.table.observer = null; }
+    return rec.finish();
+  }
+
+  // the game as a device's page reads it (server/frames.js)
+  gameView() { return gameView(this.table.game); }
+
+  // The game after the first n events (n = null: now), and the frames of the events from n to
+  // m, for the admin's replay mode on a page that has no rules engine.
+  history(n, m) {
+    const all = this.events, end = all.length;
+    n = Math.max(0, Math.min(end, Number.isInteger(n) ? n : end));
+    m = Math.max(n, Math.min(end, Number.isInteger(m) ? m : n));
+    const t = Table.replay(this.setup, all.slice(0, n));
+    const view = gameView(t.game);
+    const rec = new FrameRecorder();
+    t.observer = rec;
+    for (let k = n; k < m; k++) {
+      if (all[k].place) break;
+      t.apply(all[k]);
+    }
+    return { at: n, view, frames: rec.finish() };
+  }
+
+  // where each turn starts in the events, and whose it is: [{ at, player, dice }] (replay mode)
+  turns() {
+    const t = Table.replay(this.setup, []), out = [{ at: 0, player: t.game.turn }];
+    this.events.forEach((ev, k) => {
+      const before = t.game.turn;
+      t.apply(ev);
+      if (t.game.turn !== before || ev.place || k === this.events.length - 1) out.push({ at: k + 1, player: t.game.turn });
+    });
+    return out;
   }
 
   // the admin puts the pieces somewhere else (text as in parsePlace); the turn starts again
