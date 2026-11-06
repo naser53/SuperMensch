@@ -36,12 +36,12 @@ export class Config {
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
       ranks: true,              // RANKS: generals and marshals (off by default in the one-color game)
-      general_points: 90,       // GENERAL_POINTS: a piece's own capture points to become a general
-      marshal_points: 140,      // MARSHAL_POINTS: ... to become a marshal
+      general_points: 70,       // GENERAL_POINTS: a piece's own capture points to become a general
+      marshal_points: 100,      // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
-      general_bounty: 20,       // GENERAL_BOUNTY
-      marshal_bounty: 30,       // MARSHAL_BOUNTY
+      general_bounty: 35,       // GENERAL_BOUNTY
+      marshal_bounty: 50,       // MARSHAL_BOUNTY
       rank_mult_on_break: false,
       pushback_min: 7,          // PUSHBACK_MIN: a hit general or marshal is pushed back at least this far
       nest_swap: true,          // NEST_SWAP: with a 6, a soldier in the nest with rank points swaps

@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.9 (2026-11-06)
+
+* Rule change (owner): ranks come sooner and bounties are half of each threshold. General from 70 (was 90), marshal from 100 (was 140); bounty 35 for a general (was 20), 50 for a marshal (was 30): `GENERAL_POINTS`, `MARSHAL_POINTS`, `GENERAL_BOUNTY`, `MARSHAL_BOUNTY` in `js/config.js`. Golden records re-recorded.
+
 ## v3.2.8 (2026-11-06)
 
 * Fix: the Scores view kept showing the points and captures of a soldier that had been captured and sent back to its yard. A piece that loses its points (a soldier captured to the yard, a general pushed back as a soldier) now starts again from 0 and × 0 in the Scores view; a general or marshal that goes to the yard with its rank keeps them. Player scores do not change (`_capture` in `js/engine.js`). Test added.
