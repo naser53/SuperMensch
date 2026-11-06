@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor } from "../server/core.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
@@ -352,4 +352,30 @@ test("replay mode: a step forward does not throw the dice of the turn before aga
       else assert.notEqual(page.game.lastDice, before, `event ${n + i}: a new throw is a new array`);
     });
   }
+});
+
+test("the admin's game rules: checked, defaults left out, kept with the room", () => {
+  const r = cleanRules({ all: { general_points: 80, marshal_points: 100, walls: false, tunnel_costs: [80, 120, 160] },
+    6: { color_bonus: 70 }, 4: { color_bonus: 25, corridor_points: [2, 4, 8, 12] }, 8: {} });
+  assert.deepEqual(r, { all: { general_points: 80, walls: false }, 6: { color_bonus: 70 }, 8: {}, 4: { corridor_points: [2, 4, 8, 12] } });
+  assert.deepEqual(rulesFor(r, 4), { general_points: 80, walls: false, corridor_points: [2, 4, 8, 12] });
+  assert.equal(rulesFor(cleanRules({}), 6), null);
+  assert.equal(ruleDefaults()[4].color_bonus, 25);
+  const bad = [
+    { all: { general_points: 100 } },                 // a marshal needs more
+    { all: { walls: "no" } },
+    { all: { gate_points: 1.5 } },
+    { all: { gate_points: -1 } },
+    { 6: { corridor_points: [1, 2, 3] } },            // one per corridor
+    { 4: { tunnel_last_corridor: 4 } },               // the final corridor is never an exit
+  ];
+  for (const b of bad) assert.throws(() => cleanRules(b), JSON.stringify(b));
+  // a room plays by the rules in its setup; the one-color game stays traditional
+  const su = { ...checkSetup({ mode: "two", colors: 6, seats: twoSeats(1, "ai") }, users), rules: rulesFor(r, 6) };
+  const t = new Table(su, { autoDice: true });
+  assert.equal(t.game.cfg.general_points, 80);
+  assert.equal(t.game.cfg.color_bonus, 70);
+  assert.equal(t.game.cfg.walls, false);
+  assert.equal(Config.forBoard(6, "beginner", "one", 10, { ranks: true }).ranks, false);
+  assert.equal(editSetup(su, [{ user: 2 }, { ai: true }], users).setup.rules, su.rules);
 });

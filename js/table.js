@@ -13,13 +13,14 @@
 import { Config } from "./config.js";
 import { Game, Option, Player } from "./engine.js";
 
-// setup = { players: [{ name, colors, isAi }], mode, colors, level }; plain JSON
+// setup = { players: [{ name, colors, isAi }], mode, colors, level, corridor?, rules? }; plain JSON
+// (rules: the admin's rule values when the room was made, server/core.js rulesFor)
 export class Table {
   // rng: where the table's own dice come from (the server passes a crypto source)
   constructor(setup, { seed = null, autoDice = true, rng = null } = {}) {
     this.setup = setup;
     const players = setup.players.map(p => Player(p.name, p.colors, !!p.isAi));
-    this.game = new Game(players, setup.mode, Config.forBoard(setup.colors, setup.level || "beginner", setup.mode, setup.corridor || 10), seed, true);
+    this.game = new Game(players, setup.mode, Config.forBoard(setup.colors, setup.level || "beginner", setup.mode, setup.corridor || 10, setup.rules), seed, true);
     if (rng) this.game.rng = rng;
     this.events = [];
     this.autoDice = autoDice;

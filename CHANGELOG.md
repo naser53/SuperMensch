@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.10 (2026-11-06)
+
+* Admin (owner): a "Game rules" section sets the rule values of `js/config.js` (points, ranks and bounties, walls and castles, tunnels, gift sixes, cards, and the rule switches) for the whole server. Values whose defaults differ per board (corridor points, nest bonus, finish bonus, tunnel reach) are set for the 6-, 8- and 4-color boards. Every value is checked on the server (`cleanRules`, `Config.RULES`). A new room keeps the values of its board in its setup (`setup.rules`), so a running game keeps its rules when they change; "Play again" takes the current ones. The defaults and the golden records do not change. Tests added.
+
 ## v3.2.9 (2026-11-06)
 
 * Rule change (owner): ranks come sooner and bounties are half of each threshold. General from 70 (was 90), marshal from 100 (was 140); bounty 35 for a general (was 20), 50 for a marshal (was 30): `GENERAL_POINTS`, `MARSHAL_POINTS`, `GENERAL_BOUNTY`, `MARSHAL_BOUNTY` in `js/config.js`. Golden records re-recorded.
