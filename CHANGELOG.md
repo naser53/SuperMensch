@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
+## v3.0.12 (2026-11-06)
+
+* Board: the nest fields of every color now carry faint numbers 1 to 4 (1 at the nest entrance, 4 deepest), drawn like the faint numbers on the track fields.
+
 ## v3.0.11 (2026-11-06)
 
 * Tapping the roll die (or any dock button) on a phone no longer flashes a square box around it: the browser's tap highlight and the mouse-focus ring are off for the round dock buttons; keyboard focus still shows a ring.
