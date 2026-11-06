@@ -37,8 +37,8 @@ const ICON = {
   cardSmall: svg('<rect x="6" y="3" width="12" height="18" rx="2"/>', 14),
   castle: svg('<path d="M4 21V9h3V5h3v4h4V5h3v4h3v12z"/><path d="M10 21v-5h4v5"/>'),
   tunnel: svg('<path d="M3 20v-6a9 9 0 0 1 18 0v6"/><path d="M7 20v-6a5 5 0 0 1 10 0v6"/>'),
-  // Second try: a die inside a turning arrow ("throw again")
-  retry: svg('<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/><rect x="7.5" y="7.5" width="9" height="9" rx="2"/><circle cx="10.3" cy="10.3" r="1" fill="currentColor" stroke="none"/><circle cx="13.7" cy="13.7" r="1" fill="currentColor" stroke="none"/>', 30),
+  // Second try: a turning arrow, open at its start so it does not read as a full circle (owner, 2026-11-06)
+  retry: svg('<path d="M19.37 17.16A9 9 0 1 1 18.4 5.6"/><path d="M21 3v5h-5"/>', 39),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
   list: svg('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
   star: svg('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),

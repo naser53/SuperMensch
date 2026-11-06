@@ -294,7 +294,7 @@ The notes below are from the ribbon on top; what each part does still holds, onl
 * Row 2: whose turn and the round, and the **actions** of the moment: a big **die button** to
   roll (the owner's Dice3D die: a rounded 3D die in a small glass orb that turns slowly, so no face reads as a value, faster on hover; `js/rolldie.js` keeps the button's round face, its colour, pulse and die, in one layer laid over the see-through button, so it is never rebuilt with the ribbon and on/off eases with a spring instead of jumping; without WebGL the old CSS cube shows; it always stays in its
   place and is greyed out, standing still, until it is the human's time to roll), triple-dice card,
-  **Second try** right beside it (an icon only, a die in a turning arrow; always shown, greyed out
+  **Second try** right beside it (an icon only, a turning arrow open at its start; always shown, greyed out
   when it cannot be used), triple-dice card and tunnels (also always shown, greyed out when they
   cannot be used; the card only in the two-color game; on phones as icon + count). The tunnel
   buttons show only the tunnel icon and the count (the word "Tunnels" is in the tooltip) and open
