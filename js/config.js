@@ -19,10 +19,11 @@ export class Config {
 
       // SQUARE_POINTS (owner, 2026-11-06): a capture is worth the number of the field in the captured
       // piece's own count, from 1 on its gate to the track length on its threshold, except
-      // GATE_POINTS on the gate and THRESHOLD_POINTS on the threshold. Off: the corridor points below.
+      // GATE_POINTS on the gate, and on the threshold its number plus THRESHOLD_EXTRA (4-color 40 + 20,
+      // 6-color 60 + 20). Off: the corridor points below.
       square_points: true,      // SQUARE_POINTS
       gate_points: 6,           // GATE_POINTS
-      threshold_points: 60,     // THRESHOLD_POINTS
+      threshold_extra: 20,      // THRESHOLD_EXTRA (owner, 2026-11-06)
       corridor_points: [1, 3, 6, 10, 15, 23],  // CORRIDOR_POINTS (when SQUARE_POINTS is off)
       gate_bonus: 5,            // GATE_BONUS
       threshold_bonus: 20,      // THRESHOLD_BONUS
@@ -33,8 +34,8 @@ export class Config {
       clean_piece_bonus: 5,     // CLEAN_PIECE_BONUS: a piece reaches the nest without ever being captured
 
       ranks: true,              // RANKS: generals and marshals (off by default in the one-color game)
-      general_points: 15,       // GENERAL_POINTS: a piece's own capture points to become a general
-      marshal_points: 25,       // MARSHAL_POINTS: ... to become a marshal
+      general_points: 40,       // GENERAL_POINTS: a piece's own capture points to become a general
+      marshal_points: 60,       // MARSHAL_POINTS: ... to become a marshal
       general_mult: 2,          // GENERAL_MULT
       marshal_mult: 3,          // MARSHAL_MULT
       general_bounty: 10,       // GENERAL_BOUNTY

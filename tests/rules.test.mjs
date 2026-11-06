@@ -192,7 +192,7 @@ test("points by field number (SQUARE_POINTS)", () => {
   assert.equal(g.piecePoints(1, 1), 2);
   assert.equal(g.piecePoints(1, 45), 46);
   assert.equal(g.piecePoints(1, g.L - 2), g.L - 1);
-  assert.equal(g.piecePoints(1, g.L - 1), 60);    // threshold
+  assert.equal(g.piecePoints(1, g.L - 1), g.L + 20);   // threshold: its number + 20
 });
 
 test("points by corridor (SQUARE_POINTS off)", () => {
@@ -492,14 +492,14 @@ test("single-color game: a 6 throws again, as long as 6 comes", () => {
   assert.equal(g.turn, 1);                 // next player
 });
 
-test("ranks and tunnel costs: general from 15 points, marshal from 25; bounties 10 / 15; tunnels 80 / 120 / 160", () => {
+test("ranks and tunnel costs: general from 40 points, marshal from 60; bounties 10 / 15; tunnels 80 / 120 / 160", () => {
   const g = make();
-  assert.equal(g.rankName(14).key, "soldier");
-  assert.equal(g.rankName(15).key, "general");
-  assert.equal(g.rankName(24).key, "general");
-  assert.equal(g.rankName(25).key, "marshal");
-  assert.equal(g.bounty(15), 10);
-  assert.equal(g.bounty(25), 15);
+  assert.equal(g.rankName(39).key, "soldier");
+  assert.equal(g.rankName(40).key, "general");
+  assert.equal(g.rankName(59).key, "general");
+  assert.equal(g.rankName(60).key, "marshal");
+  assert.equal(g.bounty(40), 10);
+  assert.equal(g.bounty(60), 15);
   assert.equal(g.tunnelCost(1, 2), 80);
   assert.equal(g.tunnelCost(1, 3), 120);
   assert.equal(g.tunnelCost(1, 4), 160);
@@ -527,10 +527,10 @@ test("ranks come from the points the piece wins with its own captures", () => {
   const pts = g.piecePoints(1, g.relOf(1, 8));
   g._applyScore(0, p);
   assert.equal(p.state.kills[0][0], 10 + pts);    // soldier: no multiplier
-  // a general (15+) doubles its capture points
+  // a general doubles its capture points
   const h = make();
   put(h, 0, 0, 5); put(h, 3, 0, 1);
-  h.state.kills[0][0] = 15;
+  h.state.kills[0][0] = h.cfg.general_points;
   put(h, 1, 0, h.relOf(1, 8));
   const q = h.playsFor(0, [3, 1]).find(x => x.state.pos[1][0] === YARD && x.steps[0].mover.join() === "p,0,0");
   h._applyScore(0, q);
@@ -605,7 +605,7 @@ test("nest swap: with a 6 a soldier in the nest with points comes out with them,
   assert.equal(p.state.kills[0][0], 9);
   assert.ok(p.state.hit[0][0] && p.state.hit[0][s.swap]);   // no clean-piece bonus from a swap
   // not for a general, not without points, not without a yard piece, not without a 6
-  g.state.kills[0][0] = 15;
+  g.state.kills[0][0] = g.cfg.general_points;
   assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));
   g.state.kills[0][0] = 0;
   assert.ok(!g.playsFor(0, [6, 2]).some(x => x.steps.some(s => s.swap != null)));

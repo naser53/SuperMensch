@@ -1110,7 +1110,7 @@ class App {
     if (c.square_points) {
       corr.push(row(this.T("info_square", { a: N(2), b: N(g.L - 1) }), this.T("info_square_pts")));
       corr.push(row(this.T("info_gate_sq", { n: N(1) }), N(c.gate_points)));
-      corr.push(row(this.T("info_threshold_sq", { n: N(g.L) }), N(c.threshold_points)));
+      corr.push(row(this.T("info_threshold_sq", { n: N(g.L) }), N(g.L + c.threshold_extra)));
     } else {
     for (let k = 1; k <= n; k++) {
       const name = k === 1 ? this.T("info_corr_first", { n: N(1) }) : k === n ? this.T("info_corr_final", { n: N(n) }) : this.T("info_corr", { n: N(k) });

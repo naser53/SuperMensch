@@ -822,7 +822,7 @@ export class Game {
     if (c.square_points) {
       // the field's number in the captured piece's own count: gate 1 ... threshold L
       if (rel === 0) return c.gate_points;
-      if (rel === this.L - 1) return c.threshold_points;
+      if (rel === this.L - 1) return this.L + c.threshold_extra;
       return rel + 1;
     }
     const idx = Math.min(Math.floor(rel / c.corridor_len), c.corridor_points.length - 1);

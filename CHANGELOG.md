@@ -4,9 +4,9 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with `supermensch.html`
 attached. The `latest` release is always the newest build of `main`.
 
-## v3.1.0 (2026-11-06)
+## v3.1.1 (2026-11-06)
 
-* **Capture points by field number** (owner's rule change). Every color counts the track from its own gate (1) to its own threshold (40 / 60 / 80); a capture gives the capturer the field's number in the victim's count, except 6 on the gate and 60 on the threshold (`SQUARE_POINTS`, `GATE_POINTS`, `THRESHOLD_POINTS`). The old corridor points come back with `square_points: false`. The info table shows the new rule. Golden games re-recorded.
+* **Capture points by field number** (owner's rule change). Every color counts the track from its own gate (1) to its own threshold (40 / 60 / 80); a capture gives the capturer the field's number in the victim's count, except 6 on the gate and the threshold's number + 20 on the threshold (4-color 60, 6-color 80; `SQUARE_POINTS`, `GATE_POINTS`, `THRESHOLD_EXTRA`). Ranks: general from 40 rank points, marshal from 60 (were 15 / 25). The old corridor points come back with `square_points: false`. The info table shows the new rule. Golden games re-recorded.
 
 ## v3.0.13 (2026-11-06)
 
