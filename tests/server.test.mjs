@@ -332,3 +332,24 @@ test("a page without rules follows the game from the server's frames (server/fra
     assert.ok(room.turns().length > 2);
   }
 });
+
+test("replay mode: a step forward does not throw the dice of the turn before again (js/view.js)", async () => {
+  const { RemoteTable } = await import("../js/view.js");
+  const setup = checkSetup({ mode: "two", colors: 6, seats: twoSeats(1, "ai", 2) }, users);
+  const room = new Room(setup, [], mulberry32(5));
+  for (let k = 0; k < 60 && !room.table.game.over; k++) room.move(room.events.length, { pick: 0 }, [0, 2]);
+  const turns = room.turns(), [a, b, c] = turns.slice(3, 6).map(x => x.at);
+  // the page jumps to a turn, then steps forward twice; each answer comes from a game built anew
+  const h = room.history(a, a), page = new RemoteTable(setup, room.events.slice(0, a), JSON.parse(JSON.stringify(h.view)));
+  for (const [n, m] of [[a, b], [b, c]]) {
+    const step = JSON.parse(JSON.stringify(room.history(n, m)));
+    room.events.slice(n, m).forEach((ev, i) => {
+      const before = page.game.lastDice;
+      page.apply(ev, step.frames[i]);
+      // (a pick that keeps two of three dice makes a new pair: another throw for the page)
+      const same = page.game.lastDice.join() === before.join();
+      if (!ev.dice && same) assert.equal(page.game.lastDice, before, `event ${n + i}: the same throw stays the same array`);
+      else assert.notEqual(page.game.lastDice, before, `event ${n + i}: a new throw is a new array`);
+    });
+  }
+});

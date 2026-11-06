@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.7 (2026-11-06)
+
+* Fix: in replay mode each step forward threw the dice of the turn before again, crossed out, beside the next player (v3.2.6 fixed only the jump). The server numbers every throw anew when it builds the game again for the frames (also when a room wakes from sleep), so the page took the old throw for a new one. Now only a dice event can bring a new throw: after any other event the page keeps the dice it already shows (`RemoteTable.apply`, `ViewGame._dice` in `js/view.js`). Test added.
+
 ## v3.2.6 (2026-11-06)
 
 * Fix: after a jump in replay mode (and on opening a game) the last throw of the player before was thrown again beside the player whose turn it is, every die crossed out, as if that player could not move. The page now takes the last throw as already seen (`showTable`, `openOnline` in `js/main.js`).
