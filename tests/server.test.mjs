@@ -1,7 +1,8 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine } from "../server/core.js";
+import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
@@ -70,6 +71,24 @@ test("names are trimmed and limited", () => {
   assert.equal(cleanName("  Maman   Bozorg "), "Maman Bozorg");
   assert.equal(cleanName("   "), null);
   assert.equal(cleanName("x".repeat(40)).length, 24);
+});
+
+test("the computer's level of a room: beginner by default, kept on edits, changed mid-game", () => {
+  const base = { mode: "two", colors: 6, level: "beginner", seats: twoSeats("ai", 1) };
+  assert.equal(checkSetup(base, users).engine, undefined);                       // beginner: left out
+  assert.equal(checkSetup({ ...base, engine: "nonsense" }, users).engine, undefined);
+  const hard = checkSetup({ ...base, engine: "hard" }, users);
+  assert.equal(hard.engine, "hard");
+  assert.equal(editSetup(hard, [{ ai: true }, { user: 2 }], users).setup.engine, "hard");
+  assert.equal(withEngine(hard, "beginner").engine, undefined);
+  assert.equal(withEngine(hard, "intermediate").engine, "intermediate");
+  const room = new Room(hard, [], mulberry32(5));
+  assert.equal(room.ais[0].w, ENGINE_LEVELS.hard);
+  const n = room.events.length;
+  assert.equal(room.setEngine("intermediate").engine, "intermediate");
+  assert.equal(room.ais[0].w, ENGINE_LEVELS.intermediate);
+  assert.equal(room.events.length, n);                                           // the game goes on as it is
+  assert.equal(new Room(base.engine ? base : checkSetup(base, users), []).ais[0].w, ENGINE_LEVELS.beginner);
 });
 
 test("setup check: names from the users, colors and seats checked", () => {
