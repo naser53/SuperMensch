@@ -429,3 +429,28 @@ test("the admin page has every text in every language, the game rules included",
     }
   }
 });
+
+test("each step of a play carries the points of its captures so far (server/frames.js scoredStates)", async () => {
+  const { playEntries } = await import("../server/frames.js");
+  const setup = { mode: "two", colors: 6, players: [{ name: "A", colors: [0, 3], isAi: true }, { name: "B", colors: [1, 4], isAi: true }] };
+  let early = 0, plays = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const room = new Room(setup, [], mulberry32(seed));
+    const t = Table.replay(setup, []);
+    for (const ev of room.events) {
+      const g = t.game, dec = g.pending;
+      const play = ev.pick !== undefined && dec.kind === "play" ? dec.options[ev.pick].payload : null;
+      const e = play && play.steps ? playEntries(g, play) : null;
+      const scores0 = g.state.scores.slice();
+      t.apply(ev);
+      if (!e || !e.length) continue;
+      plays++;
+      // the last step shows what the play scored: ranks and earned points as in the game after it
+      assert.deepEqual(e[e.length - 1].after.kills, t.game.state.kills);
+      assert.deepEqual(e[e.length - 1].after.earned, t.game.state.earned);
+      if (e.length > 1 && e[0].step.captures.length && e[0].after.scores[dec.player] > scores0[dec.player]) early++;
+    }
+  }
+  assert.ok(plays > 100);
+  assert.ok(early > 0, "a capture with the first die scores at once");
+});

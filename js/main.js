@@ -497,7 +497,8 @@ class App {
     if (done.length) { this.choose(done[0].option, entry); return; }
     this.autoDie();
     this.render();
-    this.board.animateSteps(entry, this.hop());
+    const end = this.board.animateSteps(entry, this.hop());
+    this.scorePops(null, entry, end);
   }
 
   hop() { return this.delay * Look.HOP_SHARE; }
@@ -781,17 +782,34 @@ class App {
 
   // Points over the pieces' heads once the move has landed: what a capturing piece won (+), and
   // what a hit general or marshal costs its player (−, the bounty).
+  // Each step's points pop up when that step has landed (owner, 2026-11-07: not after the last
+  // die): the server's step states carry the points of the captures so far (server/frames.js
+  // scoredStates). Without steps, the points of the whole event pop up at its end.
   scorePops(earned, entries, end) {
-    const g = this.game, st = g.state, pops = [];
-    st.earned.forEach((row, col) => row.forEach((v, i) => {
-      const d = v - earned[col][i];
+    const g = this.game;
+    if (!entries || !entries.length) { this.popAt(this.gains(earned, g.state.earned), end); return; }
+    const ends = this.board.stepEnds || [];
+    entries.forEach(({ before, after, step }, k) => {
+      const pops = this.gains(before.earned, after.earned);
+      for (const c of step.captures) {
+        const b = g.bounty(c.vkills);
+        if (b && c.victim[0] === "p") pops.push([c.victim, `−${num(this.lang, b)}`, "loss"]);
+      }
+      this.popAt(pops, ends[k] ?? end);
+    });
+  }
+
+  gains(from, to) {
+    const pops = [];
+    to.forEach((row, col) => row.forEach((v, i) => {
+      const d = v - from[col][i];
       if (d > 0) pops.push([["p", col, i], `+${num(this.lang, d)}`, "gain"]);
     }));
-    for (const { step } of entries || []) for (const c of step.captures) {
-      const b = g.bounty(c.vkills);
-      if (b && c.victim[0] === "p") pops.push([c.victim, `−${num(this.lang, b)}`, "loss"]);
-    }
-    if (pops.length) setTimeout(() => pops.forEach(p => this.board.popOver(...p)), Math.max(0, end - performance.now()));
+    return pops;
+  }
+
+  popAt(pops, when) {
+    if (pops.length) setTimeout(() => pops.forEach(p => this.board.popOver(...p)), Math.max(0, when - performance.now()));
   }
 
   // The hint shows on the board when it changes and fades after a few seconds, so a long

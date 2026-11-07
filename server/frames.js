@@ -79,17 +79,41 @@ class Encoder {
   }
 }
 
+// The states after each step with the points of the captures made so far: ranks, earned points
+// and scores (the engine scores a play as a whole, once it is over). Owner, 2026-11-07: the
+// effects of a move (+points, a new general or marshal) show when that piece lands, not after
+// the last die. A wall or castle is scored as a whole, so a play that breaks one keeps its
+// points for its last step. Only for drawing: the engine's own states are not changed.
+// cache: the scored copy of each step state (sequences that share their first steps share it).
+export function scoredStates(g, steps, states, kind = "normal", target = null, cache = null) {
+  const p = g.turn, structs = g.structures(g.state), own = new Set(g.players[p].colors);
+  const breaks = kind === "break" || steps.some(s => s.captures.some(c => {
+    const x = structs.get(c.abs);
+    return x && !own.has(x[1]) && !c.gate_right && !c.free && c.victim[0] === "p";
+  }));
+  return states.map((st, k) => {
+    if (breaks && k < states.length - 1) return st;
+    if (cache && !breaks && cache.has(st)) return cache.get(st);
+    const part = { steps: steps.slice(0, k + 1), state: st.copy(), kind, target };
+    g._applyScoreCore(p, part);
+    if (cache && !breaks) cache.set(st, part.state);
+    return part.state;
+  });
+}
+
 // the steps of a play, from state st, as the page animates them: [{ before, after, step }]
 export function playEntries(g, play, st = g.state) {
-  const structs = g.structures(st), out = [];
+  const structs = g.structures(st), steps = [], states = [];
   let cur = st;
   for (const s of play.steps) {
     const r = g.step(cur, g.turn, s.mover, s.die, structs, play.target);
     if (!r) break;
-    out.push({ before: cur, after: r[0], step: r[1] });
+    steps.push(r[1]);
+    states.push(r[0]);
     cur = r[0];
   }
-  return out;
+  const scored = st === g.state ? scoredStates(g, steps, states, play.kind, play.target) : states;
+  return steps.map((step, k) => ({ before: k ? scored[k - 1] : st, after: scored[k], step }));
 }
 
 // The game as the page reads it. full: also the options of a person's decision (with the
@@ -104,10 +128,11 @@ function gameData(g, enc, full) {
       pending.options = enc.enc(dec.options);
       if (dec.kind === "play") {
         enc.ref(g.state, true);
+        const cache = new Map();
         pending.seqs = g.sequences(dec).map(q => ({
           option: dec.options.indexOf(q.option), dieIdx: q.dieIdx,
           steps: q.steps.map(s => ({ ...enc.enc(s), desc: g.describe({ steps: [s] })[0] })),
-          states: q.states.map(s => enc.ref(s, true)),
+          states: scoredStates(g, q.steps, q.states, q.option.payload.kind, q.option.payload.target, cache).map(s => enc.ref(s, true)),
         }));
       }
       if (dec.kind === "pre_roll") pending.tblock = g.tunnelBlockers(dec.player);
