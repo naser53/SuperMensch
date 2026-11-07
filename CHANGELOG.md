@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.11 (2026-11-07)
+
+* Tunnel declared (owner): as for a new wall, a tunnel sign in the piece's color pops up above the piece that declared a tunnel, with a golden ring under it, and fades within about 1.5 s (`Board3D.tunnelFx`, called from `App.choose`). On every device.
+* Computer player: it paid for tunnels it then did not use (game RBEM-40: a tunnel declared 6 fields before the entrance, where only a 6 reaches it, and nothing in the move value for the tunnel already paid). It now declares a tunnel only for a pawn at most 3 fields before the entrance (`AI_WEIGHTS.tunnelReach`), and a declared pawn not yet inside counts most of the fields the tunnel saves (`AI_WEIGHTS.tunnelHope`), so it takes the tunnel when it can. Against the old computer player it wins 164 of 300 four-color games. No rule changes.
+
 ## v3.2.10 (2026-11-06)
 
 * Admin (owner): a "Game rules" section sets the rule values of `js/config.js` (points, ranks and bounties, walls and castles, tunnels, gift sixes, cards, and the rule switches) for the whole server. Values whose defaults differ per board (corridor points, nest bonus, finish bonus, tunnel reach) are set for the 6-, 8- and 4-color boards. Every value is checked on the server (`cleanRules`, `Config.RULES`). A new room keeps the values of its board in its setup (`setup.rules`), so a running game keeps its rules when they change; "Play again" takes the current ones. The defaults and the golden records do not change. Tests added.

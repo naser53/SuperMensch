@@ -8,7 +8,12 @@ import { TUN, YARD, mulberry32 } from "./engine.js";
 // points = per rank point a pawn in play carries (so a soldier in the nest swaps back in, §11).
 // Cards: the bar for a triple-dice card drops by 1 for every cardPace rounds without one, and by
 // cardBlocked while one of the player's pawns is stuck behind an opponent's castle.
-export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1, points: 0.8, cardPace: 0, cardBlocked: 5 };
+// Tunnels: one is declared only for a pawn at most tunnelReach fields before the entrance (a
+// declared pawn moves only into its tunnel, so from farther away most dice burn for it), and a
+// declared pawn not yet inside counts tunnelHope of the fields the tunnel saves, all of them less
+// a tenth per field still to go, so the computer takes the tunnel it has paid for.
+export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1, points: 0.8, cardPace: 0, cardBlocked: 5,
+  tunnelReach: 3, tunnelHope: 0.9 };
 
 export class SimpleAI {
   // cardZ: a triple-dice card is played only for a throw that gains this many standard
@@ -40,6 +45,13 @@ export class SimpleAI {
           }
         if (r === TUN) { v += 10 + g.effectiveRel(st, col, i) + 2; return; }   // safe inside a tunnel
         v += 10 + r;
+        if (r < L && this.w.tunnelHope) {
+          const t = g.tunnelOf(st, col, i);
+          if (t) {
+            const [E, X, T] = g.tunnelGeom(t[3], t[4]);
+            v += this.w.tunnelHope * (X - E - T - 1) * Math.max(0, 1 - (E - r) / 10);
+          }
+        }
         if (r < L && this.w.points && g.cfg.ranks) v += this.w.points * st.kills[col][i];
         if (r >= L) {
           v += 25;
@@ -132,8 +144,10 @@ export class SimpleAI {
     return best;
   }
 
-  // Take the longest tunnel the player can pay for without going into debt.
+  // Take the longest tunnel the player can pay for without going into debt, for a pawn close
+  // enough to its entrance (tunnelReach).
   _tunnelPick(g, p, opts) {
+    const reach = this.w.tunnelReach ?? Infinity;
     let best = null, gain = 0;
     const score = g.state.scores[p];
     for (const o of opts) {
@@ -142,6 +156,7 @@ export class SimpleAI {
       const cost = g.tunnelCost(a, b);
       const [E, X, T] = g.tunnelGeom(a, b);
       const saved = X - E - T - 1;
+      if (E - g.state.pos[o.payload[1]][o.payload[2]] > reach) continue;
       if (cost <= score - this.tunnelReserve && saved > gain) { best = o; gain = saved; }
     }
     return best;
