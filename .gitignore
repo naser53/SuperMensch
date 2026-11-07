@@ -1,5 +1,6 @@
 node_modules/
 dist/
+server/public/admin-page.js
 *.png
 !fonts/*.png
 .dev.vars

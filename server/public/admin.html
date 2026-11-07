@@ -8,7 +8,10 @@
   :root { --bg: #f6f4ef; --card: #fff; --ink: #222; --muted: #777; --line: #ddd; --accent: #2b6cb0; }
   body { margin: 0; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--ink); }
   main { max-width: 760px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 20px; margin: 0 0 12px; }
+  h1 { font-size: 20px; margin: 0; }
+  .top { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 0 0 12px; }
+  [dir=rtl] body { font-family: Vazirmatn, Tahoma, system-ui, sans-serif; }
+  .over { display: inline-block; padding: 0 8px; border-radius: 10px; background: #e6f4ea; color: #1e6b34; font-size: 13px; font-weight: 600; }
   h2 { font-size: 16px; margin: 0 0 8px; }
   section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
   button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fafafa; cursor: pointer; }
@@ -22,7 +25,7 @@
   .colors label { display: flex; align-items: center; gap: 6px; }
   .colors input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
   .rules { border-collapse: collapse; width: 100%; }
-  .rules td, .rules th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  .rules td, .rules th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: middle; }
   .rules th { font-weight: 600; font-size: 13px; }
   .rules tr.grp td { font-weight: 600; padding-top: 10px; border-bottom: none; }
   .rules input[type=number] { width: 64px; }
@@ -34,86 +37,87 @@
 </head>
 <body>
 <main>
-  <h1>SuperMensch admin <span class="muted">· players start at <a href="/">the game page</a></span></h1>
+  <div class="top"><h1><span data-t="title">SuperMensch admin</span> <span class="muted">· <span data-th="sub">players start at <a href="/">the game page</a></span></span></h1>
+    <select id="lang" aria-label="Language"></select></div>
 
   <section id="login">
-    <div class="row">Admin key <input id="adminKey" type="password" size="18"><button class="primary" id="adminBtn">Open</button>
+    <div class="row"><span data-t="admin_key">Admin key</span> <input id="adminKey" type="password" size="18"><button class="primary" id="adminBtn" data-t="open">Open</button>
       <span id="loginErr" class="err"></span></div>
   </section>
 
   <div id="panel" hidden>
     <section>
-      <h2>Players</h2>
+      <h2 data-t="players">Players</h2>
       <div id="users"></div>
     </section>
 
     <section>
-      <h2>Voice chat</h2>
-      <div class="muted">Players talk to each other in online games. Tick <b>Voice</b> next to a player above to let them talk;
+      <h2 data-t="voice_h">Voice chat</h2>
+      <div class="muted" data-th="voice_about">Players talk to each other in online games. Tick <b>Voice</b> next to a player above to let them talk;
         everyone in the room hears. This switch turns voice off for the whole server at once.</div>
-      <div class="row"><label><input type="checkbox" id="voiceOn"> Voice chat on</label> <span id="voiceMsg"></span></div>
+      <div class="row"><label><input type="checkbox" id="voiceOn"> <span data-t="voice_on">Voice chat on</span></label> <span id="voiceMsg"></span></div>
       <div id="voiceReady" class="muted"></div>
     </section>
 
     <section>
-      <h2>Points on a pawn</h2>
-      <div class="muted">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
+      <h2 data-t="points_h">Points on a pawn</h2>
+      <div class="muted" data-t="points_about">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
         Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
-      <div class="row"><label><input type="radio" name="points" value="bar"> Bar</label>
-        <label><input type="radio" name="points" value="ring" checked> Ring</label>
-        <button class="primary" id="pointsBtn">Save</button> <span id="pointsMsg"></span></div>
+      <div class="row"><label><input type="radio" name="points" value="bar"> <span data-t="bar">Bar</span></label>
+        <label><input type="radio" name="points" value="ring" checked> <span data-t="ring">Ring</span></label>
+        <button class="primary" id="pointsBtn" data-t="save">Save</button> <span id="pointsMsg"></span></div>
     </section>
 
     <section>
-      <h2>Hunter</h2>
-      <div class="muted">What the hunter carries, in every game on this server. Games started after saving use it.</div>
-      <div class="row"><label><input type="radio" name="hunter" value="arrow" checked> Arrow</label>
-        <label><input type="radio" name="hunter" value="sword"> Sword</label>
-        <button class="primary" id="hunterBtn">Save</button> <span id="hunterMsg"></span></div>
+      <h2 data-t="hunter_h">Hunter</h2>
+      <div class="muted" data-t="hunter_about">What the hunter carries, in every game on this server. Games started after saving use it.</div>
+      <div class="row"><label><input type="radio" name="hunter" value="arrow" checked> <span data-t="arrow">Arrow</span></label>
+        <label><input type="radio" name="hunter" value="sword"> <span data-t="sword">Sword</span></label>
+        <button class="primary" id="hunterBtn" data-t="save">Save</button> <span id="hunterMsg"></span></div>
     </section>
 
     <section>
-      <h2>Colors</h2>
-      <div class="muted">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
-      <div class="row"><b>Pieces</b></div>
+      <h2 data-t="colors_h">Colors</h2>
+      <div class="muted" data-t="colors_about">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
+      <div class="row"><b data-t="pieces">Pieces</b></div>
       <div id="colors" class="colors"></div>
-      <div class="row"><b>Board</b> <span class="muted">(the 4-color board keeps its cream and red while these are at default)</span></div>
+      <div class="row"><b data-t="board">Board</b> <span class="muted" data-t="board_note">(the 4-color board keeps its cream and red while these are at default)</span></div>
       <div id="boardColors" class="colors"></div>
-      <div class="row"><button class="primary" id="colorsBtn">Save colors</button> <button id="colorsReset">All to default</button>
+      <div class="row"><button class="primary" id="colorsBtn" data-t="save_colors">Save colors</button> <button id="colorsReset" data-t="all_default">All to default</button>
         <span id="colorsMsg"></span></div>
     </section>
 
     <section>
-      <h2>Game rules</h2>
-      <div class="muted">For the whole server. Rooms made after saving (and "Play again") use these values; a game
+      <h2 data-t="rules_h">Game rules</h2>
+      <div class="muted" data-t="rules_about">For the whole server. Rooms made after saving (and "Play again") use these values; a game
         already running keeps the rules it started with. Some values differ per board: one box for each. A yellow box
         differs from the default. Lists are numbers with commas. The one-color game always stays the traditional game
         (no ranks, walls, castles or tunnels).</div>
       <div style="overflow-x:auto"><table class="rules" id="rules"></table></div>
-      <div class="row"><button class="primary" id="rulesBtn">Save rules</button> <button id="rulesReset">All to default</button>
+      <div class="row"><button class="primary" id="rulesBtn" data-t="save_rules">Save rules</button> <button id="rulesReset" data-t="all_default">All to default</button>
         <span id="rulesMsg"></span></div>
     </section>
 
     <section>
-      <h2>New room</h2>
-      <div class="row">Name <input id="gName" placeholder="Friday at grandma's" size="24"></div>
+      <h2 data-t="new_room">New room</h2>
+      <div class="row"><span data-t="name">Name</span> <input id="gName" data-tp="name_ph" size="24"></div>
       <div class="row">
-        Board <select id="gColors"><option value="4">4 colors</option><option value="6" selected>6 colors</option><option value="8">8 colors</option></select>
-        Game <select id="gMode"><option value="two">two colors each</option><option value="one">one color each</option></select>
-        Fields <select id="gCorr"><option value="10">10 per corridor</option><option value="14">14 per corridor (longer arms)</option></select>
-        Dice <select id="gLevel"><option value="beginner">beginner</option><option value="intermediate">intermediate</option><option value="difficult">difficult</option></select>
-        Players <select id="gN"></select>
+        <span data-t="board_lbl">Board</span> <select id="gColors"></select>
+        <span data-t="game_lbl">Game</span> <select id="gMode"><option value="two" data-t="mode_two">two colors each</option><option value="one" data-t="mode_one">one color each</option></select>
+        <span data-t="fields_lbl">Fields</span> <select id="gCorr"><option value="10" data-t="corr_10">10 per corridor</option><option value="14" data-t="corr_14">14 per corridor (longer arms)</option></select>
+        <span data-t="dice_lbl">Dice</span> <select id="gLevel"><option value="beginner" data-t="lv_beginner">beginner</option><option value="intermediate" data-t="lv_intermediate">intermediate</option><option value="difficult" data-t="lv_difficult">difficult</option></select>
+        <span data-t="players_lbl">Players</span> <select id="gN"></select>
       </div>
       <div id="seats"></div>
-      <div class="row"><button class="primary" id="createBtn">Create room</button> <span id="createMsg"></span></div>
+      <div class="row"><button class="primary" id="createBtn" data-t="create_room">Create room</button> <span id="createMsg"></span></div>
     </section>
 
     <section>
-      <h2>Rooms</h2>
+      <h2 data-t="rooms">Rooms</h2>
       <div id="rooms"></div>
     </section>
   </div>
 </main>
-<script type="module" src="/admin-page.js"></script>
+<script src="/admin-page.js"></script>
 </body>
 </html>

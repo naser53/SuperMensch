@@ -594,6 +594,11 @@ earlier sketch (browser dice, PINs).
   room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
   `server/core.js`). The same number of players keeps the moves; another number starts the game
   again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
+  **Admin languages** (owner, 2026-11-07; v3.2.12): the admin page speaks the game's languages (en, fa, de)
+  with a menu at the top; it reads and writes the game page's saved language (localStorage
+  `supermensch`.lang), so both follow one choice. Texts in `js/admin-strings.js` (rule labels
+  `rule_<key>`, groups `grp_<group>`, known server errors `err_<message>`; a missing one falls back to
+  English). A finished room shows a 🏁 "Finished" badge and its winner in the room list.
   **Hunter weapon** (owner, 2026-11-03): the admin page chooses what the hunter carries, Arrow or
   Sword, for the whole server (`POST /api/admin/hunter`, Lobby `settings` key `hunter`, sent with
   `/api/settings` as `hunter`; `setHunterWeapon` / `Board3D.hunterWeapon` in `js/render3d.js`).
@@ -678,7 +683,7 @@ earlier sketch (browser dice, PINs).
 * Code: `server/worker.js` (routes, both Durable Objects, WebSocket protocol in its comments),
   `server/admin.js` (the `/api/admin/*` routes, called by the worker after the admin key check),
   `server/core.js` (no Cloudflare parts, tested in `tests/server.test.mjs`), `server/public/`
-  (pages; the admin page is `admin.html` with its script in `admin-page.js`), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
+  (pages; the admin page is `admin.html`; its script `js/admin-page.js` is bundled by `npm run build` into `server/public/admin-page.js`, not in Git), `wrangler.toml`, `.github/workflows/server.yml` (deploys from `v2`; secrets
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ADMIN_KEY`).
 * Local: put `ADMIN_KEY=...` in `.dev.vars`, run `npx wrangler dev`, open http://localhost:8787.
 * **Colors on the first page** (owner, 2026-11-01): after tapping a name, a child picks the
