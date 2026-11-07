@@ -14,8 +14,10 @@ export const OPEN_HOURS = 24;            // a game idle this long leaves the lis
 const ID_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ";   // no I, L, O: easy to read out loud
 
 // a fresh game id such as K7QX-42 (four letters, two digits)
-// A room's passkey (owner, 2026-11-07): four digits a player types to play in it.
-export function newPasskey(rand = cryptoRandom) { return String(Math.floor(rand() * 10000)).padStart(4, "0"); }
+// A room's passkey (owner, 2026-11-07): four digits a player types to play in it. Every new room
+// gets DEFAULT_PASSKEY while the game is in testing (owner, 2026-11-07: "not safe, but we test");
+// the admin may set another per room.
+export const DEFAULT_PASSKEY = "1234";
 export function cleanPasskey(k) { const s = String(k ?? "").trim(); return /^\d{4}$/.test(s) ? s : null; }
 
 // Wrong passkeys: after PASSKEY_TRIES wrong ones within PASSKEY_WAIT_MS a room takes no passkey

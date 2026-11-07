@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, newPasskey, nextName, rulesFor } from "./core.js";
+import { OPEN_HOURS, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, DEFAULT_PASSKEY, nextName, rulesFor } from "./core.js";
 import { adminApi } from "./admin.js";
 import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
 
@@ -106,6 +106,11 @@ export class Lobby extends DurableObject {
     if (!cols.includes("voice")) this.sql.exec(`ALTER TABLE users ADD COLUMN voice INTEGER NOT NULL DEFAULT 0`);
     const gcols = this.sql.exec(`PRAGMA table_info(games)`).toArray().map(c => c.name);
     if (!gcols.includes("passkey")) this.sql.exec(`ALTER TABLE games ADD COLUMN passkey TEXT`);
+    // once (v3.2.15): the random passkeys of v3.2.14 become the default (owner, 2026-11-07)
+    if (!this.sql.exec(`SELECT k FROM settings WHERE k = 'passkey_default'`).toArray().length) {
+      this.sql.exec(`UPDATE games SET passkey = ?`, DEFAULT_PASSKEY);
+      this.sql.exec(`INSERT INTO settings (k, v) VALUES ('passkey_default', '1')`);
+    }
     if (!this.sql.exec(`SELECT COUNT(*) AS n FROM users`).one().n)
       for (let i = 1; i <= USERS; i++) this.sql.exec(`INSERT INTO users (id, name) VALUES (?, ?)`, i, `user${i}`);
   }
@@ -204,22 +209,22 @@ export class Lobby extends DurableObject {
     return this.users();
   }
 
-  // passkey: the room's four digits ("Play again" keeps the old room's); none: a new one
+  // passkey: the room's four digits ("Play again" keeps the old room's); none: the default
   addGame(name, setup, passkey = null) {
     let id;
     do id = newGameId(); while (this.sql.exec(`SELECT id FROM games WHERE id = ?`, id).toArray().length);
     const now = Date.now();
     this.sql.exec(`INSERT INTO games (id, name, created, updated, status, setup, passkey) VALUES (?, ?, ?, ?, 'open', ?, ?)`,
-      id, name, now, now, JSON.stringify(setup), passkey || newPasskey());
+      id, name, now, now, JSON.stringify(setup), passkey || DEFAULT_PASSKEY);
     return id;
   }
 
-  // a room's passkey; a room made before passkeys gets one now (the admin page shows it)
+  // a room's passkey; a room made before passkeys gets the default now
   passkeyOf(id) {
     const r = this.sql.exec(`SELECT passkey FROM games WHERE id = ?`, id).toArray();
     if (!r.length) return null;
     if (r[0].passkey) return r[0].passkey;
-    return this.setPasskey(id, newPasskey());
+    return this.setPasskey(id, DEFAULT_PASSKEY);
   }
 
   setPasskey(id, passkey) {
@@ -245,7 +250,7 @@ export class Lobby extends DurableObject {
 
   // for the admin page only (with the passkeys; the open rooms' list for the players has none)
   allGames() {
-    for (const r of this.sql.exec(`SELECT id FROM games WHERE passkey IS NULL`).toArray()) this.setPasskey(r.id, newPasskey());
+    for (const r of this.sql.exec(`SELECT id FROM games WHERE passkey IS NULL`).toArray()) this.setPasskey(r.id, DEFAULT_PASSKEY);
     return this.sql.exec(`SELECT id, name, created, updated, status, setup, result, passkey FROM games ORDER BY updated DESC`).toArray()
       .map(g => ({ ...g, setup: JSON.parse(g.setup), result: g.result ? JSON.parse(g.result) : null }));   // result: a finished game's places
   }

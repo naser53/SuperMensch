@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.15 (2026-11-07)
+
+* Room passkey (owner, while testing): every room gets 1234 instead of a random passkey (`DEFAULT_PASSKEY` in `server/core.js`); saving an empty box in the admin page sets 1234 again. The random passkeys given by v3.2.14 become 1234 once, when the server starts. The admin can still set another per room.
+
 ## v3.2.14 (2026-11-07)
 
 * Room passkey (owner): every room has four digits that a player types on the first page to play in it (the room's own passkey, set at random when the room is made; "Play again" keeps it). The admin page shows each room's passkey and sets another (empty: a new one at random; `POST /api/admin/passkey {id, passkey?}`). The server checks it before a device gets seats (`hello`; a wrong one closes the connection with 4002) and before a color pick. After 5 wrong passkeys a room takes none for 5 minutes (`PasskeyGate`). The browser keeps a typed passkey per room (localStorage `supermensch-keys`). Watching and reading a game (`GET /api/games/<ID>`) need none. Rooms made before get a passkey when the admin page lists them.

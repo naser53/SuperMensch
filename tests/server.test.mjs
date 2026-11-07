@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, DEFAULT_PASSKEY, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
 import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
@@ -96,8 +96,7 @@ test("the computer's level of a room: beginner by default, kept on edits, change
 });
 
 test("room passkeys: four digits; after a few wrong ones the room waits", () => {
-  for (let k = 0; k < 50; k++) assert.match(newPasskey(), /^\d{4}$/);
-  assert.equal(newPasskey(() => 0.0042), "0042");
+  assert.equal(DEFAULT_PASSKEY, "1234");                                    // while testing (owner)
   assert.equal(cleanPasskey(" 0815 "), "0815");
   for (const bad of ["815", "08151", "ab12", null, undefined]) assert.equal(cleanPasskey(bad), null);
   const gate = new PasskeyGate();

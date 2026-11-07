@@ -687,8 +687,8 @@ earlier sketch (browser dice, PINs).
   `supermensch-device`) takes its seats back after a break (`claimSeats` in `server/core.js`;
   owner's rule for now, password login and moving a game to another device come in M3). A held
   name stays clickable in the room list ("playing"); the server decides (owner, 2026-11-02).
-  **Room passkey** (owner, 2026-11-07; v3.2.14): four digits per room (Lobby `games.passkey`, random
-  at creation, kept by "Play again", shown and set in the admin page, `POST /api/admin/passkey`). The
+  **Room passkey** (owner, 2026-11-07; v3.2.14): four digits per room (Lobby `games.passkey`; 1234 for
+  every new room while testing, `DEFAULT_PASSKEY`, v3.2.15, kept by "Play again", shown and set in the admin page, `POST /api/admin/passkey`). The
   first page asks for it under the picked room and keeps it per room in localStorage
   `supermensch-keys`; `hello` with seats and the color pick send it, `GameRoom.passkeyOk` checks it
   (wrong: close 4002 or error "passkey"; 5 wrong in 5 minutes: "passkey wait", `PasskeyGate` in
