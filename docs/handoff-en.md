@@ -571,6 +571,12 @@ npm run build       # server/public/index.html (the game page of the server)
   the demotion rule. Since v3.2.11 it declares a tunnel only for a pawn at most 3 fields before the
   entrance (`AI_WEIGHTS.tunnelReach`) and values a declared pawn by most of the fields its tunnel
   saves (`AI_WEIGHTS.tunnelHope`), so it uses the tunnels it paid for (game RBEM-40).
+* **Computer levels** (owner, 2026-11-07; v3.2.13): each room has one, set by the admin (`setup.engine`,
+  `ENGINE_LEVELS` / `engineFor` in `js/ai.js`). Beginner: the computer of v3.2.11. Intermediate: a general
+  or marshal keeps its points value in the nest (`nestKeep`), and the danger from an opponent 1..6 fields
+  behind grows with the pawn's rank points and bounty (`risk`), so it no longer leaves a marshal next to the
+  nest (game RBEM-40, turns 104 and 112). Hard: intermediate plus the next player's best answer to each of
+  its 4 best plays, averaged over every throw (`look`, `_afterReply`).
 
 ## 11. Backlog
 1. Done: the side panel became the ribbon on top (dice on the board first, then the ribbon).
@@ -645,6 +651,9 @@ earlier sketch (browser dice, PINs).
   and each player's line with four dice, measured once per game and language (`fitReplayBar`).
   The arrows are small and ringless; a turn with more than four dice draws them smaller (`--ds`), so
   the line never wraps, and a long name is cut with "…".
+  **Computer level** (owner, 2026-11-07; v3.2.13): a select when making a room and one in each room's line
+  (rooms with a computer). `POST /api/admin/engine {id, engine}` (`withEngine` in `server/core.js`,
+  `GameRoom.setEngine`, Lobby `updateSetup`); the game goes on, the next computer move uses the new level.
   **Game rules** (owner, 2026-11-06; v3.2.10): the admin page's "Game rules" section sets the rule values of
   `js/config.js` for the whole server (not per room yet). `Config.RULES` lists what may be set (kind, range,
   label; `board: true` for values whose defaults differ per board, set for 6, 8 and 4 colors). Not there: the

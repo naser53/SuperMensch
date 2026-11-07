@@ -240,6 +240,12 @@ export class Lobby extends DurableObject {
     return this.allGames();
   }
 
+  // the same game with a changed setup (the computer's level): its state stays
+  updateSetup(id, setup) {
+    this.sql.exec(`UPDATE games SET setup = ? WHERE id = ?`, JSON.stringify(setup), id);
+    return this.allGames();
+  }
+
   setSetup(id, setup) {
     this.sql.exec(`UPDATE games SET setup = ?, status = 'open', result = NULL, updated = ? WHERE id = ?`, JSON.stringify(setup), Date.now(), id);
     return this.allGames();
@@ -370,6 +376,14 @@ export class GameRoom extends DurableObject {
   }
 
   // the admin gives the room a new name; the devices load the game again to show it
+  // the admin changes the computer's level (Room.setEngine); the game goes on as it is
+  setEngine(engine) {
+    const room = this._load();
+    if (!room) throw new Error("no such game");
+    const setup = room.setEngine(engine);
+    this.sql.exec(`UPDATE meta SET v = ? WHERE k = 'setup'`, JSON.stringify(setup));
+  }
+
   setName(name) {
     this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('name', ?)`, JSON.stringify(name));
     this._all({ t: "recolor" });

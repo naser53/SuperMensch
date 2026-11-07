@@ -4,6 +4,13 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.13 (2026-11-07)
+
+* Computer levels per room (owner): beginner, intermediate and hard (`ENGINE_LEVELS`, `engineFor` in `js/ai.js`), chosen when the admin makes a room and changed for each room in the admin page's room list (`POST /api/admin/engine {id, engine}`; `setup.engine`, left out for beginner, so older rooms play as before). A change counts from the computer's next move; "Play again" keeps the level. Labels in English, Farsi and German.
+  * Beginner: the computer as in v3.2.11.
+  * Intermediate (game RBEM-40, turns 104 and 112): a general or marshal keeps the value of its rank points in the nest, so it goes in when it can, and an opponent 1..6 fields behind a pawn costs a share of what that pawn would lose (its rank points and the bounty, `AI_WEIGHTS.risk`). Against beginner it wins 169 of 300 four-color games and 106 of 150 six-color games (fair share 150 and 50).
+  * Hard: intermediate that also weighs the next player's best answer to each of its 4 best plays, over every throw (about 5 ms a decision).
+
 ## v3.2.12 (2026-11-07)
 
 * Admin page in three languages (owner): English, Farsi and German, the game's own languages, with a language menu at the top. It shares the game page's saved choice (the same browser shows both in the same language), Farsi reads right to left with Persian digits, and every section is translated, the "Game rules" table included (`js/admin-strings.js`; a rule without a translation shows its English label from `Config.RULES`). Debug commands stay as they are. The admin page's script is now `js/admin-page.js`, bundled by `npm run build` into `server/public/admin-page.js`.

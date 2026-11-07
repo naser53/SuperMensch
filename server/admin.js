@@ -3,7 +3,7 @@
 // Returns a Response, or null when <what> is not an admin route (the worker answers 404).
 
 import { Config } from "../js/config.js";
-import { cleanBoard, cleanColors, cleanName, cleanRules, editSetup, isGameId, ruleDefaults } from "./core.js";
+import { cleanBoard, cleanColors, cleanName, cleanRules, editSetup, isGameId, ruleDefaults, withEngine } from "./core.js";
 
 export async function adminApi(what, body, { env, lobby, settings, json, fail }) {
   if (what === "check") return json({ ok: true });
@@ -45,6 +45,13 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     const { setup, keep } = editSetup(old, body.seats, await lobby.users());
     await env.ROOM.get(env.ROOM.idFromName(body.id)).edit(setup, keep);
     return json(await lobby.setSetup(body.id, setup));
+  }
+  if (what === "engine" && body && isGameId(body.id)) {      // the computer's level in a room
+    const old = await lobby.setupOf(body.id);
+    if (!old) return fail("no such game", 404);
+    const setup = withEngine(old, body.engine);
+    await env.ROOM.get(env.ROOM.idFromName(body.id)).setEngine(setup.engine || "beginner");
+    return json(await lobby.updateSetup(body.id, setup));
   }
   if (what === "place" && body && isGameId(body.id)) {       // put the pieces somewhere (a test aid); no text: just show them
     const room = env.ROOM.get(env.ROOM.idFromName(body.id));

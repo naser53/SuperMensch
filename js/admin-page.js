@@ -202,7 +202,7 @@ $("#createBtn").onclick = async () => {
     return s.value === "ai" ? { ai: true, colors: cols } : { user: +s.value, colors: cols };
   });
   try {
-    const r = await api("games", { name: $("#gName").value, setup: { mode, colors, level: $("#gLevel").value, corridor: +$("#gCorr").value, seats } });
+    const r = await api("games", { name: $("#gName").value, setup: { mode, colors, level: $("#gLevel").value, engine: $("#gEngine").value, corridor: +$("#gCorr").value, seats } });
     show("#createMsg", T("room_made", { name: r.name, id: r.id }));
     $("#gName").value = "";
     loadRooms();
@@ -211,6 +211,12 @@ $("#createBtn").onclick = async () => {
 
 // a player's name as the room keeps it: the engine's in the page's language
 const playerName = n => String(n).replace(/^Engine\b/, T("engine"));
+
+// the computer's level of a room with a computer player (owner, 2026-11-07); none: beginner
+const ENGINES = [["beginner", "lv_beginner"], ["intermediate", "lv_intermediate"], ["hard", "lv_difficult"]];
+const engineSel = g => !g.setup.players.some(p => p.isAi) ? "" :
+  `<span title="${E("engine_tip")}">${E("engine_lbl")} <select data-eng="${g.id}">` +
+  ENGINES.map(([v, k]) => `<option value="${v}" ${(g.setup.engine || "beginner") === v ? "selected" : ""}>${E(k)}</option>`).join("") + "</select></span>";
 
 // every room, with a button to delete it (a second press deletes). A finished game keeps its
 // place in the list with a finish mark and its winner (owner, 2026-11-07).
@@ -224,9 +230,14 @@ async function loadRooms(list) {
   };
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.setup.corridor ? E("n_fields", { n: N(g.setup.corridor) }) + " · " : ""}${state(g)} · ${esc(dateText(g.updated))}</span>
+    ${engineSel(g)}
     <button data-edit="${g.id}">${E("edit_players")}</button> <button data-dbg="${g.id}">${E("debug")}</button> <button data-del="${g.id}">${E("delete")}</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">${E("no_rooms")}</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
+  document.querySelectorAll("[data-eng]").forEach(s => s.onchange = async () => {
+    try { await loadRooms(await api("admin/engine", { id: s.dataset.eng, engine: s.value })); show("#delMsg", T("saved_dot")); }
+    catch (e) { show("#delMsg", e.message, true); }
+  });
   document.querySelectorAll("[data-dbg]").forEach(b => b.onclick = () => debugRoom(gs.find(g => g.id === b.dataset.dbg)));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = T("sure_delete"); return; }

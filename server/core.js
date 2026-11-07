@@ -1,7 +1,7 @@
 // Server logic with no Cloudflare parts, so Node tests can run it: game ids, setup checks,
 // and a room (one online game) that throws the dice and answers for the computer players.
 
-import { SimpleAI } from "../js/ai.js";
+import { ENGINE_LEVELS, engineFor } from "../js/ai.js";
 import { Config } from "../js/config.js";
 import { tr } from "../js/i18n.js";
 import { Table, fingerprint } from "../js/table.js";
@@ -130,7 +130,7 @@ export function seatColors(mode, colors, i) { return mode === "two" ? [i, i + co
 // number of seats keeps the game going (only who sits there changes); another number starts
 // the game again. seats: [{ user } | { ai: true }]
 export function editSetup(old, seats, users) {
-  const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level, corridor: old.corridor,
+  const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level, corridor: old.corridor, engine: old.engine,
     seats: (seats || []).map((s, i) => ({ ...(s.ai ? { ai: true } : { user: s.user }), colors: seatColors(old.mode, old.colors, i) })) }, users);
   if (old.rules) setup.rules = old.rules;          // the room keeps the rules it was made with
   return { setup, keep: setup.players.length === old.players.length };
@@ -206,7 +206,15 @@ export function checkSetup(su, users) {
     return { name: u.name, colors: cols, isAi: false, user: u.id };
   });
   if (!players.some(p => !p.isAi)) throw new Error("no human player");
-  return { players, mode, colors, level, ...(corridor !== 10 ? { corridor } : {}) };
+  return withEngine({ players, mode, colors, level, ...(corridor !== 10 ? { corridor } : {}) }, su.engine);
+}
+
+// The computer's level of a room (owner, 2026-11-07): beginner, intermediate or hard
+// (ENGINE_LEVELS in js/ai.js). Kept in the setup only when it is not beginner, so the rooms made
+// before it read as beginner, which is how their computer played. Returns a new setup.
+export function withEngine(setup, engine) {
+  const { engine: _, ...rest } = setup;
+  return engine && engine !== "beginner" && Object.keys(ENGINE_LEVELS).includes(engine) ? { ...rest, engine } : rest;
 }
 
 // One online game. The setup and the events are all that is stored.
@@ -301,8 +309,20 @@ export class Room {
     this.table.autoDice = true;
     this.table._settle();
     this.ais = {};
-    setup.players.forEach((p, i) => { if (p.isAi) this.ais[i] = new SimpleAI(); });
+    this._engines();
     this._advance();
+  }
+
+  _engines() {
+    this.ais = {};
+    this.setup.players.forEach((p, i) => { if (p.isAi) this.ais[i] = engineFor(this.setup.engine); });
+  }
+
+  // the admin changes the computer's level: the moves made stay, the next ones use the new level
+  setEngine(engine) {
+    this.setup = withEngine(this.setup, engine);
+    this._engines();
+    return this.setup;
   }
 
   get events() { return this.table.events; }

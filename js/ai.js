@@ -12,8 +12,23 @@ import { TUN, YARD, mulberry32 } from "./engine.js";
 // declared pawn moves only into its tunnel, so from farther away most dice burn for it), and a
 // declared pawn not yet inside counts tunnelHope of the fields the tunnel saves, all of them less
 // a tenth per field still to go, so the computer takes the tunnel it has paid for.
+// risk = share of the stake of a pawn (its rank points as valued here, and the bounty it would
+// pay) lost per opponent 1..6 fields behind it, so a general or marshal is not left in danger
+// (game RBEM-40). A general or marshal keeps its points value in the nest, where it is safe.
 export const AI_WEIGHTS = { reach: 2.5, colors: 8, capture: 1, points: 0.8, cardPace: 0, cardBlocked: 5,
-  tunnelReach: 3, tunnelHope: 0.9 };
+  tunnelReach: 3, tunnelHope: 0.9, risk: 0.3, nestKeep: true, look: 0 };
+
+// The computer's levels, chosen per room by the admin (owner, 2026-11-07; setup.engine):
+// beginner = the computer up to v3.2.11 (no risk by rank, a general or marshal loses its points
+// value in the nest), intermediate = AI_WEIGHTS, hard = intermediate that also looks at the next
+// player's best answer to each of its look best plays, over every throw.
+export const ENGINE_LEVELS = {
+  beginner: { ...AI_WEIGHTS, risk: 0, nestKeep: false },
+  intermediate: AI_WEIGHTS,
+  hard: { ...AI_WEIGHTS, look: 4 },
+};
+export const engineFor = (level, seed = null) =>
+  new SimpleAI(seed, 2.4, 0.5, 40, ENGINE_LEVELS[level] || ENGINE_LEVELS.beginner);
 
 export class SimpleAI {
   // cardZ: a triple-dice card is played only for a throw that gains this many standard
@@ -52,17 +67,19 @@ export class SimpleAI {
             v += this.w.tunnelHope * (X - E - T - 1) * Math.max(0, 1 - (E - r) / 10);
           }
         }
-        if (r < L && this.w.points && g.cfg.ranks) v += this.w.points * st.kills[col][i];
+        const pts = st.kills[col][i], ranked = this.w.nestKeep && g.rank(pts) > 0;
+        if ((r < L || ranked) && this.w.points && g.cfg.ranks) v += this.w.points * pts;
         if (r >= L) {
           v += 25;
           if (g.finished(st, col, i)) v += 15;
           return;
         }
-        // danger: opponents 1..6 fields behind
+        // danger: opponents 1..6 fields behind, more for a pawn with rank points and a bounty
         const a = g.absOf(col, r);
+        const stake = this.w.risk && g.cfg.ranks ? this.w.risk * ((this.w.points || 0) * pts + 1.6 * g.bounty(pts)) : 0;
         for (let k = 1; k <= 6; k++) {
           const m = occ.get(((a - k) % L + L) % L);
-          if (m && g.ownerOf(m) !== p) v -= 0.25 * r / 6 + 1.5;
+          if (m && g.ownerOf(m) !== p) v -= 0.25 * r / 6 + 1.5 + stake;
         }
       });
     }
@@ -137,11 +154,36 @@ export class SimpleAI {
     }
     // play / gift
     let best = opts[0], bv = -Infinity;
-    for (const o of opts) {
-      const v = this.scorePlay(g, o.payload, p);
-      if (v > bv) { best = o; bv = v; }
+    const vals = opts.map(o => this.scorePlay(g, o.payload, p));
+    opts.forEach((o, k) => { if (vals[k] > bv) { best = o; bv = vals[k]; } });
+    if (this.w.look && dec.kind === "play" && opts.length > 1) {
+      const top = opts.map((o, k) => [o, vals[k]]).sort((x, y) => y[1] - x[1]).slice(0, this.w.look);
+      bv = -Infinity;
+      for (const [o, v1] of top) {
+        const v = this._afterReply(g, o.payload, p) + (v1 - this.evaluate(g, o.payload.state, p));
+        if (v > bv) { best = o; bv = v; }
+      }
     }
     return best;
+  }
+
+  // hard: the value of a play once the next player has answered it with its best play, averaged
+  // over every throw of two dice
+  _afterReply(g, play, p) {
+    const st = play.state, n = g.players.length;
+    let q = (p + 1) % n;
+    while (q !== p && g.players[q].colors.every(c => st.pos[c].every((r, i) => g.finished(st, c, i)))) q = (q + 1) % n;
+    if (q === p) return this.evaluate(g, st, p);
+    const six = g.cfg.six_chance ?? 1 / 6, P = x => (x === 6 ? six : (1 - six) / 5);
+    let sum = 0;
+    for (let a = 1; a <= 6; a++)
+      for (let b = a; b <= 6; b++) {
+        const w = P(a) * P(b) * (a === b ? 1 : 2), plays = g.playsFor(q, [a, b], st);
+        let rb = null, rv = -Infinity;
+        for (const pl of plays) { const v = this.playValue(g, pl, q); if (v > rv) { rv = v; rb = pl; } }
+        sum += w * this.evaluate(g, rb ? rb.state : st, p);
+      }
+    return sum;
   }
 
   // Take the longest tunnel the player can pay for without going into debt, for a pawn close
