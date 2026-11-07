@@ -827,6 +827,8 @@ class App {
     }
     if (card) this.cardEffect();
     this.render();
+    const pl = opt && opt.payload;
+    if (Array.isArray(pl) && pl[0] === "tunnel") this.board.tunnelFx(pl[1], pl[2]);   // its sign above the piece
     let end = performance.now();
     if (entries && entries.length) end = this.board.animateSteps(entries, this.hop());
     this.scorePops(earned, entries, end);

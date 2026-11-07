@@ -426,6 +426,9 @@ the fingerprint.
   move makes a new wall, or turns pieces into a castle, the wall sign (bricks) or a castle picture with
   a flag in the builder's color pops up above its pieces once the mover has landed, golden rings glow
   under them, and all fades out within about 1.5 s. On every device (it runs from `animateSteps`).
+* **Tunnel declared** (owner, 2026-11-07; `Board3D.tunnelFx`, same CSS): a tunnel sign (a stone arch
+  with a rim in the piece's color) pops up above the piece that declared a tunnel, with a golden ring
+  under it, and fades within about 1.5 s. On every device (from `App.choose`).
 * **Full nest:** a burst of golden sparkles over the nest, then a lasting glow on its fields.
 * **"Not allowed" sign** at the click point, fading in 0.5 s.
 * **Scores view:** a card over every pawn with the points it has won and × captures; the game is
@@ -565,7 +568,9 @@ npm run build       # server/public/index.html (the game page of the server)
 
 ## 10. Known limitations
 * The computer player never breaks walls or castles, overspends on tunnels, and does not weigh
-  the demotion rule.
+  the demotion rule. Since v3.2.11 it declares a tunnel only for a pawn at most 3 fields before the
+  entrance (`AI_WEIGHTS.tunnelReach`) and values a declared pawn by most of the fields its tunnel
+  saves (`AI_WEIGHTS.tunnelHope`), so it uses the tunnels it paid for (game RBEM-40).
 
 ## 11. Backlog
 1. Done: the side panel became the ribbon on top (dice on the board first, then the ribbon).

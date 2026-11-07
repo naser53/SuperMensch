@@ -15,6 +15,8 @@ export const LIGHT = LIGHT_DEFAULT.slice();
 // the wall sign (bricks, in a 46×46 box): the "not allowed" sign over a wall and the wall-built effect
 const WALL_SVG = '<g fill="#c0703f" stroke="#5a2e17" stroke-width="1.4"><rect x="4" y="14" width="14" height="8"/><rect x="18" y="14" width="14" height="8"/><rect x="4" y="22" width="7" height="8"/><rect x="11" y="22" width="14" height="8"/><rect x="25" y="22" width="7" height="8"/><rect x="4" y="30" width="14" height="8"/><rect x="18" y="30" width="14" height="8"/></g>';
 // the castle-built effect: two towers, a keep with a gate, and a flag in the builder's color (64×64)
+// a tunnel mouth: a stone arch, dark inside, its rim in the piece's color
+const tunnelSvg = rim => `<g stroke-linejoin="round"><path d="M4 42V24a18 18 0 0 1 36 0v18z" fill="#9a9a9a" stroke="#3d3d3d" stroke-width="1.6"/><path d="M11 42V25a11 11 0 0 1 22 0v17z" fill="#2a2420" stroke="${rim}" stroke-width="3"/></g>`;
 const castleSvg = flag => `<g stroke="#3d3d3d" stroke-width="1.6" stroke-linejoin="round"><path d="M32 6v12" fill="none"/><path d="M32 6l11 3.5-11 3.5z" fill="${flag}"/><path d="M4 60V26h4v4h4v-4h4v4h4v-4h4v34z" fill="#9a9a9a"/><path d="M40 60V26h4v4h4v-4h4v4h4v-4h4v34z" fill="#9a9a9a"/><path d="M18 60V22h4v-4h5v4h5v-4h5v4h5v-4h4v42z" fill="#b5b5b5"/><path d="M26 60V47a6 6 0 0 1 12 0v13z" fill="#5a3a1e"/><rect x="9" y="38" width="4" height="7" rx="2" fill="#3d3d3d"/><rect x="51" y="38" width="4" height="7" rx="2" fill="#3d3d3d"/><rect x="30" y="30" width="4" height="7" rx="2" fill="#3d3d3d"/></g>`;
 
 // the board's own colors set by the admin: [surface, edge], null = the board's default
@@ -358,6 +360,28 @@ export class Board3D {
       add("build-fx", at, castle ? `<svg viewBox="0 0 64 64" width="76" height="76">${castleSvg(COLORS[col])}</svg>`
         : `<svg viewBox="0 4 46 38" width="64" height="53">${WALL_SVG}</svg>`);
     }, Math.max(0, t - performance.now()));
+  }
+
+  // A tunnel is declared (owner, 2026-11-07): as for a new wall, a tunnel sign in the piece's color
+  // pops up above that piece with a golden ring under it; both fade within about 1.5 s.
+  tunnelFx(col, i) {
+    const grp = this.pieceMeshes.get(`${col},${i}`);
+    if (!grp) return;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const toScreen = v => { v = v.clone().project(this.camera); return [rect.left + (v.x + 1) / 2 * rect.width, rect.top + (1 - v.y) / 2 * rect.height]; };
+    const v = new THREE.Vector3();
+    grp.getWorldPosition(v);
+    const add = (cls, [x, y], html) => {
+      const el = document.createElement("div");
+      el.className = cls;
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1600);
+    };
+    add("build-ring", toScreen(v), "");
+    add("build-fx", toScreen(v.clone().setY(v.y + 1.1)), `<svg viewBox="0 0 44 44" width="60" height="60">${tunnelSvg(COLORS[col])}</svg>`);
   }
 
   // ------------------------------------------------------------ board
