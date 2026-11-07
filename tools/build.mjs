@@ -1,6 +1,7 @@
 // Builds server/public/index.html, the game page of the online server: one self-contained file
 // (scripts, styles and the Vazirmatn font inlined). There is no offline file any more (owner,
-// 2026-11-06): the game is played on the server only.
+// 2026-11-06): the game is played on the server only. Also server/public/admin-page.js, the admin
+// page's script (js/admin-page.js with the game's language files), bundled the same way.
 import { build } from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
@@ -25,3 +26,10 @@ html = html.replace(/<!-- Development page[\s\S]*?<\/script>\n/, "")
            () => `<script>\n${js.outputFiles[0].text.replace(/<\/script/gi, "<\\/script")}</script>`);
 fs.writeFileSync(r("server/public/index.html"), html);
 console.log("server/public/index.html", (html.length / 1024).toFixed(0), "KB");
+
+const admin = await build({
+  entryPoints: [r("js/admin-page.js")], bundle: true, format: "iife", minify: true, write: false,
+  target: ["es2020"], legalComments: "eof",
+});
+fs.writeFileSync(r("server/public/admin-page.js"), admin.outputFiles[0].text);
+console.log("server/public/admin-page.js", (admin.outputFiles[0].text.length / 1024).toFixed(0), "KB");

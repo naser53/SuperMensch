@@ -226,8 +226,8 @@ export class Lobby extends DurableObject {
   }
 
   allGames() {
-    return this.sql.exec(`SELECT id, name, created, updated, status, setup FROM games ORDER BY updated DESC`).toArray()
-      .map(g => ({ ...g, setup: JSON.parse(g.setup) }));
+    return this.sql.exec(`SELECT id, name, created, updated, status, setup, result FROM games ORDER BY updated DESC`).toArray()
+      .map(g => ({ ...g, setup: JSON.parse(g.setup), result: g.result ? JSON.parse(g.result) : null }));   // result: a finished game's places
   }
 
   setupOf(id) {

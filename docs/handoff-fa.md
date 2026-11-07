@@ -516,7 +516,11 @@ npm run build       # server/public/index.html (صفحه‌ی بازی سرور)
   «بازی آفلاین» تنظیمات معمولی را نشان می‌دهد. `/admin` (`server/public/admin.html`) فقط تنظیمات است و
   با کلید مدیر باز می‌شود: تغییر نام بازیکن‌ها، ساختن و حذف اتاق (دو بار فشار)، و ویرایش بازیکن‌های یک اتاق (برای تست: عوض کردن، اضافه کردن تا ظرفیت صفحه،
   حذف؛ `editSetup` در `server/core.js`). با همان تعداد بازیکن حرکت‌ها می‌مانند؛ با تعداد دیگر بازی از نو شروع می‌شود.
-  دستگاه‌های وصل با کد 4001 بسته می‌شوند (4000 = حذف) و به صفحه‌ی اول برمی‌گردند. `/play?…` به `/?…` می‌رود.
+  دستگاه‌های وصل با کد 4001 بسته می‌شوند (4000 = حذف) و به صفحه‌ی اول برمی‌گردند.
+  **زبان‌های ادمین** (مالک، ۲۰۲۶-۱۱-۰۷؛ v3.2.12): صفحه‌ی ادمین به زبان‌های خود بازی (انگلیسی، فارسی، آلمانی) است و
+  بالای صفحه منوی زبان دارد؛ زبان ذخیره‌شده‌ی صفحه‌ی بازی را می‌خواند و می‌نویسد (localStorage `supermensch`.lang)، پس هر دو
+  یک انتخاب را دنبال می‌کنند. متن‌ها در `js/admin-strings.js` (برچسب قانون‌ها `rule_<key>`، گروه‌ها `grp_<group>`، خطاهای
+  شناخته‌شده‌ی سرور `err_<message>`؛ اگر ترجمه نباشد انگلیسی). اتاقِ تمام‌شده در فهرست اتاق‌ها علامت 🏁 «تمام شده» و برنده‌اش را دارد. `/play?…` به `/?…` می‌رود.
   **سلاح شکارچی** (صاحب پروژه، ۲۰۲۶-۱۱-۰۳): در صفحه‌ی مدیر انتخاب می‌شود که شکارچی تیر داشته باشد یا شمشیر، برای کل سرور
   (`POST /api/admin/hunter`، کلید `hunter` در جدول `settings` در Lobby، در `/api/settings` با نام `hunter`؛ `setHunterWeapon` / `Board3D.hunterWeapon` در `js/render3d.js`).
   **نمایش امتیاز مهره** (صاحب پروژه، ۲۰۲۶-۱۱-۰۳): در صفحه‌ی مدیر برای کل سرور انتخاب می‌شود که مهره امتیازهای خودش را چطور نشان دهد:
@@ -585,7 +589,7 @@ npm run build       # server/public/index.html (صفحه‌ی بازی سرور)
 * کد: `server/worker.js` (مسیرها، هر دو Durable Object، قرارداد WebSocket در توضیح‌هایش)،
   `server/admin.js` (مسیرهای `/api/admin/*`؛ worker پس از بررسی کلید ادمین آن را صدا می‌زند)،
   `server/core.js` (بدون وابستگی به Cloudflare، با آزمون `tests/server.test.mjs`)،
-  `server/public/` (صفحه‌ها؛ صفحه‌ی ادمین `admin.html` است و اسکریپتش `admin-page.js`)، `wrangler.toml`، `.github/workflows/server.yml` (استقرار از
+  `server/public/` (صفحه‌ها؛ صفحه‌ی ادمین `admin.html` است؛ اسکریپتش `js/admin-page.js` با `npm run build` در `server/public/admin-page.js` ساخته می‌شود و در Git نیست)، `wrangler.toml`، `.github/workflows/server.yml` (استقرار از
   `v2`؛ secretها: `CLOUDFLARE_API_TOKEN`، `CLOUDFLARE_ACCOUNT_ID`، `ADMIN_KEY`).
 * اجرای محلی: `ADMIN_KEY=...` را در `.dev.vars` بگذارید، `npx wrangler dev` و بعد
   http://localhost:8787.

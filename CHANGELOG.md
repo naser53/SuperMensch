@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.12 (2026-11-07)
+
+* Admin page in three languages (owner): English, Farsi and German, the game's own languages, with a language menu at the top. It shares the game page's saved choice (the same browser shows both in the same language), Farsi reads right to left with Persian digits, and every section is translated, the "Game rules" table included (`js/admin-strings.js`; a rule without a translation shows its English label from `Config.RULES`). Debug commands stay as they are. The admin page's script is now `js/admin-page.js`, bundled by `npm run build` into `server/public/admin-page.js`.
+* Admin rooms (owner): a finished game is marked with a 🏁 "Finished" badge and its winner in the room list (`allGames` sends the result).
+
 ## v3.2.11 (2026-11-07)
 
 * Tunnel declared (owner): as for a new wall, a tunnel sign in the piece's color pops up above the piece that declared a tunnel, with a golden ring under it, and fades within about 1.5 s (`Board3D.tunnelFx`, called from `App.choose`). On every device.

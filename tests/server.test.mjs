@@ -5,6 +5,8 @@ import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, clean
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
 import { Config } from "../js/config.js";
+import { ADMIN_STR } from "../js/admin-strings.js";
+import { LANGS } from "../js/i18n.js";
 
 const users = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: `user${i + 1}` }));
 const twoSeats = (...who) => who.map((w, i) => (w === "ai" ? { ai: true, colors: [i, i + 3] } : { user: w, colors: [i, i + 3] }));
@@ -378,4 +380,17 @@ test("the admin's game rules: checked, defaults left out, kept with the room", (
   assert.equal(t.game.cfg.walls, false);
   assert.equal(Config.forBoard(6, "beginner", "one", 10, { ranks: true }).ranks, false);
   assert.equal(editSetup(su, [{ user: 2 }, { ai: true }], users).setup.rules, su.rules);
+});
+
+test("the admin page has every text in every language, the game rules included", () => {
+  const en = Object.keys(ADMIN_STR.en);
+  for (const l of LANGS) {
+    assert.ok(ADMIN_STR[l], l);
+    for (const k of en) assert.ok(ADMIN_STR[l][k], `${l}: ${k}`);
+    if (l === "en") continue;
+    for (const r of Config.RULES) {
+      assert.ok(ADMIN_STR[l]["rule_" + r.key], `${l}: rule_${r.key}`);
+      assert.ok(ADMIN_STR[l]["grp_" + r.group], `${l}: grp_${r.group}`);
+    }
+  }
 });
