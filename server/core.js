@@ -14,6 +14,25 @@ export const OPEN_HOURS = 24;            // a game idle this long leaves the lis
 const ID_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ";   // no I, L, O: easy to read out loud
 
 // a fresh game id such as K7QX-42 (four letters, two digits)
+// A room's passkey (owner, 2026-11-07): four digits a player types to play in it.
+export function newPasskey(rand = cryptoRandom) { return String(Math.floor(rand() * 10000)).padStart(4, "0"); }
+export function cleanPasskey(k) { const s = String(k ?? "").trim(); return /^\d{4}$/.test(s) ? s : null; }
+
+// Wrong passkeys: after PASSKEY_TRIES wrong ones within PASSKEY_WAIT_MS a room takes no passkey
+// for PASSKEY_WAIT_MS, so the 10 000 keys cannot be tried one after another.
+export const PASSKEY_TRIES = 5, PASSKEY_WAIT_MS = 5 * 60e3;
+export class PasskeyGate {
+  constructor() { this.fails = []; }
+  // "ok", "wrong" or "wait"
+  check(given, key, now = Date.now()) {
+    this.fails = this.fails.filter(t => now - t < PASSKEY_WAIT_MS);
+    if (this.fails.length >= PASSKEY_TRIES) return "wait";
+    if (cleanPasskey(given) === key) return "ok";
+    this.fails.push(now);
+    return "wrong";
+  }
+}
+
 export function newGameId(rand = cryptoRandom) {
   let s = "";
   for (let i = 0; i < 4; i++) s += ID_CHARS[Math.floor(rand() * ID_CHARS.length)];
@@ -299,7 +318,10 @@ export function diceTurns(setup, events) {
       retry = false;
     } else if (ev.pick !== undefined) retry = g.pending.options[ev.pick].payload === "retry";
     else retry = false;
+    const logFrom = g.log.length;
     t.apply(ev);
+    // a stuck first try with nothing to keep throws the second try by itself (auto_retry)
+    if (ev.dice && t.game.log.slice(logFrom).some(m => m && m.key === "log_autoretry")) retry = true;
   }
   return out;
 }

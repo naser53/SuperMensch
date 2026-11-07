@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, nextName, rulesFor } from "./core.js";
+import { OPEN_HOURS, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, newPasskey, nextName, rulesFor } from "./core.js";
 import { adminApi } from "./admin.js";
 import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
 
@@ -79,6 +79,8 @@ async function api(req, env, url) {
     if (parts[2] === "ws") return room.fetch(req);
     if (parts[2] === "voice" && body) return json(await room.voice(body));   // voice chat (server/voice.js)
     if (parts[2] === "colors" && body) {           // a child picks the colors of a seat, before the first move
+      const ok = await room.passkeyOk(body.passkey);
+      if (ok !== "ok") return fail(ok === "wait" ? "passkey wait" : "passkey", 403);
       const setup = await room.recolor(body.seat, body.colors);
       await lobby.setSetup(parts[1], setup);
       return json({ ok: true });
@@ -102,6 +104,8 @@ export class Lobby extends DurableObject {
     const cols = this.sql.exec(`PRAGMA table_info(users)`).toArray().map(c => c.name);
     if (!cols.includes("can_create")) this.sql.exec(`ALTER TABLE users ADD COLUMN can_create INTEGER NOT NULL DEFAULT 0`);
     if (!cols.includes("voice")) this.sql.exec(`ALTER TABLE users ADD COLUMN voice INTEGER NOT NULL DEFAULT 0`);
+    const gcols = this.sql.exec(`PRAGMA table_info(games)`).toArray().map(c => c.name);
+    if (!gcols.includes("passkey")) this.sql.exec(`ALTER TABLE games ADD COLUMN passkey TEXT`);
     if (!this.sql.exec(`SELECT COUNT(*) AS n FROM users`).one().n)
       for (let i = 1; i <= USERS; i++) this.sql.exec(`INSERT INTO users (id, name) VALUES (?, ?)`, i, `user${i}`);
   }
@@ -200,13 +204,27 @@ export class Lobby extends DurableObject {
     return this.users();
   }
 
-  addGame(name, setup) {
+  // passkey: the room's four digits ("Play again" keeps the old room's); none: a new one
+  addGame(name, setup, passkey = null) {
     let id;
     do id = newGameId(); while (this.sql.exec(`SELECT id FROM games WHERE id = ?`, id).toArray().length);
     const now = Date.now();
-    this.sql.exec(`INSERT INTO games (id, name, created, updated, status, setup) VALUES (?, ?, ?, ?, 'open', ?)`,
-      id, name, now, now, JSON.stringify(setup));
+    this.sql.exec(`INSERT INTO games (id, name, created, updated, status, setup, passkey) VALUES (?, ?, ?, ?, 'open', ?, ?)`,
+      id, name, now, now, JSON.stringify(setup), passkey || newPasskey());
     return id;
+  }
+
+  // a room's passkey; a room made before passkeys gets one now (the admin page shows it)
+  passkeyOf(id) {
+    const r = this.sql.exec(`SELECT passkey FROM games WHERE id = ?`, id).toArray();
+    if (!r.length) return null;
+    if (r[0].passkey) return r[0].passkey;
+    return this.setPasskey(id, newPasskey());
+  }
+
+  setPasskey(id, passkey) {
+    this.sql.exec(`UPDATE games SET passkey = ? WHERE id = ?`, passkey, id);
+    return passkey;
   }
 
   // a room reports activity, and the result once the game is over
@@ -225,8 +243,10 @@ export class Lobby extends DurableObject {
     });
   }
 
+  // for the admin page only (with the passkeys; the open rooms' list for the players has none)
   allGames() {
-    return this.sql.exec(`SELECT id, name, created, updated, status, setup, result FROM games ORDER BY updated DESC`).toArray()
+    for (const r of this.sql.exec(`SELECT id FROM games WHERE passkey IS NULL`).toArray()) this.setPasskey(r.id, newPasskey());
+    return this.sql.exec(`SELECT id, name, created, updated, status, setup, result, passkey FROM games ORDER BY updated DESC`).toArray()
       .map(g => ({ ...g, setup: JSON.parse(g.setup), result: g.result ? JSON.parse(g.result) : null }));   // result: a finished game's places
   }
 
@@ -445,6 +465,15 @@ export class GameRoom extends DurableObject {
 
   held() { return this._seats(); }
 
+  // a player's passkey for this room (the Lobby keeps the room's): "ok", "wrong" or "wait"
+  async passkeyOk(given) {
+    const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
+    const key = await lobby.passkeyOf(this._meta("id"));
+    if (!key) return "ok";
+    this.gate = this.gate || new PasskeyGate();
+    return this.gate.check(given, key);
+  }
+
   // seat -> device name, for every seat held by a connected device
   _seats() {
     const out = {};
@@ -463,6 +492,11 @@ export class GameRoom extends DurableObject {
     try { msg = JSON.parse(data); } catch { return; }
     const room = this._load();
     if (msg.t === "hello") {
+      // a device that wants seats needs the room's passkey; one that only looks needs none
+      if (Array.isArray(msg.seats) && msg.seats.length) {
+        const ok = await this.passkeyOk(msg.passkey);
+        if (ok !== "ok") { try { ws.close(4002, ok === "wait" ? "passkey wait" : "passkey"); } catch { /* closed */ } return; }
+      }
       const humans = room.setup.players.map((p, i) => (p.isAi ? -1 : i)).filter(i => i >= 0);
       const old = ws.deserializeAttachment() || {};
       const token = msg.token ? String(msg.token).slice(0, 64) : old.token || null;
@@ -550,7 +584,7 @@ export class GameRoom extends DurableObject {
       const rules = rulesFor(await lobby.rules(), setup.colors);    // the next game: the admin's rules of now
       if (rules) setup.rules = rules; else delete setup.rules;
       if (setup.mode === "two") setup.autoRetry = true;            // a new game: today's stuck help
-      next = await lobby.addGame(name, setup);
+      next = await lobby.addGame(name, setup, await lobby.passkeyOf(this._meta("id")));   // the same passkey
       await this.env.ROOM.get(this.env.ROOM.idFromName(next)).init(next, name, setup);
       this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('next', ?)`, JSON.stringify(next));
       return next;

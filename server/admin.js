@@ -3,7 +3,7 @@
 // Returns a Response, or null when <what> is not an admin route (the worker answers 404).
 
 import { Config } from "../js/config.js";
-import { cleanBoard, cleanColors, cleanName, cleanRules, editSetup, isGameId, ruleDefaults, withEngine } from "./core.js";
+import { cleanBoard, cleanColors, cleanName, cleanPasskey, cleanRules, editSetup, isGameId, newPasskey, ruleDefaults, withEngine } from "./core.js";
 
 export async function adminApi(what, body, { env, lobby, settings, json, fail }) {
   if (what === "check") return json({ ok: true });
@@ -52,6 +52,13 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     const setup = withEngine(old, body.engine);
     await env.ROOM.get(env.ROOM.idFromName(body.id)).setEngine(setup.engine || "beginner");
     return json(await lobby.updateSetup(body.id, setup));
+  }
+  if (what === "passkey" && body && isGameId(body.id)) {     // a room's passkey: four digits, none = a new one
+    if (!(await lobby.setupOf(body.id))) return fail("no such game", 404);
+    const given = body.passkey === undefined || body.passkey === "" ? newPasskey() : cleanPasskey(body.passkey);
+    if (!given) return fail("passkey: four digits");
+    await lobby.setPasskey(body.id, given);
+    return json(await lobby.allGames());
   }
   if (what === "place" && body && isGameId(body.id)) {       // put the pieces somewhere (a test aid); no text: just show them
     const room = env.ROOM.get(env.ROOM.idFromName(body.id));

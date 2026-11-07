@@ -117,7 +117,10 @@ A player is **stuck** when no piece is "alive" (none can move; hunters do not co
   Kept dice play like a normal pair (a pair earns its bonus). On the second try of a stuck player,
   with no 6 and no pair (nothing to keep could move), the dice show crossed out and the turn passes
   by itself (owner's request); the app holds the burnt dice (`Game.noMove`, `App.hold`) before
-  the next player's throw.
+  the next player's throw. From v3.2.14 (owner; rooms with `setup.autoRetry`, Config `auto_retry`): a first
+  try with no 6 and no pair where nothing can move throws the second try by itself (log "No 6 and no
+  pair: second try."; `noMove.retry` shows the first dice crossed out for a moment). Older rooms
+  replay without it.
 * **Gift six:** after `GIFT_SIX_TURNS` = 4 stuck turns without a 6, a single 6 is given; bring a
   piece in, then the turn passes (owner's change in v2.1: counted per turn, it was 6 throws). The
   first try of a turn counts it; the second try only resets it on a 6. Every 6 resets the counter.
@@ -684,6 +687,13 @@ earlier sketch (browser dice, PINs).
   `supermensch-device`) takes its seats back after a break (`claimSeats` in `server/core.js`;
   owner's rule for now, password login and moving a game to another device come in M3). A held
   name stays clickable in the room list ("playing"); the server decides (owner, 2026-11-02).
+  **Room passkey** (owner, 2026-11-07; v3.2.14): four digits per room (Lobby `games.passkey`, random
+  at creation, kept by "Play again", shown and set in the admin page, `POST /api/admin/passkey`). The
+  first page asks for it under the picked room and keeps it per room in localStorage
+  `supermensch-keys`; `hello` with seats and the color pick send it, `GameRoom.passkeyOk` checks it
+  (wrong: close 4002 or error "passkey"; 5 wrong in 5 minutes: "passkey wait", `PasskeyGate` in
+  `server/core.js`). Looking and reading the moves need no passkey. The player list of open rooms
+  (`GET /api/games`) never carries it.
 * Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
   M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
   as computer players on this device; server events are played one by one in `tick` → `nextEvent`) · M3 seats on one device, reconnect · M4 scores and history pages ·
