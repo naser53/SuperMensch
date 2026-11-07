@@ -190,6 +190,8 @@ class App {
           `${esc(p.name)}${held ? ` <span class="muted small">(${this.T("in_play")})</span>` : ""}</button>`;
       });
       h += "</div>";
+      // the room's passkey: four digits from the grown-up who made the room
+      if (this.pick.id === r.id) h += `<div class="passkey-row"><label>${this.T("passkey")} <input id="pk" class="passkey" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="${esc(this.pick.passkey || "")}"></label></div>`;
       if (r.colorsOpen && this.pick.id === r.id) for (const i of this.pick.seats) h += this.roomColorsHtml(r, i);
       h += "</div>";
     }
@@ -233,14 +235,16 @@ class App {
   async pickRoomColor(id, i, c) {
     const r = Array.isArray(this.rooms) && this.rooms.find(x => x.id === id), p = r && r.players[i];
     if (!p || p.colors.includes(c)) return;
+    if (!/^\d{4}$/.test(this.pick.passkey || "")) { this.showToast(this.T("passkey_need"), true); return; }
     const colors = r.mode === "two" ? [p.colors[p.colors.length - 1], c] : [c];   // the newest two
     try {
       const res = await fetch(`${apiBase()}/api/games/${encodeURIComponent(id)}/colors`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seat: i, colors }) });
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seat: i, colors, passkey: this.pick.passkey }) });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
         const why = String(e.error || "");
-        this.showToast(this.T(why.includes("taken") ? "color_taken" : why.includes("started") ? "colors_fixed" : "rooms_error"));
+        this.showToast(this.T(why === "passkey wait" ? "passkey_wait" : why === "passkey" ? "passkey_wrong" : why.includes("taken") ? "color_taken" : why.includes("started") ? "colors_fixed" : "rooms_error"));
+        if (why === "passkey") { this.pick.passkey = ""; keepPasskey(id, ""); }
       }
     } catch { this.showToast(this.T("rooms_error")); }
     this.loadRooms();
@@ -250,14 +254,20 @@ class App {
     if (act === "rooms_reload") { this.rooms = null; this.render(); this.loadRooms(); return; }
     if (act === "who") {
       const [id, i] = [val.split(":")[0], +val.split(":")[1]];
-      if (this.pick.id !== id) this.pick = { id, seats: [] };
+      if (this.pick.id !== id) this.pick = { id, seats: [], passkey: passkeyOf(id) };
       const k = this.pick.seats.indexOf(i);
       if (k >= 0) this.pick.seats.splice(k, 1); else this.pick.seats.push(i);
       this.render();
       return;
     }
     if (act === "room_color") { const [id, i, c] = String(val).split(":"); this.pickRoomColor(id, +i, +c); return; }
-    if (act === "join") { if (this.pick.seats.length) this.startOnline(this.pick.id, [...this.pick.seats].sort()); return; }
+    if (act === "join") {
+      if (!this.pick.seats.length) return;
+      if (!/^\d{4}$/.test(this.pick.passkey || "")) { this.showToast(this.T("passkey_need"), true); return; }
+      keepPasskey(this.pick.id, this.pick.passkey);
+      this.startOnline(this.pick.id, [...this.pick.seats].sort());
+      return;
+    }
   }
 
   // ------------------------------------------------------------ ribbon
@@ -821,7 +831,7 @@ class App {
     this.throwBanners(logFrom);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
-    if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
+    if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && (g.pending.player !== g.noMove.player || g.noMove.retry)) {
       this.hold = { ...g.noMove, until: performance.now() + 4000 };   // shortened to 1 s once the dice settle (tick)
       setTimeout(() => this.render(), 4020);
     }
@@ -1048,6 +1058,14 @@ class App {
     ws.onmessage = e => this.onServer(JSON.parse(e.data));
     ws.onclose = e => {
       if (o.ws !== ws) return;
+      if (e.code === 4002) {                                     // a wrong passkey (or too many): back to the rooms
+        o.ws = null;
+        const wait = e.reason === "passkey wait";
+        if (!wait) keepPasskey(o.id, "");
+        this.showToast(this.T(wait ? "passkey_wait" : "passkey_wrong"), true);
+        setTimeout(() => { location.href = location.pathname; }, 3000);
+        return;
+      }
       if (e.code === 4000 || e.code === 4001) {                  // the admin deleted the room or changed its players
         o.ws = null;
         this.showToast(this.T(e.code === 4000 ? "online_deleted" : "online_changed"), true);
@@ -1063,7 +1081,7 @@ class App {
   hello() {
     const o = this.online;
     o.ws.send(JSON.stringify({ t: "hello", device: navigator.userAgent.includes("Mobile") ? "phone" : "computer",
-      token: deviceToken(), seats: o.seats, debug: !!this.rp }));
+      token: deviceToken(), seats: o.seats, debug: !!this.rp, passkey: passkeyOf(o.id) }));
   }
 
   onServer(m) {
@@ -1078,6 +1096,7 @@ class App {
       return;
     }
     if (m.t === "again") {                  // the next game of this room: go there with the same seats
+      keepPasskey(m.id, passkeyOf(o.id));     // it keeps the room's passkey
       location.href = `${location.pathname}?game=${encodeURIComponent(m.id)}&seats=${o.seats.join(",")}`;
       return;
     }
@@ -1459,6 +1478,9 @@ function wire(app) {
     else if (act === "info_close") app.showInfo(false);
     else if (act === "copy_log") app.copyLog();
   });
+  document.addEventListener("input", e => {
+    if (e.target.id === "pk") { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); app.pick.passkey = e.target.value; }
+  });
   document.addEventListener("change", e => {
     const act = e.target.dataset.act;
     if (act === "lang") app.setLang(e.target.value);
@@ -1527,6 +1549,18 @@ function apiBase() {
 // the admin key, kept by the admin page (/admin, same origin) in this browser; null for everyone else
 function adminKey() {
   try { return localStorage.getItem("adminKey") || null; } catch { return null; }
+}
+
+// the passkeys this browser has typed, per room (owner, 2026-11-07): typed once, kept
+function passkeyOf(id) {
+  try { return (JSON.parse(localStorage.getItem("supermensch-keys") || "{}"))[id] || ""; } catch { return ""; }
+}
+function keepPasskey(id, key) {
+  try {
+    const all = JSON.parse(localStorage.getItem("supermensch-keys") || "{}");
+    if (key) all[id] = key; else delete all[id];
+    localStorage.setItem("supermensch-keys", JSON.stringify(all));
+  } catch { /* private mode: typed again next time */ }
 }
 
 // a random id for this browser, kept between visits (online seats come back to it)

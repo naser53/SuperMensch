@@ -97,3 +97,18 @@ test("dice set with the debug command become events", () => {
   const r = Table.replay(su, t.events);
   assert.equal(fingerprint(r.game), fingerprint(t.game));
 });
+
+test("auto second try: a stuck first try with no 6 and no pair throws again by itself (setup.autoRetry)", () => {
+  const firstTry = (su, dice) => {
+    const t = new Table(su, { autoDice: false });
+    t.apply({ dice });
+    return t.game;
+  };
+  const su = { ...setup("two", 2, 4), autoRetry: true };
+  let g = firstTry(su, [1, 2, 4]);
+  assert.equal(g.pending.kind, "dice");                                // the second try is thrown at once
+  assert.ok(g.log.some(m => m.key === "log_autoretry"));
+  for (const dice of [[6, 2, 4], [2, 2, 4]]) assert.equal(firstTry(su, dice).pending.kind, "keep");   // a 6 or a pair: the player chooses
+  g = firstTry(setup("two", 2, 4), [1, 2, 4]);                         // rooms made before: as they were
+  assert.equal(g.pending.kind, "keep");
+});

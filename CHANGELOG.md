@@ -4,6 +4,12 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.14 (2026-11-07)
+
+* Room passkey (owner): every room has four digits that a player types on the first page to play in it (the room's own passkey, set at random when the room is made; "Play again" keeps it). The admin page shows each room's passkey and sets another (empty: a new one at random; `POST /api/admin/passkey {id, passkey?}`). The server checks it before a device gets seats (`hello`; a wrong one closes the connection with 4002) and before a color pick. After 5 wrong passkeys a room takes none for 5 minutes (`PasskeyGate`). The browser keeps a typed passkey per room (localStorage `supermensch-keys`). Watching and reading a game (`GET /api/games/<ID>`) need none. Rooms made before get a passkey when the admin page lists them.
+* Stuck help (owner): a stuck first try with no 6 and no pair, where no two dice can move anything, throws the second try by itself; the first dice show crossed out for a moment. With a 6 or a pair the player chooses as before. Only in rooms made from this version on (`setup.autoRetry`, Config `auto_retry`), so older games still replay.
+* Admin, new room: the computer's level follows the dice level when that changes (it can still be set apart).
+
 ## v3.2.13 (2026-11-07)
 
 * Computer levels per room (owner): beginner, intermediate and hard (`ENGINE_LEVELS`, `engineFor` in `js/ai.js`), chosen when the admin makes a room and changed for each room in the admin page's room list (`POST /api/admin/engine {id, engine}`; `setup.engine`, left out for beginner, so older rooms play as before). A change counts from the computer's next move; "Play again" keeps the level. Labels in English, Farsi and German.

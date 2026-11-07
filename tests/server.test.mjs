@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
 import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
@@ -80,6 +80,10 @@ test("the computer's level of a room: beginner by default, kept on edits, change
   const hard = checkSetup({ ...base, engine: "hard" }, users);
   assert.equal(hard.engine, "hard");
   assert.equal(editSetup(hard, [{ ai: true }, { user: 2 }], users).setup.engine, "hard");
+  assert.equal(hard.autoRetry, true);                                          // new rooms: auto second try
+  const { autoRetry: _, ...old } = hard;
+  assert.equal(editSetup(old, [{ ai: true }, { user: 2 }], users).setup.autoRetry, undefined);   // kept moves: as they were
+  assert.equal(editSetup(old, [{ ai: true }, { user: 2 }, { user: 3 }], users).setup.autoRetry, true);
   assert.equal(withEngine(hard, "beginner").engine, undefined);
   assert.equal(withEngine(hard, "intermediate").engine, "intermediate");
   const room = new Room(hard, [], mulberry32(5));
@@ -89,6 +93,18 @@ test("the computer's level of a room: beginner by default, kept on edits, change
   assert.equal(room.ais[0].w, ENGINE_LEVELS.intermediate);
   assert.equal(room.events.length, n);                                           // the game goes on as it is
   assert.equal(new Room(base.engine ? base : checkSetup(base, users), []).ais[0].w, ENGINE_LEVELS.beginner);
+});
+
+test("room passkeys: four digits; after a few wrong ones the room waits", () => {
+  for (let k = 0; k < 50; k++) assert.match(newPasskey(), /^\d{4}$/);
+  assert.equal(newPasskey(() => 0.0042), "0042");
+  assert.equal(cleanPasskey(" 0815 "), "0815");
+  for (const bad of ["815", "08151", "ab12", null, undefined]) assert.equal(cleanPasskey(bad), null);
+  const gate = new PasskeyGate();
+  assert.equal(gate.check("1234", "1234", 0), "ok");
+  for (let k = 0; k < PASSKEY_TRIES; k++) assert.equal(gate.check("0000", "1234", 1000), "wrong");
+  assert.equal(gate.check("1234", "1234", 2000), "wait");                     // even the right one, for a while
+  assert.equal(gate.check("1234", "1234", 1000 + PASSKEY_WAIT_MS), "ok");
 });
 
 test("setup check: names from the users, colors and seats checked", () => {

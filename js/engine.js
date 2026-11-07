@@ -1091,6 +1091,15 @@ export class Game {
       this._afterPlay();
       return;
     }
+    // AUTO_RETRY (owner, 2026-11-07): a first try with no 6, no pair and nothing to keep that can
+    // move goes on to the second try by itself; with a 6 or a pair the player chooses
+    if (this._attempt === 1 && this.cfg.auto_retry && !hit && !dice.includes(6) && new Set(dice).size === 3
+        && opts.every(o => !this.playsFor(p, o.payload[1]).length)) {
+      this.log.push(M("log_autoretry"));
+      this.noMove = { player: p, dice: dice.slice(), retry: true };   // the app shows these dice burnt, then the second try
+      this._stuckThrow();
+      return;
+    }
     if (this._attempt === 1) opts.push(new Option(M("retry"), "retry"));
     if (hit) opts = [new Option(M("retry"), "retry"), new Option(M("take_gift"), "gift")];
     this.pending = new Decision("keep", p, opts, dice, M("note_keep"));

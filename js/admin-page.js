@@ -194,6 +194,8 @@ function seatRows() {
 for (const id of ["#gColors", "#gMode", "#gN"]) $(id).onchange = seatRows;
 const corrShown = () => { $("#gCorr").disabled = $("#gColors").value === "4"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
 $("#gColors").addEventListener("change", corrShown);
+// the computer's level follows the dice level (owner, 2026-11-07); it can still be set apart
+$("#gLevel").addEventListener("change", () => { $("#gEngine").value = { difficult: "hard" }[$("#gLevel").value] || $("#gLevel").value; });
 
 $("#createBtn").onclick = async () => {
   const colors = +$("#gColors").value, mode = $("#gMode").value, half = colors / 2;
@@ -231,9 +233,15 @@ async function loadRooms(list) {
   $("#rooms").innerHTML = (gs.length ? gs.map(g => `<div class="row"><b>${esc(g.name)}</b>
     <code>${g.id}</code> <span class="muted">${g.setup.corridor ? E("n_fields", { n: N(g.setup.corridor) }) + " · " : ""}${state(g)} · ${esc(dateText(g.updated))}</span>
     ${engineSel(g)}
+    <span title="${E("passkey_tip")}">${E("passkey_lbl")} <input data-pk="${g.id}" value="${esc(g.passkey || "")}" size="4" maxlength="4" inputmode="numeric"> <button data-pks="${g.id}">${E("passkey_save")}</button></span>
     <button data-edit="${g.id}">${E("edit_players")}</button> <button data-dbg="${g.id}">${E("debug")}</button> <button data-del="${g.id}">${E("delete")}</button></div>
     <div id="edit-${g.id}"></div>`).join("") : `<div class="muted">${E("no_rooms")}</div>`) + `<div id="delMsg"></div>`;
   document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editRoom(gs.find(g => g.id === b.dataset.edit)));
+  document.querySelectorAll("[data-pks]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.pks;
+    try { await loadRooms(await api("admin/passkey", { id, passkey: document.querySelector(`[data-pk="${id}"]`).value.trim() })); show("#delMsg", T("saved_dot")); }
+    catch (e) { show("#delMsg", e.message, true); }
+  });
   document.querySelectorAll("[data-eng]").forEach(s => s.onchange = async () => {
     try { await loadRooms(await api("admin/engine", { id: s.dataset.eng, engine: s.value })); show("#delMsg", T("saved_dot")); }
     catch (e) { show("#delMsg", e.message, true); }
