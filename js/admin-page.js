@@ -194,6 +194,8 @@ function seatRows() {
 for (const id of ["#gColors", "#gMode", "#gN"]) $(id).onchange = seatRows;
 const corrShown = () => { $("#gCorr").disabled = $("#gColors").value === "4"; if ($("#gCorr").disabled) $("#gCorr").value = "10"; };
 $("#gColors").addEventListener("change", corrShown);
+// the computer's level follows the dice level (owner, 2026-11-07); it can still be set apart
+$("#gLevel").addEventListener("change", () => { $("#gEngine").value = { difficult: "hard" }[$("#gLevel").value] || $("#gLevel").value; });
 
 $("#createBtn").onclick = async () => {
   const colors = +$("#gColors").value, mode = $("#gMode").value, half = colors / 2;

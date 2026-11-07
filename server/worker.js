@@ -549,6 +549,7 @@ export class GameRoom extends DurableObject {
       const name = nextName(this._meta("name")), setup = JSON.parse(JSON.stringify(room.setup));
       const rules = rulesFor(await lobby.rules(), setup.colors);    // the next game: the admin's rules of now
       if (rules) setup.rules = rules; else delete setup.rules;
+      if (setup.mode === "two") setup.autoRetry = true;            // a new game: today's stuck help
       next = await lobby.addGame(name, setup);
       await this.env.ROOM.get(this.env.ROOM.idFromName(next)).init(next, name, setup);
       this.sql.exec(`INSERT OR REPLACE INTO meta (k, v) VALUES ('next', ?)`, JSON.stringify(next));

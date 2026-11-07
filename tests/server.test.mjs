@@ -80,6 +80,10 @@ test("the computer's level of a room: beginner by default, kept on edits, change
   const hard = checkSetup({ ...base, engine: "hard" }, users);
   assert.equal(hard.engine, "hard");
   assert.equal(editSetup(hard, [{ ai: true }, { user: 2 }], users).setup.engine, "hard");
+  assert.equal(hard.autoRetry, true);                                          // new rooms: auto second try
+  const { autoRetry: _, ...old } = hard;
+  assert.equal(editSetup(old, [{ ai: true }, { user: 2 }], users).setup.autoRetry, undefined);   // kept moves: as they were
+  assert.equal(editSetup(old, [{ ai: true }, { user: 2 }, { user: 3 }], users).setup.autoRetry, true);
   assert.equal(withEngine(hard, "beginner").engine, undefined);
   assert.equal(withEngine(hard, "intermediate").engine, "intermediate");
   const room = new Room(hard, [], mulberry32(5));

@@ -821,7 +821,7 @@ class App {
     this.throwBanners(logFrom);
     // a throw with no move followed at once by the next player's throw (a stuck player throws
     // straight away): show the burnt dice first, then the next throw
-    if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && g.pending.player !== g.noMove.player) {
+    if (g.noMove && g.pending && g.pending.dice && g.pending.dice.length && (g.pending.player !== g.noMove.player || g.noMove.retry)) {
       this.hold = { ...g.noMove, until: performance.now() + 4000 };   // shortened to 1 s once the dice settle (tick)
       setTimeout(() => this.render(), 4020);
     }

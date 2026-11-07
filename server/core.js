@@ -133,7 +133,9 @@ export function editSetup(old, seats, users) {
   const setup = checkSetup({ mode: old.mode, colors: old.colors, level: old.level, corridor: old.corridor, engine: old.engine,
     seats: (seats || []).map((s, i) => ({ ...(s.ai ? { ai: true } : { user: s.user }), colors: seatColors(old.mode, old.colors, i) })) }, users);
   if (old.rules) setup.rules = old.rules;          // the room keeps the rules it was made with
-  return { setup, keep: setup.players.length === old.players.length };
+  const keep = setup.players.length === old.players.length;
+  if (keep && !old.autoRetry) delete setup.autoRetry;   // its moves were made without it
+  return { setup, keep };
 }
 
 // A child picks the colors of a seat on the first page, until the first move of a person
@@ -206,7 +208,8 @@ export function checkSetup(su, users) {
     return { name: u.name, colors: cols, isAi: false, user: u.id };
   });
   if (!players.some(p => !p.isAi)) throw new Error("no human player");
-  return withEngine({ players, mode, colors, level, ...(corridor !== 10 ? { corridor } : {}) }, su.engine);
+  // autoRetry: rooms made from v3.2.14 on pass a useless stuck first try by themselves (Config auto_retry)
+  return withEngine({ players, mode, colors, level, ...(corridor !== 10 ? { corridor } : {}), ...(mode === "two" ? { autoRetry: true } : {}) }, su.engine);
 }
 
 // The computer's level of a room (owner, 2026-11-07): beginner, intermediate or hard

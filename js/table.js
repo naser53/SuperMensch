@@ -20,7 +20,8 @@ export class Table {
   constructor(setup, { seed = null, autoDice = true, rng = null } = {}) {
     this.setup = setup;
     const players = setup.players.map(p => Player(p.name, p.colors, !!p.isAi));
-    this.game = new Game(players, setup.mode, Config.forBoard(setup.colors, setup.level || "beginner", setup.mode, setup.corridor || 10, setup.rules), seed, true);
+    this.game = new Game(players, setup.mode, Config.forBoard(setup.colors, setup.level || "beginner", setup.mode, setup.corridor || 10,
+      setup.autoRetry ? { ...(setup.rules || {}), auto_retry: true } : setup.rules), seed, true);
     if (rng) this.game.rng = rng;
     this.events = [];
     this.autoDice = autoDice;
