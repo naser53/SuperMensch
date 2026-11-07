@@ -1097,6 +1097,7 @@ export class Board3D {
   animateSteps(entries, hop = 140) {
     const now = performance.now();
     let t = Math.max(now, this.animEnd || 0);
+    this.stepEnds = [];                        // when each step has landed (its captures too), for its effects
     for (const { before, after, step } of entries) {
       const m = step.mover[0] === "hn" ? ["h", step.mover[1]] : step.mover;
       const grp = this.meshOf(m), pts = this.moverPath(before, after, step.mover);
@@ -1124,6 +1125,7 @@ export class Board3D {
       }
       this.queueLook(step.mover, before, after, t);          // the new rank shows after the move and the capture
       this.buildFx(before, after, step.mover, t);            // a new wall or castle: its sign above it
+      this.stepEnds.push(t);
     }
     this.animEnd = t + 60;
     return this.animEnd;
