@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.26 (2026-11-09)
+
+* Head size (owner): the head now starts at 75% (was 55%) and grows to 100% at general and at marshal; both sizes are set on the admin page's Layout tab in percent (start 30 to 150, full 50 to 250, so the head may grow bigger than usual; settings key `headsize`, defaults `Look.HEAD_SIZE`). A ring in the pawn's points ring color (the Points ring and bar colors) climbs the head ball from its foot as the points grow, never above 75% of its height (`Look.HEAD_SIZE.RING_TOP`); none on a marshal.
+
 ## v3.2.25 (2026-11-09)
 
 * Head size (owner): a new points look in place of Head color (v3.2.23), which is gone, with its head colors on the admin page. The body stays as it is; the head starts small (55%, `Look.HEAD_SIZE`) and grows with every point to full size at general, then from small again to marshal. A marshal's orb over the star glows brighter and bigger with the points past marshal (`Look.HEAD_GLOW`). Display only.

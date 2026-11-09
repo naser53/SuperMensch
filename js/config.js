@@ -152,6 +152,7 @@ export class Config {
   static BOARD_COLORS = Look.BOARD_COLORS;
   static RING_COLORS = Look.RING_COLORS;
   static STACK_OPACITY = Look.STACK_OPACITY;
+  static HEAD_SIZE = Look.HEAD_SIZE;
   static SERVER_URL = Look.SERVER_URL;
   static VOICE = Look.VOICE;
 

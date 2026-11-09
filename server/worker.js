@@ -21,6 +21,13 @@ const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers
 const POINTS_LOOKS = ["ring", "bar", "stack", "headsize"];
 // the stacked rings' opacity: a whole percent from 20 to 100, else null (the default)
 const cleanOpacity = p => (Number.isInteger(p) && p >= 20 && p <= 100 ? p : null);
+// the head sizes of the points look "headsize" in percent: [start 30..150, at general/marshal 50..250],
+// each null for the default (Look.HEAD_SIZE)
+const cleanHeadSize = v => {
+  const a = Array.isArray(v) ? v : [];
+  const ok = (p, lo, hi) => (Number.isInteger(p) && p >= lo && p <= hi ? p : null);
+  return [ok(a[0], 30, 150), ok(a[1], 50, 250)];
+};
 const pointsLook = w => POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
 const VOICE_KEYS = ["sessions", "voice"];
 const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
@@ -45,10 +52,11 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(), headsize: await lobby.headsize(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
-    opacityDefault: Math.round(Config.STACK_OPACITY * 100) });
+    opacityDefault: Math.round(Config.STACK_OPACITY * 100),
+    headsizeDefault: [Math.round(Config.HEAD_SIZE.MIN * 100), Math.round(Config.HEAD_SIZE.MAX * 100)] });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
@@ -191,6 +199,17 @@ export class Lobby extends DurableObject {
   opacity() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'opacity'`).toArray();
     return r.length ? cleanOpacity(JSON.parse(r[0].v)) : null;
+  }
+
+  // the head sizes of the points look "headsize" in percent, [start, full] (owner, 2026-11-09)
+  headsize() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'headsize'`).toArray();
+    return cleanHeadSize(r.length ? JSON.parse(r[0].v) : null);
+  }
+
+  setHeadsize(v) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('headsize', ?)`, JSON.stringify(cleanHeadSize(v)));
+    return this.headsize();
   }
 
   setOpacity(p) {
