@@ -150,6 +150,7 @@ export class Config {
   static SOUND_VOLUME = Look.SOUND_VOLUME;
   static PIECE_COLORS = Look.PIECE_COLORS;
   static BOARD_COLORS = Look.BOARD_COLORS;
+  static RING_COLORS = Look.RING_COLORS;
   static SERVER_URL = Look.SERVER_URL;
   static VOICE = Look.VOICE;
 

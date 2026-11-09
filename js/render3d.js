@@ -24,8 +24,8 @@ export const BOARD = [null, null];
 
 // The admin's piece colors (from the server): [hex or null] per color, null = the default. The nest
 // fields of a changed color get a pale tint of it. board: [surface, edge] (hex or null). Takes effect
-// on the next board that is built.
-export function setColors(list, board) {
+// on the next board that is built. rings: the points ring and bar per color (hex or null).
+export function setColors(list, board, rings) {
   const hex = c => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : null);
   for (let i = 0; i < BOARD.length; i++) BOARD[i] = hex(Array.isArray(board) ? board[i] : null);
   const mix = (hex, k) => "#" + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k)
@@ -35,6 +35,7 @@ export function setColors(list, board) {
     COLORS[i] = c || Look.PIECE_COLORS[i];
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
+  for (let i = 0; i < BAR_COLORS.length; i++) BAR_COLORS[i] = hex(Array.isArray(rings) ? rings[i] : null) || Look.RING_COLORS[i];
 }
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
@@ -53,9 +54,8 @@ const GATE_SCALE = 1.12;
 // rank colors and the pawn's progress line (from its foot almost to its head)
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
-// per pawn color (COLORS): light turquoise on red, yellow on blue, light pink on green, navy on
-// yellow, yellow on purple, coral on teal, light green on pink, light sky blue on black
-const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"];
+// the points ring and bar per pawn color (Look.RING_COLORS, or the admin's; setColors)
+const BAR_COLORS = Look.RING_COLORS.slice();
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;

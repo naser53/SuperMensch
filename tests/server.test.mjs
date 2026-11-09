@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
+import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanRings, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
 import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
@@ -65,6 +65,9 @@ test("the admin's piece colors: a hex or the default (null) per color", () => {
   // the board's own colors: surface and edge
   assert.deepEqual(cleanBoard(["#112233", Config.BOARD_COLORS[1]]), ["#112233", null]);
   assert.throws(() => cleanBoard(["#112233"]));
+  // the points ring and bar per pawn color: one per piece color, a default stored as null
+  assert.deepEqual(cleanRings([...Config.RING_COLORS.slice(0, 7), "#ABCDEF"]), [null, null, null, null, null, null, null, "#abcdef"]);
+  assert.throws(() => cleanRings(["#112233"]));
 });
 
 test("names are trimmed and limited", () => {

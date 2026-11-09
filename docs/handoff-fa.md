@@ -583,6 +583,8 @@ npm run build       # server/public/index.html (صفحه‌ی بازی سرور)
   اعمال می‌کند؛ صفحه‌ای که الان کشیده شده تا بازی بعد همان رنگ‌ها را نگه می‌دارد. زرد پیش‌فرض ۱۵٪ تیره‌تر است (`#cea70d`).
   رنگ خود صفحه هم (رو و لبه، `Config.BOARD_COLORS`، `cleanBoard`، کلید `board` در تنظیمات؛ صفحه‌ی ۴ رنگ
   تا وقتی این‌ها پیش‌فرض‌اند همان کرم و قرمز خودش را دارد).
+  رنگ حلقه و میله‌ی امتیاز مهره برای هر رنگ هم (صاحب پروژه، ۲۰۲۶-۱۱-۰۹: `Look.RING_COLORS` = `Config.RING_COLORS`،
+  `cleanRings`، کلید `rings` در تنظیمات، پیش‌فرض‌ها با نام `ringDefaults`).
   بازی سرور را با `apiBase()` پیدا می‌کند: روی workers.dev همان میزبان، وگرنه `Config.SERVER_URL`
   (API هدرهای CORS دارد تا فایل دانلودی هم به آن برسد).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (کاربران، بازی‌ها، نتیجه‌ها) و برای هر

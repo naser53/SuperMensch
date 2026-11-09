@@ -76,6 +76,8 @@ export function cleanColors(list, defaults = Config.PIECE_COLORS) {
 
 // the board's own colors, [surface, edge], checked the same way (defaults Config.BOARD_COLORS)
 export const cleanBoard = list => cleanColors(list, Config.BOARD_COLORS);
+// the points ring and bar per pawn color, checked the same way (defaults Config.RING_COLORS)
+export const cleanRings = list => cleanColors(list, Config.RING_COLORS);
 
 // The admin's game rules for the whole server (owner, 2026-11-06), as stored:
 //   { all: { key: value }, 6: { ... }, 8: { ... }, 4: { ... } }

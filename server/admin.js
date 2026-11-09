@@ -3,7 +3,7 @@
 // Returns a Response, or null when <what> is not an admin route (the worker answers 404).
 
 import { Config } from "../js/config.js";
-import { cleanBoard, cleanColors, cleanName, cleanPasskey, cleanRules, editSetup, isGameId, newPasskey, ruleDefaults, withEngine } from "./core.js";
+import { cleanBoard, cleanRings, cleanColors, cleanName, cleanPasskey, cleanRules, editSetup, isGameId, newPasskey, ruleDefaults, withEngine } from "./core.js";
 
 export async function adminApi(what, body, { env, lobby, settings, json, fail }) {
   if (what === "check") return json({ ok: true });
@@ -24,6 +24,7 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     const colors = cleanColors(body.colors), board = body.board === undefined ? null : cleanBoard(body.board);
     await lobby.setColors(colors);
     if (board) await lobby.setBoard(board);
+    if (body.rings !== undefined) await lobby.setRings(cleanRings(body.rings));
     return json(await settings());
   }
   if (what === "points" && body) {          // how a pawn shows its own points: "bar", "ring" or "stack"

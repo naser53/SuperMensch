@@ -43,9 +43,9 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), hunter: await lobby.hunter(), points: await lobby.points(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
-    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS });
+    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
@@ -151,6 +151,18 @@ export class Lobby extends DurableObject {
   setColors(colors) {
     this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('colors', ?)`, JSON.stringify(colors));
     return this.colors();
+  }
+
+  // the points ring and bar per pawn color (cleanRings): hex or null per color
+  rings() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'rings'`).toArray();
+    const v = r.length ? JSON.parse(r[0].v) : [];
+    return Config.RING_COLORS.map((_, i) => v[i] || null);
+  }
+
+  setRings(rings) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('rings', ?)`, JSON.stringify(rings));
+    return this.rings();
   }
 
   // the board's own colors (cleanBoard): [surface, edge], hex or null
