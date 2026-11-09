@@ -39,6 +39,12 @@
   code { background: #eee; padding: 0 4px; border-radius: 4px; }
   .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 6px 12px; }
   .colors label { display: flex; align-items: center; gap: 6px; }
+  /* the piece colors and their ring colors side by side, one row per color (owner, 2026-11-09) */
+  .pair { display: grid; grid-template-columns: max-content max-content; gap: 0 40px; }
+  @media (max-width: 700px) { .pair { gap: 0 14px; } .pair .colors label { gap: 4px; } }
+  .pair h4 { margin: 0 0 6px; font-size: 14px; }
+  .colors.one { grid-template-columns: 1fr; }
+  .pair > div + div .nm { display: none; }   /* the ring column: the row tells the color */
   .colors input[type=color] { flex: none; }
   .colors input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
   .rules { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 560px; }
@@ -118,10 +124,10 @@
     <div class="tab" data-tab="look" hidden>
       <section>
         <h2 data-t="colors_h">Colors</h2>
-        <div class="grp"><div class="gh"><h3 data-t="pieces">Pieces</h3><div class="muted" data-t="colors_about">For every game on this server.</div></div>
-          <div class="gb"><div id="colors" class="colors"></div></div></div>
-        <div class="grp"><div class="gh"><h3 data-t="rings">Points ring and bar</h3><div class="muted" data-t="rings_note">(on a pawn of each color)</div></div>
-          <div class="gb"><div id="ringColors" class="colors"></div></div></div>
+        <div class="grp"><div class="gh"><h3 data-t="pieces_rings">Pieces and ring</h3><div class="muted" data-t="colors_about">For every game on this server.</div></div>
+          <div class="gb"><div class="pair">
+            <div><h4 data-t="pieces">Pieces</h4><div id="colors" class="colors one"></div></div>
+            <div><h4 data-t="rings">Ring</h4><div id="ringColors" class="colors one"></div></div></div></div></div>
         <div class="grp"><div class="gh"><h3 data-t="board">Board</h3><div class="muted" data-t="board_note">(the 4-color board keeps its cream and red while these are at default)</div></div>
           <div class="gb"><div id="boardColors" class="colors"></div></div></div>
         <div class="row foot"><button class="primary" id="colorsBtn" data-t="save_colors">Save colors</button> <button id="colorsReset" data-t="all_default">All to default</button>

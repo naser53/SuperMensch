@@ -106,7 +106,7 @@ $("#voiceOn").onchange = async () => {
 const BOARD_NAMES = ["surface", "edge"];
 // one color picker with a Default button; kind "col" (pieces), "rng" (points ring and bar) or "brd" (board)
 const picker = (kind, i, name, value, def) => `<label><input type="color" data-${kind}="${i}" data-def="${def}" value="${value || def}">
-    ${esc(name)} <button data-todef title="${E("back_to", { c: def })}">${E("default")}</button></label>`;
+    <span class="nm">${esc(name)}</span> <button data-todef title="${E("back_to", { c: def })}">${E("default")}</button></label>`;
 async function loadColors(d) {
   d = d || await api("settings");
   showHunter(d);
