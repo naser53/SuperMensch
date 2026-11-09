@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.24 (2026-11-09)
+
+* Debug: give a pawn rank points (owner). A line `R2 p85` in a room's Debug box gives red 2 85 rank points where it stands, to test the general and marshal looks. Stored with the place event (`points`).
+
 ## v3.2.23 (2026-11-09)
 
 * Head color (owner): a fourth points look on the admin page, next to Bar, Ring and Stacked rings. Instead of rings on the body, the pawn's head turns little by little from its own color to a head color as it wins points; at general it starts again from its own color up to marshal. A marshal's orb over the star glows brighter and bigger with every point past marshal (`Look.HEAD_GLOW`, at its brightest one general-to-marshal span later). The head color of each pawn color is set in the Look tab (settings key `heads`, defaults `Look.HEAD_COLORS`, the same stand-out colors as the rings, none grey or silver); every color may be chosen for now (owner). Display only.

@@ -636,7 +636,8 @@ earlier sketch (browser dice, PINs).
   owner, 2026-11-04): 1..L track as on the board, z1..z4 the color's nest (z1 just inside; L+1.. still
   works), y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
   event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
-  pages load the game again.
+  pages load the game again. `R2 p85` (owner, 2026-11-09) gives red 2 rank points 85 where it stands, to see the general and
+  marshal looks; stored in the same event as `points: [[color, piece, points]]`.
   **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
   (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
   `rewind N` (owner, 2026-11-04; `go drop N` still works) (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the

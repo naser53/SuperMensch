@@ -130,6 +130,7 @@ export const ADMIN_STR = {
   R2 23          red 2 on field 23
   R2z 3          red 2 on nest field 3 (also R2 z3)
   R1 y           red 1 in the yard
+  R2 p85         red 2 gets 85 rank points (general, marshal), stays where it is
   R: 5 z1 y y    all the pieces of a color
   colors R B G Y P T N K · fields 1..L as on the board · z1 just inside the nest, z4 at the back
 <b>Dice turns</b>
@@ -272,6 +273,7 @@ export const ADMIN_STR = {
   R2 23          مهره‌ی ۲ قرمز روی خانه‌ی ۲۳
   R2z 3          مهره‌ی ۲ قرمز روی خانه‌ی ۳ آشیانه (یا R2 z3)
   R1 y           مهره‌ی ۱ قرمز در حیاط
+  R2 p85         مهره‌ی ۲ قرمز ۸۵ امتیاز رتبه می‌گیرد (ژنرال، مارشال) و سر جایش می‌ماند
   R: 5 z1 y y    همه‌ی مهره‌های یک رنگ
   رنگ‌ها R B G Y P T N K · خانه‌ها ۱ تا L مثل روی صفحه · z1 درست داخل آشیانه، z4 ته آن
 <b>نوبت‌های تاس</b>
@@ -455,6 +457,7 @@ export const ADMIN_STR = {
   R2 23          Rot 2 auf Feld 23
   R2z 3          Rot 2 auf Zielfeld 3 (auch R2 z3)
   R1 y           Rot 1 im Hof
+  R2 p85         Rot 2 bekommt 85 Rangpunkte (General, Marschall), bleibt stehen
   R: 5 z1 y y    alle Figuren einer Farbe
   Farben R B G Y P T N K · Felder 1..L wie auf dem Brett · z1 gleich im Ziel, z4 ganz hinten
 <b>Würfelzüge</b>

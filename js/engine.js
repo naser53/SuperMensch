@@ -985,8 +985,9 @@ export class Game {
 
   // Test aid (the admin's "place" in an online room): put every piece where pos says
   // (pos[color][i]: relative field, YARD, 0..L-1 on the track, L.. in the nest) and start the
-  // current turn again. Throws, changing nothing, if pos does not fit the board.
-  place(pos) {
+  // current turn again. points: [[color, piece, rank points], ...] given to pieces (the admin's
+  // "R2 p85"). Throws, changing nothing, if pos or points do not fit the board.
+  place(pos, points = []) {
     const st = this.state, L = this.L;
     if (!Array.isArray(pos) || pos.length !== st.pos.length) throw new Error("one list of fields per color");
     const seen = new Set();
@@ -1000,6 +1001,10 @@ export class Game {
         seen.add(k);
       }
     });
+    if (!Array.isArray(points)) throw new Error("points: a list");
+    for (const p of points)
+      if (!Array.isArray(p) || !(p[0] >= 0 && p[0] < st.pos.length) || !Number.isInteger(p[1]) || !(p[1] >= 0 && p[1] < st.pos[p[0]].length) ||
+          !Number.isInteger(p[2]) || p[2] < 0 || p[2] > 9999) throw new Error("no such piece or points");
     st.pos.forEach((a, col) => a.forEach((r, i) => {
       const n = pos[col][i];
       if (n === r) return;
@@ -1008,6 +1013,7 @@ export class Game {
       st.tmark[col][i] = false;
       st.tunnels = st.tunnels.filter(t => !(t[1] === col && t[2] === i));
     }));
+    for (const [col, i, v] of points) st.kills[col][i] = v;
     this.queuedDice = null;
     this._startTurn();
   }

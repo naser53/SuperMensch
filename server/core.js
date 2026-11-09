@@ -248,13 +248,15 @@ export function withEngine(setup, engine) {
 //   R: 5 y y y        B: z1 z2 z3 z4        R2 23        R2z 3  (or R2 z3)
 // Track fields 1..L as on the board, z1.. the color's own nest (z1 just inside, the last one at the
 // back; L+1.. still works), y (or 0) the yard. A line per piece moves that piece only (R2 = red 2).
+// R2 p85 gives red 2 rank points 85 (its general / marshal look; owner, 2026-11-09): pushed to points
+// as [color, piece, points]; the piece stays where it is.
 const LETTERS = "RBGYPTNK";
 export function placeText(g) {
   const L = g.L;
   return g.state.pos.map((a, col) => `${LETTERS[col]}: ` + a.map(r => (r === -1 ? "y" : r >= L ? "z" + (r - L + 1) : String(g.absOf(col, r) + 1))).join(" ")).join("\n");
 }
 
-export function parsePlace(text, g) {
+export function parsePlace(text, g, points = []) {
   const L = g.L, pos = g.state.pos.map(a => a.slice());
   const field = (col, w) => {
     if (/^y$/i.test(w) || w === "0") return -1;
@@ -275,6 +277,13 @@ export function parsePlace(text, g) {
   };
   for (const line of String(text || "").split(/[\n;]+/)) {
     if (!line.trim()) continue;
+    const pts = /^\s*([a-z])\s*(\d+)\s*:?\s*p\s*(\d+)\s*$/i.exec(line);   // R2 p85
+    if (pts) {
+      const col = colorOf(pts[1], line), i = Number(pts[2]) - 1;
+      if (i < 0 || i >= pos[col].length) throw new Error(`no such piece: ${line.trim()}`);
+      points.push([col, i, Number(pts[3])]);
+      continue;
+    }
     const one = /^\s*([a-z])\s*(\d+)\s*(z?)\s*:?\s*(\S+)\s*$/i.exec(line);   // R2 23 · R2z 3 · R2 z3
     if (one) {
       const col = colorOf(one[1], line), i = Number(one[2]) - 1;
@@ -422,7 +431,8 @@ export class Room {
   // the admin puts the pieces somewhere else (text as in parsePlace); the turn starts again
   place(text) {
     const from = this.events.length;
-    this.table.apply({ place: parsePlace(text, this.table.game) });
+    const points = [], place = parsePlace(text, this.table.game, points);
+    this.table.apply({ place, ...(points.length ? { points } : {}) });
     this._advance();
     return { from, events: this.events.slice(from) };
   }
