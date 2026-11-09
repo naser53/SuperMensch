@@ -104,7 +104,8 @@ $("#voiceOn").onchange = async () => {
 
 // the piece colors of every game (server settings): a color picker each, and a way back to the default
 const BOARD_NAMES = ["surface", "edge"];
-// one color picker with a Default button; kind "col" (pieces), "rng" (points ring and bar) or "brd" (board)
+// one color picker with a Default button; kind "col" (pieces), "rng" (points ring and bar), "hd" (head
+// color of the points look "head") or "brd" (board)
 const picker = (kind, i, name, value, def) => `<label><input type="color" data-${kind}="${i}" data-def="${def}" value="${value || def}">
     ${esc(name)} <button data-todef title="${E("back_to", { c: def })}">${E("default")}</button></label>`;
 async function loadColors(d) {
@@ -114,6 +115,7 @@ async function loadColors(d) {
   showVoice(d);
   $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[lang][i] || T("color_n", { n: N(i + 1) }), d.colors[i], def)).join("");
   $("#ringColors").innerHTML = (d.ringDefaults || []).map((def, i) => picker("rng", i, COLOR_NAMES[lang][i] || T("color_n", { n: N(i + 1) }), (d.rings || [])[i], def)).join("");
+  $("#headColors").innerHTML = (d.headDefaults || []).map((def, i) => picker("hd", i, COLOR_NAMES[lang][i] || T("color_n", { n: N(i + 1) }), (d.heads || [])[i], def)).join("");
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, T(BOARD_NAMES[i]), (d.board || [])[i], def)).join("");
   document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {
     e.preventDefault();
@@ -124,7 +126,8 @@ $("#colorsBtn").onclick = async () => {
   const colors = [...document.querySelectorAll("[data-col]")].map(x => x.value);
   const board = [...document.querySelectorAll("[data-brd]")].map(x => x.value);
   const rings = [...document.querySelectorAll("[data-rng]")].map(x => x.value);
-  try { await loadColors(await api("admin/colors", { colors, board, ...(rings.length ? { rings } : {}) })); show("#colorsMsg", T("colors_saved")); }
+  const heads = [...document.querySelectorAll("[data-hd]")].map(x => x.value);
+  try { await loadColors(await api("admin/colors", { colors, board, ...(rings.length ? { rings } : {}), ...(heads.length ? { heads } : {}) })); show("#colorsMsg", T("colors_saved")); }
   catch (e) { show("#colorsMsg", e.message, true); }
 };
 const showHunter = d => { const x = document.querySelector(`[name=hunter][value=${d.hunter === "sword" ? "sword" : "arrow"}]`); x.checked = true; };
@@ -133,7 +136,7 @@ $("#hunterBtn").onclick = async () => {
   catch (e) { show("#hunterMsg", e.message, true); }
 };
 const showPoints = d => {
-  document.querySelector(`[name=points][value=${["bar", "stack"].includes(d.points) ? d.points : "ring"}]`).checked = true;
+  document.querySelector(`[name=points][value=${["bar", "stack", "head"].includes(d.points) ? d.points : "ring"}]`).checked = true;
   $("#opacity").value = d.opacity || d.opacityDefault || 60;
 };
 $("#pointsBtn").onclick = async () => {
