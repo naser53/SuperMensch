@@ -191,7 +191,7 @@ class App {
       });
       h += "</div>";
       // the room's passkey: four digits from the grown-up who made the room
-      if (this.pick.id === r.id) h += `<div class="passkey-row"><label>${this.T("passkey")} <input id="pk" class="passkey" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="${esc(this.pick.passkey || "")}"></label></div>`;
+      if (this.pick.id === r.id) h += `<div class="passkey-row"><label>${this.T("passkey")} <input id="pk" class="passkey" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="${esc(this.pick.passkey || "")}"></label></div>`;
       if (r.colorsOpen && this.pick.id === r.id) for (const i of this.pick.seats) h += this.roomColorsHtml(r, i);
       h += "</div>";
     }

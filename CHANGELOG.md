@@ -7,6 +7,8 @@ Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no 
 ## v3.2.24 (2026-11-09)
 
 * Debug: give a pawn rank points (owner). A line `R2 p85` in a room's Debug box gives red 2 85 rank points where it stands, to test the general and marshal looks. Stored with the place event (`points`).
+* The admin page's Look tab is now called Layout (owner).
+* The room passkey on the first page is hidden while it is typed (a password box; owner).
 
 ## v3.2.23 (2026-11-09)
 
