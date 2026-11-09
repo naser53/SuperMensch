@@ -40,23 +40,20 @@ export function setColors(list, board, rings) {
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
 export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
-// how a pawn shows its own points: "bar" (a line up the body), "ring" (a ring that climbs the
-// body to general, again to marshal; a marshal glows instead) or "stack" (rings that pile up from
-// the foot to the neck at general, again to marshal; owner, 2026-11-09) or "headsize" (the head grows
-// from HEAD_MIN to HEAD_MAX on the way to general, again to marshal, and a ring in the points color
-// climbs it; a marshal's orb glows brighter with more points; owner, 2026-11-09); an admin setting like the hunter
+// how a pawn shows its own points: "ring" (a ring that climbs the body to general, again to marshal;
+// a marshal glows instead) or "headring" (rings in the points color on the head ball, from HR_FROM
+// to HR_TO of its height, to general and again to marshal: one that climbs, HR_MODE "move", or ones
+// that pile up, "stack"; the head keeps its size; a marshal's orb glows brighter with more points;
+// owner, 2026-11-09); an admin setting like the hunter. Bar, stacked rings and head size are gone.
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
-// the stacked rings' opacity in percent (an admin setting, 20..100; null = Look.STACK_OPACITY)
-let STACK_OPACITY = Look.STACK_OPACITY;
-// the head size of the points look "headsize" at the start and at general / marshal (admin settings
-// in percent: [30..150, 50..250], null = Look.HEAD_SIZE)
-let HEAD_MIN = Look.HEAD_SIZE.MIN, HEAD_MAX = Look.HEAD_SIZE.MAX;
-export function setPointsLook(w, opacity, headsize) {
-  POINTS_LOOK = ["bar", "stack", "headsize"].includes(w) ? w : "ring";
-  STACK_OPACITY = Number.isInteger(opacity) && opacity >= 20 && opacity <= 100 ? opacity / 100 : Look.STACK_OPACITY;
-  const hs = Array.isArray(headsize) ? headsize : [];
-  HEAD_MIN = Number.isInteger(hs[0]) && hs[0] >= 30 && hs[0] <= 150 ? hs[0] / 100 : Look.HEAD_SIZE.MIN;
-  HEAD_MAX = Number.isInteger(hs[1]) && hs[1] >= 50 && hs[1] <= 250 ? hs[1] / 100 : Look.HEAD_SIZE.MAX;
+let HR_FROM = Look.HEAD_RING.FROM, HR_TO = Look.HEAD_RING.TO, HR_MODE = Look.HEAD_RING.MODE;
+// headring: { mode, from, to } (admin settings, percent; null = Look.HEAD_RING)
+export function setPointsLook(w, headring) {
+  POINTS_LOOK = w === "headring" || w === "headsize" ? "headring" : "ring";
+  const o = headring && typeof headring === "object" ? headring : {};
+  HR_FROM = Number.isInteger(o.from) && o.from >= 20 && o.from <= 50 ? o.from / 100 : Look.HEAD_RING.FROM;
+  HR_TO = Number.isInteger(o.to) && o.to > HR_FROM * 100 && o.to <= 100 ? o.to / 100 : Math.max(Look.HEAD_RING.TO, HR_FROM + 0.05);
+  HR_MODE = o.mode === "stack" || o.mode === "move" ? o.mode : Look.HEAD_RING.MODE;
 }
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
 // from one piece to the next (rad)
@@ -64,10 +61,9 @@ const WAVE_HEIGHT = 0.45, WAVE_SPEED = 1.6, WAVE_STEP = 0.55;
 const HILITE = "#ffc400";
 const FIELD_R = 0.43;
 const GATE_SCALE = 1.12;
-// rank colors and the pawn's progress line (from its foot almost to its head)
+// rank colors
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
-const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
-// the points ring and bar per pawn color (Look.RING_COLORS, or the admin's; setColors)
+// the points rings per pawn color (Look.RING_COLORS, or the admin's; setColors)
 const BAR_COLORS = Look.RING_COLORS.slice();
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
@@ -104,23 +100,6 @@ function pawnRadius(y) {
 }
 // the points ring climbs from just above the foot to two thirds of the pawn's height
 const RING_Y0 = 0.1, RING_Y1 = 0.62, RING_TUBE = 0.028;
-// the stacked rings: STACK_N rings fill the body from RING_Y0 up to the neck (STACK_Y1, just under
-// the collar) at general; each one overlaps the one below by about a third (owner, 2026-11-09)
-const STACK_N = 12, STACK_TUBE = 0.03, STACK_Y1 = 0.53;
-let stackGeos = null;                     // one geometry per ring height, shared by all pawns
-function stackGeometries() {
-  if (!stackGeos) stackGeos = Array.from({ length: STACK_N }, (_, k) => {
-    const y = RING_Y0 + (STACK_Y1 - RING_Y0) * k / (STACK_N - 1);
-    const geo = new THREE.TorusGeometry(pawnRadius(y) + STACK_TUBE * 0.6, STACK_TUBE, 10, 40);
-    geo.rotateX(Math.PI / 2);
-    geo.translate(0, y, 0);
-    return geo;
-  });
-  return stackGeos;
-}
-
-// where the head touches the collar: a smaller head (points look "headsize") is scaled around it
-const HEAD_FOOT = 0.64;
 // the head ball (pawnGeometry): its centre and radius; HEAD_TUBE: the thickness of the ring on it
 const HEAD_Y = 0.79, HEAD_R = 0.19, HEAD_TUBE = 0.022;
 function pawnGeometry() {
@@ -634,18 +613,14 @@ export class Board3D {
         const star = this.starSprite(), halo = this.haloSprite();
         star.position.y = halo.position.y = 1.52;
         star.visible = halo.visible = false;
-        const bar = this.progressBar(col);
         const pring = new THREE.Mesh(new THREE.TorusGeometry(0.3, RING_TUBE, 12, 48),
           new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
         pring.rotation.x = Math.PI / 2; pring.visible = false;
-        const stack = new THREE.Group();
-        // see-through (STACK_OPACITY), so the pawn's color shows through the stacked rings
-        const stackMat = new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.2,
-          roughness: 0.4, transparent: true, opacity: STACK_OPACITY, depthWrite: false });
-        for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, stackMat));
-        stack.visible = false;
-        grp.add(r1, r2, star, halo, bar, pring, stack);
-        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, stack, mat, head: grp.children[1], hop: 0 };
+        // the head rings (points look "headring"): children of the head, made when first needed
+        const hrings = new THREE.Group();
+        grp.children[1].add(hrings);
+        grp.add(r1, r2, star, halo, pring);
+        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, pring, hrings, mat, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -685,29 +660,6 @@ export class Board3D {
     s.scale.set(0.6, 0.6, 1);
     s.renderOrder = 10;
     return s;
-  }
-
-  // A line up the pawn's body that gets longer with every point the pawn has won itself, from its
-  // foot to its head at marshal (the star tells the rank). In a color that stands out on that
-  // pawn (BAR_COLORS), with a thin dark edge. It turns with the camera (around the pawn's axis),
-  // sits on the side facing it and draws over the body.
-  progressBar(col) {
-    const grp = new THREE.Group();
-    const plane = (w, h) => { const geo = new THREE.PlaneGeometry(w, h); geo.translate(0, h / 2, 0); return geo; };
-    const bar = new THREE.Group();
-    const edge = new THREE.Mesh(plane(BAR_W + 0.024, BAR_H),
-      new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.45, depthTest: false }));
-    edge.renderOrder = 9;
-    const fill = new THREE.Mesh(plane(BAR_W, BAR_H),
-      new THREE.MeshBasicMaterial({ color: BAR_COLORS[col], transparent: true, depthTest: false, toneMapped: false }));
-    fill.position.z = 0.001;
-    fill.renderOrder = 9.5;
-    bar.add(edge, fill);
-    bar.position.set(0, BAR_Y, BAR_Z);
-    grp.add(bar);
-    grp.userData = { bar };
-    grp.visible = false;
-    return grp;
   }
 
   // The hunter: a pawn of its color carrying an arrow or a sword that points the way it runs.
@@ -861,7 +813,7 @@ export class Board3D {
     this.drawTunnels(st);
   }
 
-  // rank look of a pawn from its rank points: rings, star, halo and the points bar
+  // rank look of a pawn from its rank points: rings, star, halo and the points rings
   applyLook(grp, kills) {
     const g = this.game, u = grp.userData;
     const marshal = g.rank(kills) === 2, general = g.rank(kills) >= 1;
@@ -874,16 +826,9 @@ export class Board3D {
     u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
     u.star.scale.setScalar(marshal ? 0.36 : 0.42);
     u.halo.visible = marshal;
-    const ring = POINTS_LOOK !== "bar";     // "ring", "stack" or "headsize"
-    u.bar.visible = !ring && kills > 0;
-    u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
     // the points ring: up the body to general, then from the foot again to marshal
     const f = marshal ? 0 : general ? (kills - gp) / (mp - gp) : kills / gp;
     u.pring.visible = POINTS_LOOK === "ring" && f > 0;
-    // the stacked rings: as many as the share of the way (any progress shows the first one)
-    const n = POINTS_LOOK === "stack" ? Math.min(STACK_N, Math.ceil(f * STACK_N - 1e-9)) : 0;
-    u.stack.visible = n > 0;
-    u.stack.children.forEach((m, k) => { m.visible = k < n; });
     if (u.pring.visible) {
       // a thin round ring that touches the body all round (not a band): its tube sits on the outline
       const y = RING_Y0 + (RING_Y1 - RING_Y0) * Math.min(1, f), r = +(pawnRadius(y) + RING_TUBE * 0.7).toFixed(3);
@@ -894,39 +839,30 @@ export class Board3D {
         u.pring.userData.r = r;
       }
     }
-    // the head: HEAD_MIN at first, HEAD_MAX at general, HEAD_MIN again and HEAD_MAX at marshal; it
-    // keeps touching the collar (y 0.64): scaled around that point. A ring in the points color climbs
-    // the ball from its foot to RING_TOP of its height on the way (none for a marshal); it is a child
-    // of the head, so it grows with it
-    if (u.head) {
-      const on = POINTS_LOOK === "headsize";
-      const k = !on ? 1 : marshal ? HEAD_MAX : HEAD_MIN + (HEAD_MAX - HEAD_MIN) * Math.min(1, f);
-      u.head.scale.setScalar(k);
-      u.head.position.y = HEAD_FOOT * (1 - k);
-      if (!u.hring && on) {
-        u.hring = new THREE.Mesh(new THREE.TorusGeometry(0.1, HEAD_TUBE, 10, 40), u.pring.material);
-        u.hring.rotation.x = Math.PI / 2;
-        u.hring.userData.piece = u.piece;
-        u.head.add(u.hring);
-      }
-      if (u.hring) {
-        u.hring.visible = on && !marshal && f > 0;
-        if (u.hring.visible) {
-          const y = -HEAD_R + 2 * HEAD_R * Look.HEAD_SIZE.RING_TOP * Math.min(1, f);
-          const rr = +(Math.sqrt(Math.max(0, HEAD_R * HEAD_R - y * y)) + HEAD_TUBE * 0.6).toFixed(3);
-          u.hring.position.y = HEAD_Y + y;
-          if (u.hring.userData.r !== rr) {
-            u.hring.geometry.dispose();
-            u.hring.geometry = new THREE.TorusGeometry(rr, HEAD_TUBE, 10, 40);
-            u.hring.userData.r = rr;
-          }
-        }
-      }
+    // the head rings: one that climbs the ball from HR_FROM to HR_TO of its height, or as many
+    // stacked between them as the share of the way (any progress shows the first one); none for a
+    // marshal. Each touches the ball all round.
+    const on = POINTS_LOOK === "headring" && !marshal && f > 0, N = Look.HEAD_RING.STACK_N;
+    const at = [];
+    if (on && HR_MODE === "stack") for (let k = 0; k < Math.min(N, Math.ceil(f * N - 1e-9)); k++) at.push(HR_FROM + (HR_TO - HR_FROM) * k / (N - 1));
+    else if (on) at.push(HR_FROM + (HR_TO - HR_FROM) * Math.min(1, f));
+    while (u.hrings.children.length < at.length) {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(0.1, HEAD_TUBE, 10, 40), u.pring.material);
+      m.rotation.x = Math.PI / 2;
+      m.userData.piece = u.piece;
+      u.hrings.add(m);
     }
-    // a marshal glows more when the ring is the points look; with "headsize" its orb grows brighter
-    // and bigger with every point past marshal (Look.HEAD_GLOW)
-    let haloScale = ring && marshal ? 1.0 : 0.6, haloOpacity = 1;
-    if (POINTS_LOOK === "headsize" && marshal) {
+    u.hrings.children.forEach((m, k) => {
+      m.visible = k < at.length;
+      if (!m.visible) return;
+      const y = -HEAD_R + 2 * HEAD_R * at[k], rr = +(Math.sqrt(Math.max(0, HEAD_R * HEAD_R - y * y)) + HEAD_TUBE * 0.6).toFixed(3);
+      m.position.y = HEAD_Y + y;
+      if (m.userData.r !== rr) { m.geometry.dispose(); m.geometry = new THREE.TorusGeometry(rr, HEAD_TUBE, 10, 40); m.userData.r = rr; }
+    });
+    // a marshal glows more; with "headring" its orb grows brighter and bigger with every point past
+    // marshal (Look.HEAD_GLOW)
+    let haloScale = marshal ? 1.0 : 0.6, haloOpacity = 1;
+    if (POINTS_LOOK === "headring" && marshal) {
       const G = Look.HEAD_GLOW, s = Math.max(0, Math.min(1, (kills - mp) / (G.SPAN * (mp - gp))));
       haloScale = G.SCALE0 + (G.SCALE1 - G.SCALE0) * s;
       haloOpacity = G.OPACITY0 + (G.OPACITY1 - G.OPACITY0) * s;
@@ -934,8 +870,8 @@ export class Board3D {
     u.halo.scale.setScalar(haloScale);
     u.halo.material.opacity = haloOpacity;
     if (u.mat) {
-      u.mat.emissive.set(ring && marshal ? GOLD_BRIGHT : "#000000");
-      u.mat.emissiveIntensity = ring && marshal ? 0.28 : 1;
+      u.mat.emissive.set(marshal ? GOLD_BRIGHT : "#000000");
+      u.mat.emissiveIntensity = marshal ? 0.28 : 1;
     }
   }
 
@@ -1770,7 +1706,6 @@ export class Board3D {
     if (this.uprightLabels) {
       const az = this.cameraAzimuth();
       for (const l of this.uprightLabels) l.rotation.y = az;
-      for (const grp of this.pieceMeshes.values()) grp.userData.bar.rotation.y = az - grp.rotation.y;
     }
     this.stepDice(now, k);
     this.stepShine(now);

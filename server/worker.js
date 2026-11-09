@@ -18,17 +18,19 @@ const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers
   "access-control-allow-methods": "GET, POST, OPTIONS" };
 // the voice fields a device keeps in its WebSocket attachment (sessions it made, its microphone)
 // the points looks a pawn can have (the first is the default)
-const POINTS_LOOKS = ["ring", "bar", "stack", "headsize"];
-// the stacked rings' opacity: a whole percent from 20 to 100, else null (the default)
-const cleanOpacity = p => (Number.isInteger(p) && p >= 20 && p <= 100 ? p : null);
-// the head sizes of the points look "headsize" in percent: [start 30..150, at general/marshal 50..250],
-// each null for the default (Look.HEAD_SIZE)
-const cleanHeadSize = v => {
-  const a = Array.isArray(v) ? v : [];
-  const ok = (p, lo, hi) => (Number.isInteger(p) && p >= lo && p <= hi ? p : null);
-  return [ok(a[0], 30, 150), ok(a[1], 50, 250)];
+const POINTS_LOOKS = ["ring", "headring"];
+// the rings on the head of the points look "headring": { mode "move" or "stack", from 20..50 %, to
+// from+5..100 % of the head ball's height }, each null for the default (Look.HEAD_RING)
+const cleanHeadRing = v => {
+  const o = v && typeof v === "object" ? v : {};
+  const int = (p, lo, hi) => (Number.isInteger(p) && p >= lo && p <= hi ? p : null);
+  const from = int(o.from, 20, 50);
+  return { mode: ["move", "stack"].includes(o.mode) ? o.mode : null, from,
+    to: int(o.to, (from ?? Math.round(Config.HEAD_RING.FROM * 100)) + 5, 100) };
 };
-const pointsLook = w => POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
+// the stacked rings, the bar and the head size are gone (owner, 2026-11-09): a saved one reads as the
+// default, the old "headsize" as "headring"
+const pointsLook = w => w === "headsize" ? "headring" : POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
 const VOICE_KEYS = ["sessions", "voice"];
 const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
 const fail = (msg, status = 400) => json({ error: msg }, status);
@@ -52,11 +54,10 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(), headsize: await lobby.headsize(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
-    opacityDefault: Math.round(Config.STACK_OPACITY * 100),
-    headsizeDefault: [Math.round(Config.HEAD_SIZE.MIN * 100), Math.round(Config.HEAD_SIZE.MAX * 100)] });
+    headringDefault: { mode: Config.HEAD_RING.MODE, from: Math.round(Config.HEAD_RING.FROM * 100), to: Math.round(Config.HEAD_RING.TO * 100) } });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
@@ -189,32 +190,21 @@ export class Lobby extends DurableObject {
   }
 
   // how a pawn shows its own points in every game: "ring" (default; owner, 2026-11-04), "bar" or
-  // "stack" (rings piled up the body; owner, 2026-11-09) or "headsize" (the head grows; owner, 2026-11-09)
+  // "headring" (rings on the head; owner, 2026-11-09)
   points() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'points'`).toArray();
     return r.length ? pointsLook(JSON.parse(r[0].v)) : "ring";
   }
 
-  // the stacked rings' opacity in percent, 20..100 (owner, 2026-11-09); null = the page's default
-  opacity() {
-    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'opacity'`).toArray();
-    return r.length ? cleanOpacity(JSON.parse(r[0].v)) : null;
+  // the rings on the head of the points look "headring" (cleanHeadRing; owner, 2026-11-09)
+  headring() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'headring'`).toArray();
+    return cleanHeadRing(r.length ? JSON.parse(r[0].v) : null);
   }
 
-  // the head sizes of the points look "headsize" in percent, [start, full] (owner, 2026-11-09)
-  headsize() {
-    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'headsize'`).toArray();
-    return cleanHeadSize(r.length ? JSON.parse(r[0].v) : null);
-  }
-
-  setHeadsize(v) {
-    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('headsize', ?)`, JSON.stringify(cleanHeadSize(v)));
-    return this.headsize();
-  }
-
-  setOpacity(p) {
-    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('opacity', ?)`, JSON.stringify(cleanOpacity(p)));
-    return this.opacity();
+  setHeadring(v) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('headring', ?)`, JSON.stringify(cleanHeadRing(v)));
+    return this.headring();
   }
 
   setPoints(w) {

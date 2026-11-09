@@ -133,15 +133,15 @@ $("#hunterBtn").onclick = async () => {
   catch (e) { show("#hunterMsg", e.message, true); }
 };
 const showPoints = d => {
-  document.querySelector(`[name=points][value=${["bar", "stack", "headsize"].includes(d.points) ? d.points : "ring"}]`).checked = true;
-  $("#opacity").value = d.opacity || d.opacityDefault || 60;
-  const hs = d.headsize || [], hd = d.headsizeDefault || [75, 100];
-  $("#headStart").value = hs[0] || hd[0];
-  $("#headFull").value = hs[1] || hd[1];
+  document.querySelector(`[name=points][value=${d.points === "headring" ? "headring" : "ring"}]`).checked = true;
+  const hr = d.headring || {}, hd = d.headringDefault || { mode: "move", from: 20, to: 75 };
+  $("#hrFrom").value = hr.from || hd.from;
+  $("#hrTo").value = hr.to || hd.to;
+  $("#hrMode").value = hr.mode || hd.mode;
 };
 $("#pointsBtn").onclick = async () => {
-  try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value, opacity: Math.round(+$("#opacity").value),
-    headsize: [Math.round(+$("#headStart").value), Math.round(+$("#headFull").value)] })); show("#pointsMsg", T("saved_dot")); }
+  try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value, 
+    headring: { mode: $("#hrMode").value, from: Math.round(+$("#hrFrom").value), to: Math.round(+$("#hrTo").value) } })); show("#pointsMsg", T("saved_dot")); }
   catch (e) { show("#pointsMsg", e.message, true); }
 };
 $("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });

@@ -18,16 +18,12 @@ export const Look = {
   // the points ring and bar of a pawn, per pawn color (as PIECE_COLORS): light turquoise on red,
   // yellow on blue, light pink on green, navy on yellow, yellow on purple, coral on teal, light green
   // on pink, light sky blue on black. The admin may change each one too (owner, 2026-11-09).
-  // the stacked rings (points look "stack") are see-through so the pawn's own color shows through
-  // them: their default opacity, 0..1 (owner, 2026-11-09); the admin may change it (20..100%)
-  STACK_OPACITY: 0.6,
-  // the points look "headsize" (owner, 2026-11-09): the head starts at HEAD_SIZE.MIN of its size and
-  // grows with the points to HEAD_SIZE.MAX at general (more than 1 = bigger than usual), then again from
-  // MIN to marshal; the admin may set both (Layout tab, in percent). A ring in the pawn's points color
-  // climbs the head from its foot to RING_TOP of its height on the way. A marshal's
-  // orb over the star: its opacity and size at marshal and at its brightest, reached HEAD_GLOW.SPAN
-  // times the general-to-marshal points later
-  HEAD_SIZE: { MIN: 0.75, MAX: 1, RING_TOP: 0.75 },
+  // the points look "headring" (owner, 2026-11-09): rings in the pawn's points color on its head ball,
+  // from FROM to TO of the ball's height (from its foot) on the way to general, again to marshal.
+  // MODE "move": one ring climbs; "stack": STACK_N rings pile up. The admin may set FROM (20..50%),
+  // TO (up to 100%) and MODE in the Layout tab. A marshal's orb over the star: its opacity and size at
+  // marshal and at its brightest, reached HEAD_GLOW.SPAN times the general-to-marshal points later
+  HEAD_RING: { FROM: 0.2, TO: 0.75, MODE: "move", STACK_N: 5 },
   HEAD_GLOW: { OPACITY0: 0.45, OPACITY1: 1, SCALE0: 0.7, SCALE1: 1.35, SPAN: 1 },
   RING_COLORS: ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"],
   // the online server (v2); a page served by another host (such as the downloaded file) asks it

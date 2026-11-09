@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.27 (2026-11-09)
+
+* Points looks (owner): Bar and Stacked rings are gone, with the stacked rings' opacity; a saved one reads as Ring.
+* Head ring (owner) in place of Head size: the head keeps its size. Rings in the points ring color sit on the head ball, from 20% to 75% of its height by default (`Look.HEAD_RING`), on the way to general, then again to marshal: one moving ring, or up to five rings piling up. The admin sets the start (20 to 50%), the end (up to 100%) and the kind in the Layout tab (settings key `headring`). A saved `headsize` reads as Head ring.
+
 ## v3.2.26 (2026-11-09)
 
 * Head size (owner): the head now starts at 75% (was 55%) and grows to 100% at general and at marshal; both sizes are set on the admin page's Layout tab in percent (start 30 to 150, full 50 to 250, so the head may grow bigger than usual; settings key `headsize`, defaults `Look.HEAD_SIZE`). A ring in the pawn's points ring color (the Points ring and bar colors) climbs the head ball from its foot as the points grow, never above 75% of its height (`Look.HEAD_SIZE.RING_TOP`); none on a marshal.
