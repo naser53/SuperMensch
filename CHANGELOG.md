@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.20 (2026-11-09)
+
+* Stacked rings are see-through (owner): 60% opaque (`Look.STACK_OPACITY`), so the pawn's own color shows through them. Only the stacked-rings look; the single ring and the bar stay as they were.
+
 ## v3.2.19 (2026-11-09)
 
 * Stacked rings (owner): a third points look in the admin page, next to Bar and Ring. Twelve rings pile up from the pawn's foot to its neck, each a share of the way to general (from `general_points`), overlapping the one below; after general they pile up again to marshal, and a marshal glows instead. Display only.

@@ -622,7 +622,10 @@ export class Board3D {
           new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
         pring.rotation.x = Math.PI / 2; pring.visible = false;
         const stack = new THREE.Group();
-        for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, pring.material));
+        // see-through (Look.STACK_OPACITY), so the pawn's color shows through the stacked rings
+        const stackMat = new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.2,
+          roughness: 0.4, transparent: true, opacity: Look.STACK_OPACITY, depthWrite: false });
+        for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, stackMat));
         stack.visible = false;
         grp.add(r1, r2, star, halo, bar, pring, stack);
         grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, stack, mat, hop: 0 };
