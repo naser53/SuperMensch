@@ -44,7 +44,12 @@ export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "
 // body to general, again to marshal; a marshal glows instead) or "stack" (rings that pile up from
 // the foot to the neck at general, again to marshal; owner, 2026-11-09); an admin setting like the hunter
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
-export function setPointsLook(w) { POINTS_LOOK = ["bar", "stack"].includes(w) ? w : "ring"; }
+// the stacked rings' opacity in percent (an admin setting, 20..100; null = Look.STACK_OPACITY)
+let STACK_OPACITY = Look.STACK_OPACITY;
+export function setPointsLook(w, opacity) {
+  POINTS_LOOK = ["bar", "stack"].includes(w) ? w : "ring";
+  STACK_OPACITY = Number.isInteger(opacity) && opacity >= 20 && opacity <= 100 ? opacity / 100 : Look.STACK_OPACITY;
+}
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
 // from one piece to the next (rad)
 const WAVE_HEIGHT = 0.45, WAVE_SPEED = 1.6, WAVE_STEP = 0.55;
@@ -622,9 +627,9 @@ export class Board3D {
           new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
         pring.rotation.x = Math.PI / 2; pring.visible = false;
         const stack = new THREE.Group();
-        // see-through (Look.STACK_OPACITY), so the pawn's color shows through the stacked rings
+        // see-through (STACK_OPACITY), so the pawn's color shows through the stacked rings
         const stackMat = new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.2,
-          roughness: 0.4, transparent: true, opacity: Look.STACK_OPACITY, depthWrite: false });
+          roughness: 0.4, transparent: true, opacity: STACK_OPACITY, depthWrite: false });
         for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, stackMat));
         stack.visible = false;
         grp.add(r1, r2, star, halo, bar, pring, stack);

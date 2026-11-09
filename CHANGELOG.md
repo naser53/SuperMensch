@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.21 (2026-11-09)
+
+* Stacked rings' opacity on the admin page (owner): a box next to the points look, 20 to 100%, saved for the whole server (settings key `opacity`; empty or out of range = the default 60%, `Look.STACK_OPACITY`). Games started after saving use it.
+
 ## v3.2.20 (2026-11-09)
 
 * Stacked rings are see-through (owner): 60% opaque (`Look.STACK_OPACITY`), so the pawn's own color shows through them. Only the stacked-rings look; the single ring and the bar stay as they were.
