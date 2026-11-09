@@ -606,6 +606,10 @@ earlier sketch (browser dice, PINs).
   room's players (a test aid: replace, add up to the board's places, remove; `editSetup` in
   `server/core.js`). The same number of players keeps the moves; another number starts the game
   again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
+  **Tabs** (owner, 2026-11-09): the admin page has four tabs, Rooms (the default), Players (with
+  voice chat), Initial settings (the game rules, one group of `Config.RULES` after the other) and
+  Look (colors, points look, hunter); the last one open is kept in localStorage `adminTab`. Inside
+  a tab each group has its title and a short note on one side and its controls on the other.
   **Admin languages** (owner, 2026-11-07; v3.2.12): the admin page speaks the game's languages (en, fa, de)
   with a menu at the top; it reads and writes the game page's saved language (localStorage
   `supermensch`.lang), so both follow one choice. Texts in `js/admin-strings.js` (rule labels

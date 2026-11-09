@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.22 (2026-11-09)
+
+* Admin page in tabs (owner): Rooms, Players, Initial settings (the game rules) and Look (colors, points look, hunter). Inside a tab each group has its title and a short note beside its controls; the rules come in their groups, each with its own table. The page keeps the last tab open. Each points look has its own short description.
+
 ## v3.2.21 (2026-11-09)
 
 * Stacked rings' opacity on the admin page (owner): a box next to the points look, 20 to 100%, saved for the whole server (settings key `opacity`; empty or out of range = the default 60%, `Look.STACK_OPACITY`). Games started after saving use it.
