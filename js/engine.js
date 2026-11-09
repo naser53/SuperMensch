@@ -396,6 +396,9 @@ export class Game {
         rec[5] = k;
       } else {                                      // leaves the tunnel
         const dstRel = X + k - T - 1;
+        const cells = [];                           // §13 out of the tunnel it is a normal piece:
+        for (let x = X; x < dstRel; x++) cells.push(this.absOf(col, x));   // a castle blocks the rest
+        if (blocked(cells)) return null;
         a = this.absOf(col, dstRel);
         const [v, bad] = victimAt(a);
         if (bad) return null;
@@ -406,7 +409,7 @@ export class Game {
       }
     }
     const dst = this.fieldName(col, ns.pos[col][i]);
-    if (victim !== null) this._capture(st, ns, victim, a, false, captures, !atEntrance);  // the exit hits even walls and castles
+    if (victim !== null) this._capture(st, ns, victim, a, false, captures);   // a wall or castle only breaks together (§9)
     return [ns, new Step(m, die, src, dst, captures, false, true)];
   }
 
@@ -416,13 +419,13 @@ export class Game {
   // (towards its own gate, which is as far as it goes; the hunter: against its running
   // direction). With no free field before its gate it goes to its yard and keeps its rank
   // and points (a hunter leaves the board).
-  _capture(st, ns, victim, a, entered, captures, free = false) {
+  _capture(st, ns, victim, a, entered, captures) {
     const occ = this.occupancy(ns), L = this.L;
     const freeAt = x => x !== a && !occ.has(x);
     if (victim[0] === "p") {
       const vc = victim[1], vi = victim[2], r = st.pos[vc][vi], pts = st.kills[vc][vi];
       const rank = this.rank(pts);
-      const cap = { victim, color: vc, rel: r, abs: a, vkills: pts, gate_right: entered, free };
+      const cap = { victim, color: vc, rel: r, abs: a, vkills: pts, gate_right: entered };
       captures.push(cap);
       ns.hit[vc][vi] = true;
       if (rank > 0) {
@@ -443,7 +446,7 @@ export class Game {
       ns.tunnels = ns.tunnels.filter(t => !(t[1] === vc && t[2] === vi));
     } else {
       const q = victim[1], hh = st.hunters[q], rank = this.rank(hh[3]);
-      const cap = { victim, color: hh[0], rel: this.relOf(hh[0], hh[1]), abs: a, vkills: hh[3], gate_right: entered, free };
+      const cap = { victim, color: hh[0], rel: this.relOf(hh[0], hh[1]), abs: a, vkills: hh[3], gate_right: entered };
       captures.push(cap);
       if (rank > 0) {
         for (let k = this.cfg.pushback_min; k < L; k++) {
@@ -618,7 +621,7 @@ export class Game {
       for (const c of s.captures) {
         const st_ = structs.get(c.abs);
         if (c.victim[0] !== "p" || st_ === undefined || own.has(st_[1])) continue;
-        if (c.gate_right || c.free) continue;        // §10 gate right, §13 tunnel exit
+        if (c.gate_right) continue;                  // §10 gate right
         if (!prot.has(st_[0])) prot.set(st_[0], []);
         prot.get(st_[0]).push([s.mover, c.abs, st_]);
       }
@@ -895,7 +898,7 @@ export class Game {
     const structs = this.structures(this.state);
     const own = new Set(this.players[p].colors);
     const wall = caps.map(x => x[1]).filter(c => structs.has(c.abs) && !own.has(structs.get(c.abs)[1])
-      && !c.gate_right && !c.free && c.victim[0] === "p");
+      && !c.gate_right && c.victim[0] === "p");
     if (wall.length === 2) {
       const best = Math.max(...wall.map(c => this.piecePoints(c.color, c.rel) + this.bounty(c.vkills)));
       st.scores[p] += best + this.cfg.wall_break;

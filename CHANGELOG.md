@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.17 (2026-11-09)
+
+* Tunnel exit (owner, game YJET-19): a piece coming out of a tunnel is a normal piece. It hits a lone opponent, but a piece in a wall or castle only as part of a break with other pieces (§9), and the rest of its die cannot jump an opponent's castle. Before, the exit hit even pieces in walls and castles. A running game where an exit hit a structure piece replays differently from that move on.
+
 ## v3.2.16 (2026-11-07)
 
 * Effects on each move (owner, game VHQK-75): a capture with the first die shows its points (+n over the piece) and a new general or marshal look as soon as that piece lands, not after the second die. The server's step states carry the points of the captures so far (`scoredStates` in `server/frames.js`); the engine still scores the play as a whole, so games replay as before. A wall or castle break shows its points with its last step.

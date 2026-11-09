@@ -89,7 +89,7 @@ export function scoredStates(g, steps, states, kind = "normal", target = null, c
   const p = g.turn, structs = g.structures(g.state), own = new Set(g.players[p].colors);
   const breaks = kind === "break" || steps.some(s => s.captures.some(c => {
     const x = structs.get(c.abs);
-    return x && !own.has(x[1]) && !c.gate_right && !c.free && c.victim[0] === "p";
+    return x && !own.has(x[1]) && !c.gate_right && c.victim[0] === "p";
   }));
   return states.map((st, k) => {
     if (breaks && k < states.length - 1) return st;

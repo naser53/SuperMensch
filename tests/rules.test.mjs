@@ -321,7 +321,7 @@ test("a tunnel declared this turn can be taken back before the roll, with its co
   assert.ok(g.pending.options.some(o => String(o.payload) === String(decl.payload)));   // can be declared again
 });
 
-test("tunnel: enter, move inside, exit hits a wall piece", () => {
+test("tunnel: enter, move inside, exit like a normal piece (a wall breaks only together)", () => {
   const g = make();
   put(g, 0, 0, 2); put(g, 3, 0, 1);
   declare(g, 0, 0, 1, 2);
@@ -331,11 +331,25 @@ test("tunnel: enter, move inside, exit hits a wall piece", () => {
   assert.equal(ns.pos[0][0], TUN);
   assert.equal(ns.tunnels[0][5], 2);
   g.state = ns;
-  put(g, 1, 0, g.relOf(1, 15)); put(g, 1, 1, g.relOf(1, 16));
-  const hit = g.playsFor(0, [2, 5]).filter(p => p.state.pos[1][0] === YARD && p.state.pos[0][0] === 15);
+  const inside = g.state.copy();
+  // a lone piece at the exit is hit
+  put(g, 1, 0, g.relOf(1, 15));
+  let hit = g.playsFor(0, [2, 5]).filter(p => p.state.pos[1][0] === YARD && p.state.pos[0][0] === 15);
   assert.ok(hit.length);
   assert.equal(hit[0].state.tunnels.length, 0);
   assert.ok(hit[0].state.tmark[0][0]);
+  // a wall piece is not hit by the exit alone (owner, 2026-11-09, game YJET-19)
+  g.state = inside.copy();
+  put(g, 1, 0, g.relOf(1, 15)); put(g, 1, 1, g.relOf(1, 16));
+  assert.ok(!g.playsFor(0, [2, 5]).some(p => p.state.pos[1][0] === YARD));
+  // ... but the exit and another piece break it together
+  put(g, 0, 1, 11);
+  hit = g.playsFor(0, [2, 5]).filter(p => p.state.pos[1][0] === YARD && p.state.pos[1][1] === YARD);
+  assert.ok(hit.some(p => p.state.pos[0][0] === 15 && p.state.pos[0][1] === 16));
+  // the rest of the die after the exit cannot jump a castle
+  g.state = inside.copy();
+  for (let k = 0; k < 3; k++) put(g, 1, k, g.relOf(1, 15 + k));
+  assert.ok(!g.playsFor(0, [6]).some(p => p.state.pos[0][0] === 19));
 });
 
 test("tunnel: no sum move", () => {
