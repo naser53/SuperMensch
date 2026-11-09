@@ -30,6 +30,7 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
   if (what === "points" && body) {          // how a pawn shows its own points: "ring" or "headring"
     await lobby.setPoints(body.points);
     if (body.headring !== undefined) await lobby.setHeadring(body.headring); // the rings on the head
+    if (body.rankrings !== undefined) await lobby.setRankrings(body.rankrings); // "metal" or "ring"
     return json(await settings());
   }
   if (what === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"

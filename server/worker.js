@@ -31,6 +31,10 @@ const cleanHeadRing = v => {
 // the stacked rings, the bar and the head size are gone (owner, 2026-11-09): a saved one reads as the
 // default, the old "headsize" as "headring"
 const pointsLook = w => w === "headsize" ? "headring" : POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
+// the rank rings of a general and a marshal: "metal" (silver and gold, the default) or "ring" (the
+// pawn's Ring color; owner, 2026-11-09)
+const RANK_RINGS = ["metal", "ring"];
+const rankRings = w => (RANK_RINGS.includes(w) ? w : RANK_RINGS[0]);
 const VOICE_KEYS = ["sessions", "voice"];
 const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
 const fail = (msg, status = 400) => json({ error: msg }, status);
@@ -54,7 +58,7 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(), rankrings: await lobby.rankrings(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
     headringDefault: { mode: Config.HEAD_RING.MODE, from: Math.round(Config.HEAD_RING.FROM * 100), to: Math.round(Config.HEAD_RING.TO * 100) } });
@@ -200,6 +204,17 @@ export class Lobby extends DurableObject {
   headring() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'headring'`).toArray();
     return cleanHeadRing(r.length ? JSON.parse(r[0].v) : null);
+  }
+
+  // the rank rings: "metal" or "ring" (rankRings)
+  rankrings() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'rankrings'`).toArray();
+    return rankRings(r.length ? JSON.parse(r[0].v) : null);
+  }
+
+  setRankrings(w) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('rankrings', ?)`, JSON.stringify(rankRings(w)));
+    return this.rankrings();
   }
 
   setHeadring(v) {

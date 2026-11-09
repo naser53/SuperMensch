@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.31 (2026-11-09)
+
+* Rank rings (owner): a new admin choice in the Layout tab, next to the points look: the general's ring and the marshal's two rings stay silver and gold (default), or take the pawn's Ring color (settings key `rankrings`: `metal` or `ring`).
+
 ## v3.2.30 (2026-11-09)
 
 * Ring colors (owner): the points rings (body and head) of each pawn color now share one material that follows the admin's Ring colors at once, also on a game already open. Before, a board kept the ring colors of when it was built, so a rebuild in the middle of a game (a reconnect) could switch them.

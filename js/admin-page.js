@@ -154,10 +154,12 @@ const showPoints = d => {
   $("#hrFrom").value = hr.from || hd.from;
   $("#hrTo").value = hr.to || hd.to;
   $("#hrMode").value = hr.mode || hd.mode;
+  $("#rankRings").value = d.rankrings === "ring" ? "ring" : "metal";
 };
 $("#pointsBtn").onclick = async () => {
   try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value, 
-    headring: { mode: $("#hrMode").value, from: Math.round(+$("#hrFrom").value), to: Math.round(+$("#hrTo").value) } })); show("#pointsMsg", T("saved_dot")); }
+    headring: { mode: $("#hrMode").value, from: Math.round(+$("#hrFrom").value), to: Math.round(+$("#hrTo").value) },
+    rankrings: $("#rankRings").value })); show("#pointsMsg", T("saved_dot")); }
   catch (e) { show("#pointsMsg", e.message, true); }
 };
 $("#colorsReset").onclick = () => document.querySelectorAll(".colors [data-def]").forEach(x => setColor(x, x.dataset.def));
