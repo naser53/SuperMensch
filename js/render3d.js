@@ -43,14 +43,20 @@ export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "
 // how a pawn shows its own points: "bar" (a line up the body), "ring" (a ring that climbs the
 // body to general, again to marshal; a marshal glows instead) or "stack" (rings that pile up from
 // the foot to the neck at general, again to marshal; owner, 2026-11-09) or "headsize" (the head grows
-// from Look.HEAD_SIZE.MIN to full size on the way to general, again to marshal; a marshal's orb glows
-// brighter with more points; owner, 2026-11-09); an admin setting like the hunter
+// from HEAD_MIN to HEAD_MAX on the way to general, again to marshal, and a ring in the points color
+// climbs it; a marshal's orb glows brighter with more points; owner, 2026-11-09); an admin setting like the hunter
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
 // the stacked rings' opacity in percent (an admin setting, 20..100; null = Look.STACK_OPACITY)
 let STACK_OPACITY = Look.STACK_OPACITY;
-export function setPointsLook(w, opacity) {
+// the head size of the points look "headsize" at the start and at general / marshal (admin settings
+// in percent: [30..150, 50..250], null = Look.HEAD_SIZE)
+let HEAD_MIN = Look.HEAD_SIZE.MIN, HEAD_MAX = Look.HEAD_SIZE.MAX;
+export function setPointsLook(w, opacity, headsize) {
   POINTS_LOOK = ["bar", "stack", "headsize"].includes(w) ? w : "ring";
   STACK_OPACITY = Number.isInteger(opacity) && opacity >= 20 && opacity <= 100 ? opacity / 100 : Look.STACK_OPACITY;
+  const hs = Array.isArray(headsize) ? headsize : [];
+  HEAD_MIN = Number.isInteger(hs[0]) && hs[0] >= 30 && hs[0] <= 150 ? hs[0] / 100 : Look.HEAD_SIZE.MIN;
+  HEAD_MAX = Number.isInteger(hs[1]) && hs[1] >= 50 && hs[1] <= 250 ? hs[1] / 100 : Look.HEAD_SIZE.MAX;
 }
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
 // from one piece to the next (rad)
@@ -115,11 +121,13 @@ function stackGeometries() {
 
 // where the head touches the collar: a smaller head (points look "headsize") is scaled around it
 const HEAD_FOOT = 0.64;
+// the head ball (pawnGeometry): its centre and radius; HEAD_TUBE: the thickness of the ring on it
+const HEAD_Y = 0.79, HEAD_R = 0.19, HEAD_TUBE = 0.022;
 function pawnGeometry() {
   const pts = PAWN_PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
   const body = new THREE.LatheGeometry(pts, 40);
-  const head = new THREE.SphereGeometry(0.19, 32, 20);
-  head.translate(0, 0.79, 0);
+  const head = new THREE.SphereGeometry(HEAD_R, 32, 20);
+  head.translate(0, HEAD_Y, 0);
   return [body, head];
 }
 
@@ -886,12 +894,34 @@ export class Board3D {
         u.pring.userData.r = r;
       }
     }
-    // the head: small at first, full size at general, small again and full at marshal; it keeps
-    // touching the collar (y 0.64): scaled around that point
+    // the head: HEAD_MIN at first, HEAD_MAX at general, HEAD_MIN again and HEAD_MAX at marshal; it
+    // keeps touching the collar (y 0.64): scaled around that point. A ring in the points color climbs
+    // the ball from its foot to RING_TOP of its height on the way (none for a marshal); it is a child
+    // of the head, so it grows with it
     if (u.head) {
-      const k = POINTS_LOOK === "headsize" && !marshal ? Look.HEAD_SIZE.MIN + (1 - Look.HEAD_SIZE.MIN) * Math.min(1, f) : 1;
+      const on = POINTS_LOOK === "headsize";
+      const k = !on ? 1 : marshal ? HEAD_MAX : HEAD_MIN + (HEAD_MAX - HEAD_MIN) * Math.min(1, f);
       u.head.scale.setScalar(k);
       u.head.position.y = HEAD_FOOT * (1 - k);
+      if (!u.hring && on) {
+        u.hring = new THREE.Mesh(new THREE.TorusGeometry(0.1, HEAD_TUBE, 10, 40), u.pring.material);
+        u.hring.rotation.x = Math.PI / 2;
+        u.hring.userData.piece = u.piece;
+        u.head.add(u.hring);
+      }
+      if (u.hring) {
+        u.hring.visible = on && !marshal && f > 0;
+        if (u.hring.visible) {
+          const y = -HEAD_R + 2 * HEAD_R * Look.HEAD_SIZE.RING_TOP * Math.min(1, f);
+          const rr = +(Math.sqrt(Math.max(0, HEAD_R * HEAD_R - y * y)) + HEAD_TUBE * 0.6).toFixed(3);
+          u.hring.position.y = HEAD_Y + y;
+          if (u.hring.userData.r !== rr) {
+            u.hring.geometry.dispose();
+            u.hring.geometry = new THREE.TorusGeometry(rr, HEAD_TUBE, 10, 40);
+            u.hring.userData.r = rr;
+          }
+        }
+      }
     }
     // a marshal glows more when the ring is the points look; with "headsize" its orb grows brighter
     // and bigger with every point past marshal (Look.HEAD_GLOW)

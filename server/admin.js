@@ -30,6 +30,7 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
   if (what === "points" && body) {          // how a pawn shows its own points: "bar", "ring", "stack" or "headsize"
     await lobby.setPoints(body.points);
     if (body.opacity !== undefined) await lobby.setOpacity(body.opacity);   // the stacked rings, 20..100 %
+    if (body.headsize !== undefined) await lobby.setHeadsize(body.headsize); // head size: [start, full] %
     return json(await settings());
   }
   if (what === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"
