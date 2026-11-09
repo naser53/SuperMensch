@@ -245,8 +245,9 @@ game: no declarations, no Tunnels button, no info table).
 * **Entering:** the piece moves to the entrance and uses the rest of the die inside. A die that
   does not reach the entrance burns; the declaration stays for later turns.
 * **Inside:** one die at a time, no sum moves, no captures inside.
-* **Exit:** leftover steps continue in the corridor. The exit captures any opponent, even pieces
-  in walls and castles. After the exit the tunnel is gone.
+* **Exit:** leftover steps continue in the corridor. From the exit on the piece is a normal one: it
+  breaks a wall or castle only together with other pieces (section 3.9) and cannot jump a castle (owner,
+  2026-11-09, game YJET-19; before, the exit hit even pieces in walls and castles). After the exit the tunnel is gone.
 * At most 2 active tunnels per player (`MAX_ACTIVE_TUNNELS`). Hunters never use tunnels.
 * **Debt:** a player with 0 or more points may take a tunnel even if the score goes negative
   (debt up to that tunnel's cost). All points earned pay the debt. A tunnel piece that reaches
