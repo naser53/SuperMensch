@@ -27,10 +27,9 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     if (body.rings !== undefined) await lobby.setRings(cleanRings(body.rings));
     return json(await settings());
   }
-  if (what === "points" && body) {          // how a pawn shows its own points: "bar", "ring", "stack" or "headsize"
+  if (what === "points" && body) {          // how a pawn shows its own points: "ring" or "headring"
     await lobby.setPoints(body.points);
-    if (body.opacity !== undefined) await lobby.setOpacity(body.opacity);   // the stacked rings, 20..100 %
-    if (body.headsize !== undefined) await lobby.setHeadsize(body.headsize); // head size: [start, full] %
+    if (body.headring !== undefined) await lobby.setHeadring(body.headring); // the rings on the head
     return json(await settings());
   }
   if (what === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"

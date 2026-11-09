@@ -408,7 +408,7 @@ the fingerprint.
 
 ## 5. Effects and animations
 * **Moves:** pieces hop field by field. Computer players wait for the animations.
-* **Rank look after the move:** the points bar, star, rings and halo of a pawn change only once
+* **Rank look after the move:** the points rings, star and halo of a pawn change only once
   its move and captures have been shown (`queueLook`/`stepLooks`); a demoted victim loses its look
   when it lands.
 * **Fireworks:** when the game is over, 8 rockets rise near the edge of the board and burst into
@@ -619,12 +619,10 @@ earlier sketch (browser dice, PINs).
   Sword, for the whole server (`POST /api/admin/hunter`, Lobby `settings` key `hunter`, sent with
   `/api/settings` as `hunter`; `setHunterWeapon` / `Board3D.hunterWeapon` in `js/render3d.js`).
   **Points look** (owner, 2026-11-03): the admin page chooses how a pawn shows its own points, for the
-  whole server: Bar (`progressBar`) or Ring (the default since 2026-11-04, owner; a thin ring that touches the body all round, the
+  whole server: Ring (the default since 2026-11-04, owner; a thin ring that touches the body all round, the
   owner wants no band; it climbs from the foot to two thirds of the pawn's height up to general,
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
-  glow) or Stacked rings (`stack`, owner, 2026-11-09: STACK_N = 12 rings that pile up from the foot
-  to the neck, just under the collar, each a share of the way to general and overlapping the one below by
-  about a third, see-through at 60% opacity, `Look.STACK_OPACITY`, which the admin may set from 20 to 100% next to the points look (settings key `opacity`, sent with `/api/settings` as `opacity`, with `opacityDefault`); then they pile up again to marshal; a marshal glows like with Ring) or Head size (`headsize`, owner, 2026-11-09, in place of v3.2.23's Head color, which the owner did not like: the body stays as it is; the head starts at `Look.HEAD_SIZE.MIN` = 75% of its size and grows with the points to `MAX` = 100% at general, then from small again to marshal, scaled around the point where it touches the collar (`HEAD_FOOT`); the admin sets both in the Layout tab in percent (settings key `headsize` = [start 30..150, full 50..250], `headsizeDefault`; owner, 2026-11-09: oversize allowed, for testing); a ring in the pawn's points ring color (`BAR_COLORS`, a child of the head mesh `hring`) climbs the ball from its foot to `RING_TOP` = 75% of its height; a marshal's head is at the full size, with no ring, its body glows like with Ring and the orb over its star (halo) grows brighter and bigger with the points past marshal, `Look.HEAD_GLOW`). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
+  glow) or Head ring (`headring`, owner, 2026-11-09: the head keeps its size; rings in the pawn's points ring color (`BAR_COLORS`, in the group `hrings`, a child of the head mesh) sit on the head ball between `HEAD_RING.FROM` = 20% and `TO` = 75% of its height from its foot, on the way to general, then again to marshal; mode `move`: one ring climbs from FROM to TO; mode `stack`: `STACK_N` = 5 rings pile up between them; the admin sets FROM (20..50%), TO (up to 100%) and the mode in the Layout tab, settings key `headring` = { mode, from, to }, `headringDefault`; a marshal has no head ring, its body glows like with Ring and the orb over its star (halo) grows brighter and bigger with the points past marshal, `Look.HEAD_GLOW`). Gone (owner, 2026-11-09): Bar (until v3.2.26), Stacked rings with their opacity (v3.2.19 to v3.2.26), Head color (v3.2.23 to v3.2.24) and Head size (v3.2.25 to v3.2.26); a saved `bar` or `stack` reads as Ring, a saved `headsize` as Head ring. `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **One Debug panel** (owner, 2026-11-04): Place pieces and Debug are one button, **Debug**, with one
   large text box (one command per line, run in order: piece lines go to `admin/place`, `rewind` /
