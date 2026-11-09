@@ -682,7 +682,7 @@ earlier sketch (browser dice, PINs).
   The board's own colors too (surface and edge, `Config.BOARD_COLORS`, `cleanBoard`, settings key
   `board`; the 4-color board keeps its cream and red while they are at default). The points ring
   and bar of a pawn per color too (owner, 2026-11-09: `Look.RING_COLORS` = `Config.RING_COLORS`,
-  `cleanRings`, settings key `rings`, defaults sent as `ringDefaults`; called Ring on the admin page and shown beside the piece colors, one row per color, since v3.2.28). `/play?…`
+  `cleanRings`, settings key `rings`, defaults sent as `ringDefaults`; called Ring on the admin page and shown beside the piece colors, one row per color, since v3.2.28; since v3.2.29 every color picker on that tab has its code (#rrggbb) in a box under it, to copy or type). `/play?…`
   redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
   else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one

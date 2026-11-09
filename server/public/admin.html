@@ -41,11 +41,14 @@
   .colors label { display: flex; align-items: center; gap: 6px; }
   /* the piece colors and their ring colors side by side, one row per color (owner, 2026-11-09) */
   .pair { display: grid; grid-template-columns: max-content max-content; gap: 0 40px; }
-  @media (max-width: 700px) { .pair { gap: 0 14px; } .pair .colors label { gap: 4px; } }
+  @media (max-width: 700px) { .pair { gap: 0 10px; } .pair .colors label { gap: 4px; }
+    .pair .colors .hex { width: 58px; font-size: 11px; } .pair [data-todef] { padding: 3px 6px; font-size: 12px; } }
   .pair h4 { margin: 0 0 6px; font-size: 14px; }
   .colors.one { grid-template-columns: 1fr; }
   .pair > div + div .nm { display: none; }   /* the ring column: the row tells the color */
   .colors input[type=color] { flex: none; }
+  .colors .sw { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
+  .colors .hex { width: 68px; padding: 1px 3px; font: 12px ui-monospace, monospace; text-align: center; }
   .colors input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
   .rules { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 560px; }
   .rules col.n { width: 46%; } .rules col.b { width: 18%; }
