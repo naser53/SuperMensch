@@ -24,9 +24,8 @@ export const BOARD = [null, null];
 
 // The admin's piece colors (from the server): [hex or null] per color, null = the default. The nest
 // fields of a changed color get a pale tint of it. board: [surface, edge] (hex or null). Takes effect
-// on the next board that is built. rings: the points ring and bar per color (hex or null); heads:
-// the head colors of the points look "head" per color (hex or null).
-export function setColors(list, board, rings, heads) {
+// on the next board that is built. rings: the points ring and bar per color (hex or null).
+export function setColors(list, board, rings) {
   const hex = c => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : null);
   for (let i = 0; i < BOARD.length; i++) BOARD[i] = hex(Array.isArray(board) ? board[i] : null);
   const mix = (hex, k) => "#" + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k)
@@ -37,21 +36,20 @@ export function setColors(list, board, rings, heads) {
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
   for (let i = 0; i < BAR_COLORS.length; i++) BAR_COLORS[i] = hex(Array.isArray(rings) ? rings[i] : null) || Look.RING_COLORS[i];
-  for (let i = 0; i < HEAD_COLORS.length; i++) HEAD_COLORS[i] = hex(Array.isArray(heads) ? heads[i] : null) || Look.HEAD_COLORS[i];
 }
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
 export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
 // how a pawn shows its own points: "bar" (a line up the body), "ring" (a ring that climbs the
 // body to general, again to marshal; a marshal glows instead) or "stack" (rings that pile up from
-// the foot to the neck at general, again to marshal; owner, 2026-11-09) or "head" (the head turns from
-// the pawn color to HEAD_COLORS on the way to general, again to marshal; a marshal's orb glows brighter
-// with more points; owner, 2026-11-09); an admin setting like the hunter
+// the foot to the neck at general, again to marshal; owner, 2026-11-09) or "headsize" (the head grows
+// from Look.HEAD_SIZE.MIN to full size on the way to general, again to marshal; a marshal's orb glows
+// brighter with more points; owner, 2026-11-09); an admin setting like the hunter
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
 // the stacked rings' opacity in percent (an admin setting, 20..100; null = Look.STACK_OPACITY)
 let STACK_OPACITY = Look.STACK_OPACITY;
 export function setPointsLook(w, opacity) {
-  POINTS_LOOK = ["bar", "stack", "head"].includes(w) ? w : "ring";
+  POINTS_LOOK = ["bar", "stack", "headsize"].includes(w) ? w : "ring";
   STACK_OPACITY = Number.isInteger(opacity) && opacity >= 20 && opacity <= 100 ? opacity / 100 : Look.STACK_OPACITY;
 }
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
@@ -65,8 +63,6 @@ const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
 // the points ring and bar per pawn color (Look.RING_COLORS, or the admin's; setColors)
 const BAR_COLORS = Look.RING_COLORS.slice();
-// the head color per pawn color in the points look "head" (Look.HEAD_COLORS, or the admin's; setColors)
-const HEAD_COLORS = Look.HEAD_COLORS.slice();
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -117,22 +113,14 @@ function stackGeometries() {
   return stackGeos;
 }
 
+// where the head touches the collar: a smaller head (points look "headsize") is scaled around it
+const HEAD_FOOT = 0.64;
 function pawnGeometry() {
   const pts = PAWN_PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
   const body = new THREE.LatheGeometry(pts, 40);
   const head = new THREE.SphereGeometry(0.19, 32, 20);
   head.translate(0, 0.79, 0);
   return [body, head];
-}
-
-// a head color on the way from color a to color b (share t): the hue and lightness move evenly, the
-// saturation twice as fast, so a dark or dull pawn color (black) does not pass through grey (owner)
-function headTint(a, b, t) {
-  const p = {}, q = {};
-  a.getHSL(p); b.getHSL(q);
-  const c = a.clone().lerpHSL(b, t), h = {};
-  c.getHSL(h);
-  return c.setHSL(h.h, p.s + (q.s - p.s) * Math.min(1, 2 * t), h.l);
 }
 
 export class Board3D {
@@ -619,11 +607,9 @@ export class Board3D {
       if (g.owner[col] === null) continue;
       for (let i = 0; i < g.cfg.pieces_per_color; i++) {
         const mat = new THREE.MeshStandardMaterial({ color: COLORS[col], roughness: 0.35, metalness: 0.05 });
-        // the head has its own material: in the points look "head" it changes color with the points
-        const headMat = mat.clone();
         const grp = new THREE.Group();
         for (const geo of this.pawnGeo) {
-          const m = new THREE.Mesh(geo, geo === this.pawnGeo[1] ? headMat : mat);
+          const m = new THREE.Mesh(geo, mat);
           m.castShadow = true;
           m.userData.piece = ["p", col, i];
           grp.add(m);
@@ -651,7 +637,7 @@ export class Board3D {
         for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, stackMat));
         stack.visible = false;
         grp.add(r1, r2, star, halo, bar, pring, stack);
-        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, stack, mat, headMat, hop: 0 };
+        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, stack, mat, head: grp.children[1], hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -825,7 +811,6 @@ export class Board3D {
       if (!(u.lookQueue && u.lookQueue.length)) this.applyLook(grp, u.wantKills);
       const sel = highlight && highlight[0] === "p" && highlight[1] === col && highlight[2] === i;
       grp.children[0].material.emissive?.set(sel ? "#664400" : "#000000");
-      if (u.headMat) { u.headMat.emissive.copy(u.mat.emissive); u.headMat.emissiveIntensity = u.mat.emissiveIntensity; }
       grp.scale.setScalar(sel ? 1.12 : 1);
     }
     st.hunters.forEach((h, p) => {
@@ -881,7 +866,7 @@ export class Board3D {
     u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
     u.star.scale.setScalar(marshal ? 0.36 : 0.42);
     u.halo.visible = marshal;
-    const ring = POINTS_LOOK !== "bar";     // "ring", "stack" or "head"
+    const ring = POINTS_LOOK !== "bar";     // "ring", "stack" or "headsize"
     u.bar.visible = !ring && kills > 0;
     u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
     // the points ring: up the body to general, then from the foot again to marshal
@@ -901,26 +886,26 @@ export class Board3D {
         u.pring.userData.r = r;
       }
     }
-    // the head: from the pawn color to its head color as the share of the way grows (not a marshal);
-    // through the hues (HSL), so the colors on the way stay bright and never turn grey (owner)
-    if (u.headMat) {
-      const base = new THREE.Color(COLORS[u.piece[1]]);
-      u.headMat.color.copy(POINTS_LOOK === "head" && f > 0 ? headTint(base, new THREE.Color(HEAD_COLORS[u.piece[1]]), Math.min(1, f)) : base);
+    // the head: small at first, full size at general, small again and full at marshal; it keeps
+    // touching the collar (y 0.64): scaled around that point
+    if (u.head) {
+      const k = POINTS_LOOK === "headsize" && !marshal ? Look.HEAD_SIZE.MIN + (1 - Look.HEAD_SIZE.MIN) * Math.min(1, f) : 1;
+      u.head.scale.setScalar(k);
+      u.head.position.y = HEAD_FOOT * (1 - k);
     }
-    // a marshal glows more when the ring is the points look; with "head" its orb grows brighter and
-    // bigger with every point past marshal (Look.HEAD_GLOW)
+    // a marshal glows more when the ring is the points look; with "headsize" its orb grows brighter
+    // and bigger with every point past marshal (Look.HEAD_GLOW)
     let haloScale = ring && marshal ? 1.0 : 0.6, haloOpacity = 1;
-    if (POINTS_LOOK === "head" && marshal) {
+    if (POINTS_LOOK === "headsize" && marshal) {
       const G = Look.HEAD_GLOW, s = Math.max(0, Math.min(1, (kills - mp) / (G.SPAN * (mp - gp))));
       haloScale = G.SCALE0 + (G.SCALE1 - G.SCALE0) * s;
       haloOpacity = G.OPACITY0 + (G.OPACITY1 - G.OPACITY0) * s;
     }
     u.halo.scale.setScalar(haloScale);
     u.halo.material.opacity = haloOpacity;
-    for (const m of [u.mat, u.headMat]) {
-      if (!m) continue;
-      m.emissive.set(ring && marshal ? GOLD_BRIGHT : "#000000");
-      m.emissiveIntensity = ring && marshal ? 0.28 : 1;
+    if (u.mat) {
+      u.mat.emissive.set(ring && marshal ? GOLD_BRIGHT : "#000000");
+      u.mat.emissiveIntensity = ring && marshal ? 0.28 : 1;
     }
   }
 
