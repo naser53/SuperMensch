@@ -105,7 +105,9 @@ $("#voiceOn").onchange = async () => {
 // the piece colors of every game (server settings): a color picker each, and a way back to the default
 const BOARD_NAMES = ["surface", "edge"];
 // one color picker with a Default button; kind "col" (pieces), "rng" (points ring and bar) or "brd" (board)
-const picker = (kind, i, name, value, def) => `<label><input type="color" data-${kind}="${i}" data-def="${def}" value="${value || def}">
+// under the swatch its code (#rrggbb), to copy to another color or to type a new one (owner, 2026-11-09)
+const picker = (kind, i, name, value, def) => `<label><span class="sw"><input type="color" data-${kind}="${i}" data-def="${def}" value="${value || def}">
+    <input class="hex" type="text" dir="ltr" maxlength="7" spellcheck="false" autocomplete="off" value="${value || def}"></span>
     <span class="nm">${esc(name)}</span> <button data-todef title="${E("back_to", { c: def })}">${E("default")}</button></label>`;
 async function loadColors(d) {
   d = d || await api("settings");
@@ -117,9 +119,23 @@ async function loadColors(d) {
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, T(BOARD_NAMES[i]), (d.board || [])[i], def)).join("");
   document.querySelectorAll("[data-todef]").forEach(b => b.onclick = e => {
     e.preventDefault();
-    const x = b.parentElement.querySelector("input"); x.value = x.dataset.def;
+    setColor(b.parentElement.querySelector("[data-def]"), b.parentElement.querySelector("[data-def]").dataset.def);
+  });
+  document.querySelectorAll(".colors [data-def]").forEach(x => {
+    const hex = x.parentElement.querySelector(".hex");
+    x.oninput = () => { hex.value = x.value; };
+    // "#abc", "abc", "#aabbcc" or "aabbcc"; anything else waits, and on leaving the box goes back
+    hex.oninput = () => { const v = hexColor(hex.value); if (v) x.value = v; };
+    hex.onchange = () => { hex.value = x.value; };
   });
 }
+const hexColor = t => {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(t.trim());
+  if (!m) return null;
+  const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1];
+  return "#" + h.toLowerCase();
+};
+const setColor = (x, v) => { x.value = v; const hex = x.parentElement.querySelector(".hex"); if (hex) hex.value = x.value; };
 $("#colorsBtn").onclick = async () => {
   const colors = [...document.querySelectorAll("[data-col]")].map(x => x.value);
   const board = [...document.querySelectorAll("[data-brd]")].map(x => x.value);
@@ -144,7 +160,7 @@ $("#pointsBtn").onclick = async () => {
     headring: { mode: $("#hrMode").value, from: Math.round(+$("#hrFrom").value), to: Math.round(+$("#hrTo").value) } })); show("#pointsMsg", T("saved_dot")); }
   catch (e) { show("#pointsMsg", e.message, true); }
 };
-$("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
+$("#colorsReset").onclick = () => document.querySelectorAll(".colors [data-def]").forEach(x => setColor(x, x.dataset.def));
 
 // the game rules for the whole server (Config.RULES; server/core.js cleanRules): a row per rule, one box
 // for every board where the boards' defaults differ (6, 8, 4 colors), else one box for all
