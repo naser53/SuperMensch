@@ -1061,6 +1061,8 @@ export class Board3D {
     if (m[0] === "p") {
       const [, col, i] = m, r0 = a.pos[col][i], r1 = b.pos[col][i];
       const at = st => this.piecePos(st, col, i);
+      const tun = this.tunnelPath(a, b, col, i);
+      if (tun) return tun;
       if (r0 === YARD || r0 === TUN || r1 === TUN || r1 === YARD || r0 === r1 || (r0 >= L && r1 < L)) return [at(a), at(b)];   // (nest swap: a hop)
       const end = r1 < r0 ? r1 + L : r1;               // r1 < r0: a lap again (tunnel debt)
       const pts = [];
@@ -1080,6 +1082,33 @@ export class Board3D {
     }
     const n = ((h1[1] - h0[1]) * h0[2] % L + L) % L, pts = [];
     for (let k = 0; k <= n; k++) pts.push(this.xz(this.data.track[((h0[1] + h0[2] * k) % L + L) % L], this.surfaceY()));
+    return pts;
+  }
+
+  // §13 a move that uses a declared tunnel (owner, 2026-11-09, game YJET-19): the piece walks to
+  // the entrance, then through the tube, and out along the corridor, so the player sees the tunnel
+  // used. null when the move does not go through a tunnel.
+  tunnelPath(a, b, col, i) {
+    const g = this.game, rec = g.tunnelOf(a, col, i);
+    if (!rec) return null;
+    const r0 = a.pos[col][i], r1 = b.pos[col][i];
+    if (r1 === YARD || r0 === r1) return null;
+    const [E, X, T] = g.tunnelGeom(rec[3], rec[4]);
+    const inside = r1 === TUN ? b.tunnels.find(t => t[1] === col && t[2] === i)[5] : T;   // last tube cell reached
+    if (r1 !== TUN && !(r1 >= X)) return null;          // stopped on or before the entrance: a normal walk
+    const cells = this.tunnelCells(col, rec[3], rec[4]), y = this.surfaceY();
+    const field = x => this.xz(this.data.track[g.absOf(col, x)], y);
+    const pts = [];
+    let from = 1;
+    if (r0 === TUN) {
+      from = rec[5];
+      pts.push(this.xz(cells[from], y + 0.18));
+      from++;
+    } else {
+      for (let x = r0; x <= E; x++) pts.push(field(x));
+    }
+    for (let j = from; j <= inside; j++) pts.push(this.xz(cells[j], y + 0.18));
+    if (r1 !== TUN) for (let x = X; x <= r1; x++) pts.push(field(x));
     return pts;
   }
 
