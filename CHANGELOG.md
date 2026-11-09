@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.23 (2026-11-09)
+
+* Head color (owner): a fourth points look on the admin page, next to Bar, Ring and Stacked rings. Instead of rings on the body, the pawn's head turns little by little from its own color to a head color as it wins points; at general it starts again from its own color up to marshal. A marshal's orb over the star glows brighter and bigger with every point past marshal (`Look.HEAD_GLOW`, at its brightest one general-to-marshal span later). The head color of each pawn color is set in the Look tab (settings key `heads`, defaults `Look.HEAD_COLORS`, the same stand-out colors as the rings, none grey or silver); every color may be chosen for now (owner). Display only.
+
 ## v3.2.22 (2026-11-09)
 
 * Admin page in tabs (owner): Rooms, Players, Initial settings (the game rules) and Look (colors, points look, hunter). Inside a tab each group has its title and a short note beside its controls; the rules come in their groups, each with its own table. The page keeps the last tab open. Each points look has its own short description.
