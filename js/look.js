@@ -15,6 +15,10 @@ export const Look = {
   // the board's own colors on the 6- and 8-color boards: its surface and its edge (the 4-color board
   // keeps its classic cream and red unless the admin sets them). The admin may change both too.
   BOARD_COLORS: ["#f0e6c8", "#b59c6c"],
+  // the points ring and bar of a pawn, per pawn color (as PIECE_COLORS): light turquoise on red,
+  // yellow on blue, light pink on green, navy on yellow, yellow on purple, coral on teal, light green
+  // on pink, light sky blue on black. The admin may change each one too (owner, 2026-11-09).
+  RING_COLORS: ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"],
   // the online server (v2); a page served by another host (such as the downloaded file) asks it
   SERVER_URL: "https://supermensch-dev.ndaneshi.workers.dev",
   // voice chat in online games (js/voice.js): the microphone's bit rate (Opus, bit/s; about 15 MB an

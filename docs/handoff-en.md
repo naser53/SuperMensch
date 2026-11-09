@@ -618,7 +618,9 @@ earlier sketch (browser dice, PINs).
   whole server: Bar (`progressBar`) or Ring (the default since 2026-11-04, owner; a thin ring that touches the body all round, the
   owner wants no band; it climbs from the foot to two thirds of the pawn's height up to general,
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
-  glow). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
+  glow) or Stacked rings (`stack`, owner, 2026-11-09: STACK_N = 12 rings that pile up from the foot
+  to the neck, just under the collar, each a share of the way to general and overlapping the one below by
+  about a third; then they pile up again to marshal; a marshal glows like with Ring). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **One Debug panel** (owner, 2026-11-04): Place pieces and Debug are one button, **Debug**, with one
   large text box (one command per line, run in order: piece lines go to `admin/place`, `rewind` /
@@ -675,7 +677,9 @@ earlier sketch (browser dice, PINs).
   `setColors` in `js/render3d.js` applies them (a changed color's nest fields get a pale tint of it);
   a board already drawn keeps its colors until the next game. Default yellow is 15% darker (`#cea70d`).
   The board's own colors too (surface and edge, `Config.BOARD_COLORS`, `cleanBoard`, settings key
-  `board`; the 4-color board keeps its cream and red while they are at default). `/play?…`
+  `board`; the 4-color board keeps its cream and red while they are at default). The points ring
+  and bar of a pawn per color too (owner, 2026-11-09: `Look.RING_COLORS` = `Config.RING_COLORS`,
+  `cleanRings`, settings key `rings`, defaults sent as `ringDefaults`). `/play?…`
   redirects to `/?…`. The game finds the server through `apiBase()`: its own host on workers.dev,
   else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one

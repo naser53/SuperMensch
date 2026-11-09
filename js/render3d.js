@@ -24,8 +24,8 @@ export const BOARD = [null, null];
 
 // The admin's piece colors (from the server): [hex or null] per color, null = the default. The nest
 // fields of a changed color get a pale tint of it. board: [surface, edge] (hex or null). Takes effect
-// on the next board that is built.
-export function setColors(list, board) {
+// on the next board that is built. rings: the points ring and bar per color (hex or null).
+export function setColors(list, board, rings) {
   const hex = c => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : null);
   for (let i = 0; i < BOARD.length; i++) BOARD[i] = hex(Array.isArray(board) ? board[i] : null);
   const mix = (hex, k) => "#" + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k)
@@ -35,14 +35,16 @@ export function setColors(list, board) {
     COLORS[i] = c || Look.PIECE_COLORS[i];
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
+  for (let i = 0; i < BAR_COLORS.length; i++) BAR_COLORS[i] = hex(Array.isArray(rings) ? rings[i] : null) || Look.RING_COLORS[i];
 }
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
 export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "arrow"; }
-// how a pawn shows its own points: "bar" (a line up the body) or "ring" (a ring that climbs the
-// body to general, again to marshal; a marshal glows instead); an admin setting like the hunter
+// how a pawn shows its own points: "bar" (a line up the body), "ring" (a ring that climbs the
+// body to general, again to marshal; a marshal glows instead) or "stack" (rings that pile up from
+// the foot to the neck at general, again to marshal; owner, 2026-11-09); an admin setting like the hunter
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
-export function setPointsLook(w) { POINTS_LOOK = w === "bar" ? "bar" : "ring"; }
+export function setPointsLook(w) { POINTS_LOOK = ["bar", "stack"].includes(w) ? w : "ring"; }
 // the winner's wave at the end of a game: how high (board units), how fast (rad/s), the delay
 // from one piece to the next (rad)
 const WAVE_HEIGHT = 0.45, WAVE_SPEED = 1.6, WAVE_STEP = 0.55;
@@ -52,9 +54,8 @@ const GATE_SCALE = 1.12;
 // rank colors and the pawn's progress line (from its foot almost to its head)
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 const BAR_W = 0.1, BAR_H = 0.8, BAR_Y = 0.1, BAR_Z = 0.22;
-// per pawn color (COLORS): light turquoise on red, yellow on blue, light pink on green, navy on
-// yellow, yellow on purple, coral on teal, light green on pink, light sky blue on black
-const BAR_COLORS = ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"];
+// the points ring and bar per pawn color (Look.RING_COLORS, or the admin's; setColors)
+const BAR_COLORS = Look.RING_COLORS.slice();
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -90,6 +91,20 @@ function pawnRadius(y) {
 }
 // the points ring climbs from just above the foot to two thirds of the pawn's height
 const RING_Y0 = 0.1, RING_Y1 = 0.62, RING_TUBE = 0.028;
+// the stacked rings: STACK_N rings fill the body from RING_Y0 up to the neck (STACK_Y1, just under
+// the collar) at general; each one overlaps the one below by about a third (owner, 2026-11-09)
+const STACK_N = 12, STACK_TUBE = 0.03, STACK_Y1 = 0.53;
+let stackGeos = null;                     // one geometry per ring height, shared by all pawns
+function stackGeometries() {
+  if (!stackGeos) stackGeos = Array.from({ length: STACK_N }, (_, k) => {
+    const y = RING_Y0 + (STACK_Y1 - RING_Y0) * k / (STACK_N - 1);
+    const geo = new THREE.TorusGeometry(pawnRadius(y) + STACK_TUBE * 0.6, STACK_TUBE, 10, 40);
+    geo.rotateX(Math.PI / 2);
+    geo.translate(0, y, 0);
+    return geo;
+  });
+  return stackGeos;
+}
 
 function pawnGeometry() {
   const pts = PAWN_PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
@@ -606,8 +621,11 @@ export class Board3D {
         const pring = new THREE.Mesh(new THREE.TorusGeometry(0.3, RING_TUBE, 12, 48),
           new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
         pring.rotation.x = Math.PI / 2; pring.visible = false;
-        grp.add(r1, r2, star, halo, bar, pring);
-        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, mat, hop: 0 };
+        const stack = new THREE.Group();
+        for (const geo of stackGeometries()) stack.add(new THREE.Mesh(geo, pring.material));
+        stack.visible = false;
+        grp.add(r1, r2, star, halo, bar, pring, stack);
+        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, bar, pring, stack, mat, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -836,12 +854,16 @@ export class Board3D {
     u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
     u.star.scale.setScalar(marshal ? 0.36 : 0.42);
     u.halo.visible = marshal;
-    const ring = POINTS_LOOK === "ring";
+    const ring = POINTS_LOOK !== "bar";     // "ring" or "stack"
     u.bar.visible = !ring && kills > 0;
     u.bar.userData.bar.scale.y = Math.min(1, kills / mp);
     // the points ring: up the body to general, then from the foot again to marshal
     const f = marshal ? 0 : general ? (kills - gp) / (mp - gp) : kills / gp;
-    u.pring.visible = ring && f > 0;
+    u.pring.visible = POINTS_LOOK === "ring" && f > 0;
+    // the stacked rings: as many as the share of the way (any progress shows the first one)
+    const n = POINTS_LOOK === "stack" ? Math.min(STACK_N, Math.ceil(f * STACK_N - 1e-9)) : 0;
+    u.stack.visible = n > 0;
+    u.stack.children.forEach((m, k) => { m.visible = k < n; });
     if (u.pring.visible) {
       // a thin round ring that touches the body all round (not a band): its tube sits on the outline
       const y = RING_Y0 + (RING_Y1 - RING_Y0) * Math.min(1, f), r = +(pawnRadius(y) + RING_TUBE * 0.7).toFixed(3);

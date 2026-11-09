@@ -62,9 +62,11 @@
     <section>
       <h2 data-t="points_h">Points on a pawn</h2>
       <div class="muted" data-t="points_about">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
-        Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
+        Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Stacked rings: rings pile up from the foot
+        to the neck at general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
       <div class="row"><label><input type="radio" name="points" value="bar"> <span data-t="bar">Bar</span></label>
         <label><input type="radio" name="points" value="ring" checked> <span data-t="ring">Ring</span></label>
+        <label><input type="radio" name="points" value="stack"> <span data-t="stack">Stacked rings</span></label>
         <button class="primary" id="pointsBtn" data-t="save">Save</button> <span id="pointsMsg"></span></div>
     </section>
 
@@ -81,6 +83,8 @@
       <div class="muted" data-t="colors_about">For every game on this server. Tap a color to pick any shade. Games started after saving use the new colors.</div>
       <div class="row"><b data-t="pieces">Pieces</b></div>
       <div id="colors" class="colors"></div>
+      <div class="row"><b data-t="rings">Points ring and bar</b> <span class="muted" data-t="rings_note">(on a pawn of each color)</span></div>
+      <div id="ringColors" class="colors"></div>
       <div class="row"><b data-t="board">Board</b> <span class="muted" data-t="board_note">(the 4-color board keeps its cream and red while these are at default)</span></div>
       <div id="boardColors" class="colors"></div>
       <div class="row"><button class="primary" id="colorsBtn" data-t="save_colors">Save colors</button> <button id="colorsReset" data-t="all_default">All to default</button>
