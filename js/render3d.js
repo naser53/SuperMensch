@@ -51,7 +51,10 @@ export function setHunterWeapon(w) { HUNTER_WEAPON = w === "sword" ? "sword" : "
 let POINTS_LOOK = "ring";                 // the default (owner, 2026-11-04)
 let HR_FROM = Look.HEAD_RING.FROM, HR_TO = Look.HEAD_RING.TO, HR_MODE = Look.HEAD_RING.MODE;
 // headring: { mode, from, to } (admin settings, percent; null = Look.HEAD_RING)
-export function setPointsLook(w, headring) {
+// the rank rings of a general and a marshal: "metal" (silver and gold) or "ring" (the Ring color)
+let RANK_RINGS = "metal";
+export function setPointsLook(w, headring, rankrings) {
+  RANK_RINGS = rankrings === "ring" ? "ring" : "metal";
   POINTS_LOOK = w === "headring" || w === "headsize" ? "headring" : "ring";
   const o = headring && typeof headring === "object" ? headring : {};
   HR_FROM = Number.isInteger(o.from) && o.from >= 20 && o.from <= 50 ? o.from / 100 : Look.HEAD_RING.FROM;
@@ -627,7 +630,7 @@ export class Board3D {
         const hrings = new THREE.Group();
         grp.children[1].add(hrings);
         grp.add(r1, r2, star, halo, pring);
-        grp.userData = { piece: ["p", col, i], r1, r2, star, halo, pring, hrings, mat, hop: 0 };
+        grp.userData = { piece: ["p", col, i], r1, r2, r1m: ring1, r2m: gold, star, halo, pring, hrings, mat, hop: 0 };
         const p = this.piecePos(g.state, col, i);
         grp.position.copy(p);
         this.pieceGroup.add(grp);
@@ -827,7 +830,10 @@ export class Board3D {
     const gp = g.cfg.general_points, mp = g.cfg.marshal_points;
     const t = marshal ? 1 : general ? (kills - gp) / (mp - gp) : 0;     // silver -> gold
     u.r1.visible = general;
-    u.r1.material.color.set(marshal ? GOLD : SILVER);
+    u.r1m.color.set(marshal ? GOLD : SILVER);
+    const rm = RANK_RINGS === "ring" ? ringMat(u.piece[1]) : null;    // the admin's choice (setPointsLook)
+    u.r1.material = rm || u.r1m;
+    u.r2.material = rm || u.r2m;
     u.r2.visible = marshal;
     u.star.visible = general;
     u.star.material.color.copy(new THREE.Color(SILVER).lerp(new THREE.Color(marshal ? GOLD_BRIGHT : GOLD), t));
