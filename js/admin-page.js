@@ -47,6 +47,16 @@ $("#lang").onchange = async () => {
   if (!$("#panel").hidden) await redraw();
 };
 applyLang();
+
+// the tabs (owner, 2026-11-09): Rooms, Players, Initial settings (the rules), Look; the last one open is kept
+function showTab(name) {
+  if (!document.querySelector(`.tab[data-tab="${name}"]`)) name = "rooms";
+  document.querySelectorAll(".tab").forEach(t => { t.hidden = t.dataset.tab !== name; });
+  document.querySelectorAll("#tabs [data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  store.set("adminTab", name);
+}
+document.querySelectorAll("#tabs [data-tab]").forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
+showTab(store.get("adminTab") || "rooms");
 const api = async (path, body) => {
   const r = await fetch("/api/" + path, body === undefined ? {} :
     { method: "POST", headers: { "content-type": "application/json", "x-admin-key": key }, body: JSON.stringify(body) });
@@ -152,11 +162,15 @@ const ruleValue = x => {
 const markRule = x => x.classList.toggle("chg", JSON.stringify(ruleValue(x)) !== x.dataset.def);
 function showRules(d) {
   rulesInfo = d;
-  let grp = "", rows = "";
+  // one group (Config.RULES group) after the other, each with its own title and table
+  let grp = null, rows = "", html = "";
+  const close = () => { if (grp !== null) html += `<div style="overflow-x:auto"><table class="rules"><col class="n">${BOARDS.map(() => '<col class="b">').join("")}${rows}</table></div></div></div>`; };
   for (const r of d.list) {
     if (r.group !== grp) {
+      close();
       grp = r.group;
-      rows += `<tr class="grp"><td>${esc(ADMIN_STR[lang]["grp_" + grp] || grp)}</td>${BOARDS.map(n => `<th>${E("n_colors", { n: N(n) })}</th>`).join("")}</tr>`;
+      html += `<div class="grp wide"><div class="gh"><h3>${esc(ADMIN_STR[lang]["grp_" + grp] || grp)}</h3></div><div class="gb">`;
+      rows = `<tr><th></th>${BOARDS.map(n => `<th>${E("n_colors", { n: N(n) })}</th>`).join("")}</tr>`;
     }
     const cell = where => {
       const n = where === "all" ? 6 : where, def = d.defaults[n][r.key];
@@ -166,7 +180,8 @@ function showRules(d) {
     rows += `<tr><td>${esc(ADMIN_STR[lang]["rule_" + r.key] || r.label)} <code>${r.key}</code></td>` +
       (r.board ? BOARDS.map(n => `<td>${cell(n)}</td>`).join("") : `<td colspan="3">${cell("all")}</td>`) + "</tr>";
   }
-  $("#rules").innerHTML = rows;
+  close();
+  $("#rules").innerHTML = html;
   document.querySelectorAll("[data-rule]").forEach(x => { markRule(x); x.oninput = x.onchange = () => markRule(x); });
 }
 async function loadRules() { showRules(await api("admin/rules", {})); }
