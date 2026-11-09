@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.28 (2026-11-09)
+
+* Admin page, Layout tab (owner): the piece colors and their ring colors stand side by side, one row per color, under one heading "Pieces and ring"; "Points ring and bar" is now called Ring. It fits a phone too.
+
 ## v3.2.27 (2026-11-09)
 
 * Points looks (owner): Bar and Stacked rings are gone, with the stacked rings' opacity; a saved one reads as Ring.
