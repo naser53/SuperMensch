@@ -19,6 +19,8 @@ const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers
 // the voice fields a device keeps in its WebSocket attachment (sessions it made, its microphone)
 // the points looks a pawn can have (the first is the default)
 const POINTS_LOOKS = ["ring", "bar", "stack"];
+// the stacked rings' opacity: a whole percent from 20 to 100, else null (the default)
+const cleanOpacity = p => (Number.isInteger(p) && p >= 20 && p <= 100 ? p : null);
 const pointsLook = w => POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
 const VOICE_KEYS = ["sessions", "voice"];
 const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
@@ -43,9 +45,10 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
-    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS });
+    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
+    opacityDefault: Math.round(Config.STACK_OPACITY * 100) });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
     if (!adminOk) return fail("wrong admin key", 403);
@@ -182,6 +185,17 @@ export class Lobby extends DurableObject {
   points() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'points'`).toArray();
     return r.length ? pointsLook(JSON.parse(r[0].v)) : "ring";
+  }
+
+  // the stacked rings' opacity in percent, 20..100 (owner, 2026-11-09); null = the page's default
+  opacity() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'opacity'`).toArray();
+    return r.length ? cleanOpacity(JSON.parse(r[0].v)) : null;
+  }
+
+  setOpacity(p) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('opacity', ?)`, JSON.stringify(cleanOpacity(p)));
+    return this.opacity();
   }
 
   setPoints(w) {

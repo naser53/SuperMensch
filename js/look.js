@@ -19,7 +19,7 @@ export const Look = {
   // yellow on blue, light pink on green, navy on yellow, yellow on purple, coral on teal, light green
   // on pink, light sky blue on black. The admin may change each one too (owner, 2026-11-09).
   // the stacked rings (points look "stack") are see-through so the pawn's own color shows through
-  // them: their opacity, 0..1 (owner, 2026-11-09)
+  // them: their default opacity, 0..1 (owner, 2026-11-09); the admin may change it (20..100%)
   STACK_OPACITY: 0.6,
   RING_COLORS: ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"],
   // the online server (v2); a page served by another host (such as the downloaded file) asks it

@@ -122,9 +122,12 @@ $("#hunterBtn").onclick = async () => {
   try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", T("saved_dot")); }
   catch (e) { show("#hunterMsg", e.message, true); }
 };
-const showPoints = d => { document.querySelector(`[name=points][value=${["bar", "stack"].includes(d.points) ? d.points : "ring"}]`).checked = true; };
+const showPoints = d => {
+  document.querySelector(`[name=points][value=${["bar", "stack"].includes(d.points) ? d.points : "ring"}]`).checked = true;
+  $("#opacity").value = d.opacity || d.opacityDefault || 60;
+};
 $("#pointsBtn").onclick = async () => {
-  try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value })); show("#pointsMsg", T("saved_dot")); }
+  try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value, opacity: Math.round(+$("#opacity").value) })); show("#pointsMsg", T("saved_dot")); }
   catch (e) { show("#pointsMsg", e.message, true); }
 };
 $("#colorsReset").onclick = () => document.querySelectorAll("[data-def]").forEach(x => { x.value = x.dataset.def; });
