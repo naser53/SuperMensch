@@ -62,9 +62,11 @@
     <section>
       <h2 data-t="points_h">Points on a pawn</h2>
       <div class="muted" data-t="points_about">How a pawn shows the points it has won itself, in every game on this server. Bar: a line up the body.
-        Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
+        Ring: a ring that climbs the body to general, then again to marshal; a marshal glows instead. Stacked rings: rings pile up from the foot
+        to the neck at general, then again to marshal; a marshal glows instead. Pages loaded after saving use it.</div>
       <div class="row"><label><input type="radio" name="points" value="bar"> <span data-t="bar">Bar</span></label>
         <label><input type="radio" name="points" value="ring" checked> <span data-t="ring">Ring</span></label>
+        <label><input type="radio" name="points" value="stack"> <span data-t="stack">Stacked rings</span></label>
         <button class="primary" id="pointsBtn" data-t="save">Save</button> <span id="pointsMsg"></span></div>
     </section>
 

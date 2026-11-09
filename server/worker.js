@@ -17,6 +17,9 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, x-admin-key",
   "access-control-allow-methods": "GET, POST, OPTIONS" };
 // the voice fields a device keeps in its WebSocket attachment (sessions it made, its microphone)
+// the points looks a pawn can have (the first is the default)
+const POINTS_LOOKS = ["ring", "bar", "stack"];
+const pointsLook = w => POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
 const VOICE_KEYS = ["sessions", "voice"];
 const keepVoice = a => Object.fromEntries(VOICE_KEYS.filter(k => a && a[k] !== undefined).map(k => [k, a[k]]));
 const fail = (msg, status = 400) => json({ error: msg }, status);
@@ -162,14 +165,15 @@ export class Lobby extends DurableObject {
     return this.board();
   }
 
-  // how a pawn shows its own points in every game: "ring" (default; owner, 2026-11-04) or "bar"
+  // how a pawn shows its own points in every game: "ring" (default; owner, 2026-11-04), "bar" or
+  // "stack" (rings piled up the body; owner, 2026-11-09)
   points() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'points'`).toArray();
-    return r.length && JSON.parse(r[0].v) === "bar" ? "bar" : "ring";
+    return r.length ? pointsLook(JSON.parse(r[0].v)) : "ring";
   }
 
   setPoints(w) {
-    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('points', ?)`, JSON.stringify(w === "bar" ? "bar" : "ring"));
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('points', ?)`, JSON.stringify(pointsLook(w)));
     return this.points();
   }
 

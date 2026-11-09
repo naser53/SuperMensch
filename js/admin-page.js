@@ -120,7 +120,7 @@ $("#hunterBtn").onclick = async () => {
   try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", T("saved_dot")); }
   catch (e) { show("#hunterMsg", e.message, true); }
 };
-const showPoints = d => { document.querySelector(`[name=points][value=${d.points === "bar" ? "bar" : "ring"}]`).checked = true; };
+const showPoints = d => { document.querySelector(`[name=points][value=${["bar", "stack"].includes(d.points) ? d.points : "ring"}]`).checked = true; };
 $("#pointsBtn").onclick = async () => {
   try { showPoints(await api("admin/points", { points: document.querySelector("[name=points]:checked").value })); show("#pointsMsg", T("saved_dot")); }
   catch (e) { show("#pointsMsg", e.message, true); }

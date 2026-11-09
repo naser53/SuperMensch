@@ -26,7 +26,7 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     if (board) await lobby.setBoard(board);
     return json(await settings());
   }
-  if (what === "points" && body) {          // how a pawn shows its own points: "bar" or "ring"
+  if (what === "points" && body) {          // how a pawn shows its own points: "bar", "ring" or "stack"
     await lobby.setPoints(body.points);
     return json(await settings());
   }
