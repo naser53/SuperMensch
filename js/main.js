@@ -1527,7 +1527,7 @@ async function main() {
   catch { /* fall back to the system font */ }
   try {
     const kept = JSON.parse(localStorage.getItem("supermensch-colors") || "null");
-    if (Array.isArray(kept)) setColors(kept); else if (kept) { setColors(kept.colors, kept.board, kept.rings, kept.heads); setHunterWeapon(kept.hunter); setPointsLook(kept.points, kept.opacity); }
+    if (Array.isArray(kept)) setColors(kept); else if (kept) { setColors(kept.colors, kept.board, kept.rings); setHunterWeapon(kept.hunter); setPointsLook(kept.points, kept.opacity); }
   } catch { /* none kept */ }
   const app = new App();
   window.superMensch = app;            // handy for testing from the console
@@ -1545,13 +1545,13 @@ async function loadColors(app) {
   try {
     const r = await fetch(`${apiBase()}/api/settings`, { cache: "no-store" });
     if (!r.ok) return;
-    const { colors, board, rings, heads, hunter, points, opacity } = await r.json();
-    const text = JSON.stringify({ colors: colors || null, board: board || null, rings: rings || null, heads: heads || null, hunter: hunter || null, points: points || null,
+    const { colors, board, rings, hunter, points, opacity } = await r.json();
+    const text = JSON.stringify({ colors: colors || null, board: board || null, rings: rings || null, hunter: hunter || null, points: points || null,
       opacity: opacity || null });
     let old = null;
     try { old = localStorage.getItem("supermensch-colors"); localStorage.setItem("supermensch-colors", text); } catch { /* private mode */ }
     if (text === old) return;
-    setColors(colors, board, rings, heads);
+    setColors(colors, board, rings);
     setHunterWeapon(hunter);
     setPointsLook(points, opacity);
     if (!app.game) app.render();

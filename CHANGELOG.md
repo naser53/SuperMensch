@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.25 (2026-11-09)
+
+* Head size (owner): a new points look in place of Head color (v3.2.23), which is gone, with its head colors on the admin page. The body stays as it is; the head starts small (55%, `Look.HEAD_SIZE`) and grows with every point to full size at general, then from small again to marshal. A marshal's orb over the star glows brighter and bigger with the points past marshal (`Look.HEAD_GLOW`). Display only.
+
 ## v3.2.24 (2026-11-09)
 
 * Debug: give a pawn rank points (owner). A line `R2 p85` in a room's Debug box gives red 2 85 rank points where it stands, to test the general and marshal looks. Stored with the place event (`points`).

@@ -18,7 +18,7 @@ const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers
   "access-control-allow-methods": "GET, POST, OPTIONS" };
 // the voice fields a device keeps in its WebSocket attachment (sessions it made, its microphone)
 // the points looks a pawn can have (the first is the default)
-const POINTS_LOOKS = ["ring", "bar", "stack", "head"];
+const POINTS_LOOKS = ["ring", "bar", "stack", "headsize"];
 // the stacked rings' opacity: a whole percent from 20 to 100, else null (the default)
 const cleanOpacity = p => (Number.isInteger(p) && p >= 20 && p <= 100 ? p : null);
 const pointsLook = w => POINTS_LOOKS.includes(w) ? w : POINTS_LOOKS[0];
@@ -45,9 +45,9 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), heads: await lobby.heads(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), opacity: await lobby.opacity(),
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
-    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS, headDefaults: Config.HEAD_COLORS,
+    defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
     opacityDefault: Math.round(Config.STACK_OPACITY * 100) });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
   if (parts[0] === "admin") {
@@ -168,18 +168,6 @@ export class Lobby extends DurableObject {
     return this.rings();
   }
 
-  // the head colors of the points look "head" per pawn color (cleanHeads): hex or null per color
-  heads() {
-    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'heads'`).toArray();
-    const v = r.length ? JSON.parse(r[0].v) : [];
-    return Config.HEAD_COLORS.map((_, i) => v[i] || null);
-  }
-
-  setHeads(heads) {
-    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('heads', ?)`, JSON.stringify(heads));
-    return this.heads();
-  }
-
   // the board's own colors (cleanBoard): [surface, edge], hex or null
   board() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'board'`).toArray();
@@ -193,7 +181,7 @@ export class Lobby extends DurableObject {
   }
 
   // how a pawn shows its own points in every game: "ring" (default; owner, 2026-11-04), "bar" or
-  // "stack" (rings piled up the body; owner, 2026-11-09) or "head" (the head changes color; owner, 2026-11-09)
+  // "stack" (rings piled up the body; owner, 2026-11-09) or "headsize" (the head grows; owner, 2026-11-09)
   points() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'points'`).toArray();
     return r.length ? pointsLook(JSON.parse(r[0].v)) : "ring";

@@ -21,13 +21,11 @@ export const Look = {
   // the stacked rings (points look "stack") are see-through so the pawn's own color shows through
   // them: their default opacity, 0..1 (owner, 2026-11-09); the admin may change it (20..100%)
   STACK_OPACITY: 0.6,
-  // the head color of a pawn in the points look "head": the head turns from the pawn color to this
-  // one as the pawn wins points, again after general (owner, 2026-11-09). Per pawn color, like
-  // RING_COLORS (the same stand-out colors; none of them grey or silver, the general star's color).
-  // The admin may change each one; every color is allowed for now (owner, 2026-11-09).
-  HEAD_COLORS: ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"],
-  // a marshal's orb over the star in the points look "head": its opacity and size at marshal and
-  // at its brightest, reached HEAD_GLOW.SPAN times the general-to-marshal points later
+  // the points look "headsize" (owner, 2026-11-09): the head starts at HEAD_SIZE.MIN of its size and
+  // grows with the points to its full size at general, then again from MIN to marshal; a marshal's
+  // orb over the star: its opacity and size at marshal and at its brightest, reached HEAD_GLOW.SPAN
+  // times the general-to-marshal points later
+  HEAD_SIZE: { MIN: 0.55 },
   HEAD_GLOW: { OPACITY0: 0.45, OPACITY1: 1, SCALE0: 0.7, SCALE1: 1.35, SPAN: 1 },
   RING_COLORS: ["#9ff0f0", "#ffd84a", "#ffb3e0", "#1f3a93", "#ffe066", "#ff9f8a", "#b6ffb0", "#8fdcff"],
   // the online server (v2); a page served by another host (such as the downloaded file) asks it
