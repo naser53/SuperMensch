@@ -620,7 +620,7 @@ earlier sketch (browser dice, PINs).
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
   glow) or Stacked rings (`stack`, owner, 2026-11-09: STACK_N = 12 rings that pile up from the foot
   to the neck, just under the collar, each a share of the way to general and overlapping the one below by
-  about a third; then they pile up again to marshal; a marshal glows like with Ring). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
+  about a third, see-through at 60% opacity, `Look.STACK_OPACITY`; then they pile up again to marshal; a marshal glows like with Ring). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **One Debug panel** (owner, 2026-11-04): Place pieces and Debug are one button, **Debug**, with one
   large text box (one command per line, run in order: piece lines go to `admin/place`, `rewind` /
