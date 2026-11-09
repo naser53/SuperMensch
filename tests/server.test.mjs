@@ -227,6 +227,13 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   assert.throws(() => room.place("B: 41 42"), /needs 4/);
   assert.throws(() => room.place("Q: 1 y y y"), /no such color/);
   assert.equal(room.events.length, n);                             // a refused place changes nothing
+  assert.throws(() => room.place("R5 p10"), /no such piece/);
+  const r = room.place("R2 p85\nR1 p0");                         // rank points; the pieces stay
+  assert.deepEqual(r.events[0].points, [[0, 1, 85], [0, 0, 0]]);
+  const t = new Table(setup, { autoDice: false }); room.events.slice(0, n + 1).forEach(ev => t.apply(ev));
+  assert.deepEqual([t.game.state.kills[0][0], t.game.state.kills[0][1]], [0, 85]);
+  assert.equal(room.placeText().split("\n")[0], "R: 4 23 z2 y");
+  assert.equal(fingerprint(Table.replay(setup, room.events).game), room.fingerprint());
 });
 
 test("admin debug: rewind N and roll dice go back to a dice turn and throw it again", () => {

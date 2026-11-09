@@ -608,7 +608,7 @@ earlier sketch (browser dice, PINs).
   again. Connected devices are closed with code 4001 (4000 = deleted) and go back to the first page.
   **Tabs** (owner, 2026-11-09): the admin page has four tabs, Rooms (the default), Players (with
   voice chat), Initial settings (the game rules, one group of `Config.RULES` after the other) and
-  Look (colors, points look, hunter); the last one open is kept in localStorage `adminTab`. Inside
+  Layout (colors, points look, hunter; called Look until v3.2.24); the last one open is kept in localStorage `adminTab`. Inside
   a tab each group has its title and a short note on one side and its controls on the other.
   **Admin languages** (owner, 2026-11-07; v3.2.12): the admin page speaks the game's languages (en, fa, de)
   with a menu at the top; it reads and writes the game page's saved language (localStorage
@@ -624,7 +624,7 @@ earlier sketch (browser dice, PINs).
   then from the foot again up to marshal; a marshal has no ring but a bigger halo and a golden
   glow) or Stacked rings (`stack`, owner, 2026-11-09: STACK_N = 12 rings that pile up from the foot
   to the neck, just under the collar, each a share of the way to general and overlapping the one below by
-  about a third, see-through at 60% opacity, `Look.STACK_OPACITY`, which the admin may set from 20 to 100% next to the points look (settings key `opacity`, sent with `/api/settings` as `opacity`, with `opacityDefault`); then they pile up again to marshal; a marshal glows like with Ring) or Head color (`head`, owner, 2026-11-09: no rings; the head, a mesh of its own with `headMat`, turns from the pawn color to `HEAD_COLORS` (per pawn color, `Look.HEAD_COLORS`, set by the admin in the Look tab, settings key `heads`, `headDefaults`; every color allowed for now, the owner may later block grey and silver, the general star's colors) on the way to general, again from the pawn color to marshal; a marshal's head is its own color, its body glows like with Ring and the orb over its star (halo) grows brighter and bigger with the points past marshal, `Look.HEAD_GLOW`). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
+  about a third, see-through at 60% opacity, `Look.STACK_OPACITY`, which the admin may set from 20 to 100% next to the points look (settings key `opacity`, sent with `/api/settings` as `opacity`, with `opacityDefault`); then they pile up again to marshal; a marshal glows like with Ring) or Head color (`head`, owner, 2026-11-09: no rings; the head, a mesh of its own with `headMat`, turns from the pawn color to `HEAD_COLORS` (per pawn color, `Look.HEAD_COLORS`, set by the admin in the Layout tab, settings key `heads`, `headDefaults`; every color allowed for now, the owner may later block grey and silver, the general star's colors) on the way to general, again from the pawn color to marshal; a marshal's head is its own color, its body glows like with Ring and the orb over its star (halo) grows brighter and bigger with the points past marshal, `Look.HEAD_GLOW`). `POST /api/admin/points`, Lobby `settings` key `points`, `/api/settings` as `points`;
   `setPointsLook` / `applyLook` / `pawnRadius` in `js/render3d.js`.
   **One Debug panel** (owner, 2026-11-04): Place pieces and Debug are one button, **Debug**, with one
   large text box (one command per line, run in order: piece lines go to `admin/place`, `rewind` /
@@ -636,7 +636,8 @@ earlier sketch (browser dice, PINs).
   owner, 2026-11-04): 1..L track as on the board, z1..z4 the color's nest (z1 just inside; L+1.. still
   works), y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
   event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
-  pages load the game again.
+  pages load the game again. `R2 p85` (owner, 2026-11-09) gives red 2 rank points 85 where it stands, to see the general and
+  marshal looks; stored in the same event as `points: [[color, piece, points]]`.
   **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
   (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
   `rewind N` (owner, 2026-11-04; `go drop N` still works) (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
@@ -703,7 +704,7 @@ earlier sketch (browser dice, PINs).
   first page asks for it under the picked room and keeps it per room in localStorage
   `supermensch-keys`; `hello` with seats and the color pick send it, `GameRoom.passkeyOk` checks it
   (wrong: close 4002 or error "passkey"; 5 wrong in 5 minutes: "passkey wait", `PasskeyGate` in
-  `server/core.js`). Looking and reading the moves need no passkey. The player list of open rooms
+  `server/core.js`). The first page shows the typed passkey as dots (a password box; owner, 2026-11-09). Looking and reading the moves need no passkey. The player list of open rooms
   (`GET /api/games`) never carries it.
 * Steps: M0 table layer (done) · M1 server, lobby, admin, dev page, deploy (done) ·
   M2 the 3D game on the server (`play?game=ID&seats=0,2`: `App.startOnline`; seats played elsewhere count
