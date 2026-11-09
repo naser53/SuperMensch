@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.18 (2026-11-09)
+
+* Tunnel moves are shown through the tunnel (owner, game YJET-19): a piece that uses a tunnel walks to the entrance, through the tube, and out along the corridor, instead of hopping over every field in between. Display only; the rules are unchanged.
+
 ## v3.2.17 (2026-11-09)
 
 * Tunnel exit (owner, game YJET-19): a piece coming out of a tunnel is a normal piece. It hits a lone opponent, but a piece in a wall or castle only as part of a break with other pieces (§9), and the rest of its die cannot jump an opponent's castle. Before, the exit hit even pieces in walls and castles. A running game where an exit hit a structure piece replays differently from that move on.
