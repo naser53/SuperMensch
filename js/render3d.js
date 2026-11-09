@@ -35,7 +35,10 @@ export function setColors(list, board, rings) {
     COLORS[i] = c || Look.PIECE_COLORS[i];
     LIGHT[i] = c ? mix(c, 0.85) : LIGHT_DEFAULT[i];
   }
-  for (let i = 0; i < BAR_COLORS.length; i++) BAR_COLORS[i] = hex(Array.isArray(rings) ? rings[i] : null) || Look.RING_COLORS[i];
+  for (let i = 0; i < BAR_COLORS.length; i++) {
+    BAR_COLORS[i] = hex(Array.isArray(rings) ? rings[i] : null) || Look.RING_COLORS[i];
+    if (RING_MATS[i]) { RING_MATS[i].color.set(BAR_COLORS[i]); RING_MATS[i].emissive.set(BAR_COLORS[i]); }
+  }
 }
 // what the hunter carries: "arrow" or "sword" (an admin setting for the whole server, like the colors)
 let HUNTER_WEAPON = "arrow";
@@ -65,6 +68,11 @@ const GATE_SCALE = 1.12;
 const SILVER = "#c3c9d1", GOLD = "#e0a810", GOLD_BRIGHT = "#ffd21a";
 // the points rings per pawn color (Look.RING_COLORS, or the admin's; setColors)
 const BAR_COLORS = Look.RING_COLORS.slice();
+// one material per pawn color for its points rings (body and head), shared by all its pawns and
+// boards: a new Ring color from the admin shows at once, also on a game already open (owner, 2026-11-09)
+const RING_MATS = [];
+const ringMat = col => RING_MATS[col] || (RING_MATS[col] =
+  new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
 const TOP = 0.0;              // board surface height
 const FIELD_H = 0.07;
 const TABLE_Y = -0.62;
@@ -613,8 +621,7 @@ export class Board3D {
         const star = this.starSprite(), halo = this.haloSprite();
         star.position.y = halo.position.y = 1.52;
         star.visible = halo.visible = false;
-        const pring = new THREE.Mesh(new THREE.TorusGeometry(0.3, RING_TUBE, 12, 48),
-          new THREE.MeshStandardMaterial({ color: BAR_COLORS[col], emissive: BAR_COLORS[col], emissiveIntensity: 0.35, roughness: 0.4 }));
+        const pring = new THREE.Mesh(new THREE.TorusGeometry(0.3, RING_TUBE, 12, 48), ringMat(col));
         pring.rotation.x = Math.PI / 2; pring.visible = false;
         // the head rings (points look "headring"): children of the head, made when first needed
         const hrings = new THREE.Group();
