@@ -75,15 +75,16 @@ say "settings ($ENVF)"
 if [ ! -f "$ENVF" ]; then
   key="${ADMIN_KEY:-}"
   if [ -z "$key" ] && [ -r /dev/tty ]; then
-    # it travels in an HTTP header: English letters, digits and - _ . only
+    # it travels in an HTTP header and sits in a file the shell reads: English letters, digits and
+    # the signs @ ! % + = : , . _ - only (no spaces, quotes, $ or \)
     while :; do
-      read -r -s -p "Admin key for this server (letters, digits, - _ .; empty: make one): " key </dev/tty || true; echo
+      read -r -s -p "Admin key for this server (letters, digits, @ ! % + = : , . _ -; empty: make one): " key </dev/tty || true; echo
       key=$(printf '%s' "$key" | tr -d '\r')
-      [ -z "$key" ] || [[ "$key" =~ ^[A-Za-z0-9._-]+$ ]] && break
-      echo "only English letters, digits and - _ . please"
+      [ -z "$key" ] || [[ "$key" =~ ^[A-Za-z0-9@!%+=:,._-]+$ ]] && break
+      echo "only English letters, digits and @ ! % + = : , . _ - please"
     done
   fi
-  [ -z "$key" ] || [[ "$key" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "ADMIN_KEY: only English letters, digits and - _ ."; exit 1; }
+  [ -z "$key" ] || [[ "$key" =~ ^[A-Za-z0-9@!%+=:,._-]+$ ]] || { echo "ADMIN_KEY: only English letters, digits and @ ! % + = : , . _ -"; exit 1; }
   [ -n "$key" ] || { key=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' ); echo "admin key made: $key  (keep it; it is in $ENVF)"; }
   umask 077
   printf 'PORT=%s\nHOST=%s\nDATA_DIR=%s\nADMIN_KEY=%s\n' "$PORT" "$HOST" "$DATA" "$key" > "$ENVF"
