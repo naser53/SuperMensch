@@ -33,6 +33,10 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     if (body.rankrings !== undefined) await lobby.setRankrings(body.rankrings); // "metal" or "ring"
     return json(await settings());
   }
+  if (what === "opendays" && body) {        // days without a move a room stays on the first page (0 = always)
+    await lobby.setOpenDays(body.days);
+    return json(await settings());
+  }
   if (what === "hunter" && body) {          // what the hunter carries: "arrow" or "sword"
     await lobby.setHunter(body.hunter);
     return json(await settings());

@@ -7,7 +7,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
-import { OPEN_HOURS, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, newPasskey, nextName, rulesFor } from "./core.js";
+import { OPEN_DAYS, cleanOpenDays, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, newPasskey, nextName, rulesFor } from "./core.js";
 import { adminApi } from "./admin.js";
 import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
 
@@ -58,7 +58,7 @@ async function api(req, env, url) {
 
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
-  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(), rankrings: await lobby.rankrings(),
+  const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(), rankrings: await lobby.rankrings(), openDays: await lobby.openDays(), openDaysDefault: OPEN_DAYS,
     voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
     headringDefault: { mode: Config.HEAD_RING.MODE, from: Math.round(Config.HEAD_RING.FROM * 100), to: Math.round(Config.HEAD_RING.TO * 100) } });
@@ -227,6 +227,17 @@ export class Lobby extends DurableObject {
     return this.points();
   }
 
+  // days without a move a room stays on the first page (cleanOpenDays; 0 = always)
+  openDays() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'openDays'`).toArray();
+    return cleanOpenDays(r.length ? JSON.parse(r[0].v) : null);
+  }
+
+  setOpenDays(d) {
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('openDays', ?)`, JSON.stringify(cleanOpenDays(d)));
+    return this.openDays();
+  }
+
   // what the hunter carries in every game: "arrow" (default) or "sword"
   hunter() {
     const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'hunter'`).toArray();
@@ -288,7 +299,7 @@ export class Lobby extends DurableObject {
   }
 
   openGames() {
-    const since = Date.now() - OPEN_HOURS * 3600e3;
+    const days = this.openDays(), since = days ? Date.now() - days * 86400e3 : 0;
     return this.sql.exec(`SELECT id, name, created, updated, setup FROM games WHERE status = 'open' AND updated > ?
       ORDER BY updated DESC`, since).toArray().map(r => {
       const su = JSON.parse(r.setup);

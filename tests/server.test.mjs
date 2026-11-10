@@ -1,7 +1,7 @@
 // Server logic tests (server/core.js; no Cloudflare needed).   npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Room, checkSetup, claimSeats, cleanBoard, cleanColors, cleanRings, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
+import { Room, OPEN_DAYS, cleanOpenDays, checkSetup, claimSeats, cleanBoard, cleanColors, cleanRings, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
 import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
 import { mulberry32 } from "../js/engine.js";
@@ -466,4 +466,10 @@ test("each step of a play carries the points of its captures so far (server/fram
   }
   assert.ok(plays > 100);
   assert.ok(early > 0, "a capture with the first die scores at once");
+});
+
+test("days a room stays on the first page: 0 (always) to 365, else the default", () => {
+  assert.equal(cleanOpenDays(0), 0);
+  assert.equal(cleanOpenDays(30), 30);
+  for (const bad of [-1, 366, 1.5, "7", null, undefined]) assert.equal(cleanOpenDays(bad), OPEN_DAYS);
 });

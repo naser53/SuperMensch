@@ -82,7 +82,9 @@
     <div class="tab" data-tab="rooms">
       <section>
         <div class="grp wide"><div class="gh"><h3 data-t="rooms">Rooms</h3></div>
-          <div class="gb"><div id="rooms"></div></div></div>
+          <div class="gb"><div id="rooms"></div>
+            <div class="row"><label><span data-t="open_days">On the first page for</span> <input type="number" id="openDays" min="0" max="365" step="1" style="width:64px"> <span data-t="open_days_unit">days without a move (0 = always)</span></label>
+              <button class="primary" id="openDaysBtn" data-t="save">Save</button> <span id="openDaysMsg"></span></div></div></div>
       </section>
       <section>
         <div class="grp wide"><div class="gh"><h3 data-t="new_room">New room</h3></div>
