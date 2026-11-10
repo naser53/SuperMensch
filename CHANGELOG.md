@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.35 (2026-11-10)
+
+* The server also runs on a Linux machine (owner, 2026-11-10), from the same code as on Cloudflare: `server/node/` gives the Worker what Cloudflare gives it (SQLite files, WebSockets, the pages). `tools/linux/install.sh` sets up an Ubuntu server (Node, a service on port 80, an update from `main` every 2 minutes); `sudo supermensch-copy` copies the rooms, users and settings from Cloudflare (new admin routes `export` and `import`). Cloudflare stays as it is; the last Cloudflare-only version is v3.2.34.
+* The game page talks to the server it came from (it used to know only Cloudflare and the local test server).
+
 ## v3.2.34 (2026-11-10)
 
 * Debug and place commands (owner: `G4 p34` said "no such field"): a piece in a tunnel broke every place command of its room, because the unchanged pieces were checked too. Such a piece now shows as `t` under "Pieces now" and may stay there; none is put into a tunnel this way.

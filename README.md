@@ -52,7 +52,8 @@ npm run build       # server/public/index.html, the game page of the online serv
 
 While working on the code, serve the folder (`npx serve .` or any static server) and open
 `index.html`; it loads the modules from `js/` directly. Every push runs the tests and builds the
-page; a push to `main` deploys the online server. The game is online only (since v3.2.0).
+page; a push to `main` deploys the online server on Cloudflare and, within two minutes, on the
+owner's Linux server (`tools/linux/install.sh`; handoff 12.4). The game is online only (since v3.2.0).
 
 **Versions:** raise the version in `package.json` (and `package-lock.json`) and `js/version.js`,
 add a section to `CHANGELOG.md` and push to `main`. When CI sees a version with no release yet,
@@ -82,7 +83,8 @@ and TURN together; a speaker uses about 15 MB an hour.
 | `js/debugcmd.js` | Debug console commands (for `tools/replay.mjs`) |
 | `js/table.js` | A game plus its event list, for replay and the online game |
 | `js/voice.js` | Voice chat in online games (WebRTC through Cloudflare Realtime) |
-| `server/` | The online server (Cloudflare Worker); `server/voice.js` talks to Cloudflare Realtime |
+| `server/` | The online server (Cloudflare Worker; `server/node/` runs the same code on Linux); `server/voice.js` talks to Cloudflare Realtime |
+| `tools/linux/` | Install, update and copy-the-games scripts for the Linux server |
 | `js/version.js` | The game version |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |
