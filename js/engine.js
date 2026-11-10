@@ -993,7 +993,11 @@ export class Game {
     const seen = new Set();
     pos.forEach((a, col) => {
       if (!Array.isArray(a) || a.length !== st.pos[col].length) throw new Error("every color needs all its pieces");
-      for (const r of a) {
+      for (const [i, r] of a.entries()) {
+        // a piece in a tunnel (TUN) may stay there, but none is put into one (owner, 2026-11-10:
+        // "G4 p34" said "no such field" while red 1 was in a tunnel)
+        if (r === TUN && st.pos[col][i] === TUN) continue;
+        if (r === TUN) throw new Error("a piece goes into a tunnel only by a move");
         if (!Number.isInteger(r) || r < YARD || r >= L + a.length) throw new Error("no such field");
         if (r === YARD) continue;
         const k = r < L ? "t" + this.absOf(col, r) : "n" + col + "," + r;

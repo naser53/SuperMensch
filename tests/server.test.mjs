@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { Room, OPEN_DAYS, cleanOpenDays, checkSetup, claimSeats, cleanBoard, cleanColors, cleanRings, cleanName, cleanRules, colorsKeep, editSetup, isGameId, newGameId, nextName, parseDebug, pickColors, diceTurns, ruleDefaults, rulesFor, withEngine, newPasskey, cleanPasskey, PasskeyGate, PASSKEY_TRIES, PASSKEY_WAIT_MS } from "../server/core.js";
 import { ENGINE_LEVELS } from "../js/ai.js";
 import { Table, fingerprint } from "../js/table.js";
-import { mulberry32 } from "../js/engine.js";
+import { mulberry32, TUN } from "../js/engine.js";
 import { Config } from "../js/config.js";
 import { ADMIN_STR } from "../js/admin-strings.js";
 import { LANGS } from "../js/i18n.js";
@@ -237,6 +237,12 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   assert.deepEqual([t.game.state.kills[0][0], t.game.state.kills[0][1]], [0, 85]);
   assert.equal(room.placeText().split("\n")[0], "R: 4 23 z2 y");
   assert.equal(fingerprint(Table.replay(setup, room.events).game), room.fingerprint());
+  // a piece in a tunnel shows as "t" and may stay there; none is put into one (owner, 2026-11-10)
+  room.table.game.state.pos[0][3] = TUN;
+  assert.equal(room.placeText().split("\n")[0], "R: 4 23 z2 t");
+  assert.deepEqual(room.place("R2 p40").events[0].points, [[0, 1, 40]]);
+  assert.equal(room.table.game.state.pos[0][3], TUN);
+  assert.throws(() => room.place("R1 t"), /tunnel only by a move/);
 });
 
 test("admin debug: rewind N and roll dice go back to a dice turn and throw it again", () => {

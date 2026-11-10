@@ -5,6 +5,7 @@ import { ENGINE_LEVELS, engineFor } from "../js/ai.js";
 import { Config } from "../js/config.js";
 import { tr } from "../js/i18n.js";
 import { Table, fingerprint } from "../js/table.js";
+import { TUN } from "../js/engine.js";
 import { FrameRecorder, gameView } from "./frames.js";
 
 export const USERS = 10;                 // user1 .. user10 at the first start
@@ -247,6 +248,7 @@ export function withEngine(setup, engine) {
 // One online game. The setup and the events are all that is stored.
 // The admin's "place" (a test aid): the pieces as text, a line per color or per piece, e.g.
 //   R: 5 y y y        B: z1 z2 z3 z4        R2 23        R2z 3  (or R2 z3)
+// A piece in a tunnel shows as "t"; it may stay ("t"), but none is put into one.
 // Track fields 1..L as on the board, z1.. the color's own nest (z1 just inside, the last one at the
 // back; L+1.. still works), y (or 0) the yard. A line per piece moves that piece only (R2 = red 2).
 // R2 p85 gives red 2 rank points 85 (its general / marshal look; owner, 2026-11-09): pushed to points
@@ -260,7 +262,7 @@ export const plainText = t => String(t || "")
   .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "");
 export function placeText(g) {
   const L = g.L;
-  return g.state.pos.map((a, col) => `${LETTERS[col]}: ` + a.map(r => (r === -1 ? "y" : r >= L ? "z" + (r - L + 1) : String(g.absOf(col, r) + 1))).join(" ")).join("\n");
+  return g.state.pos.map((a, col) => `${LETTERS[col]}: ` + a.map(r => (r === -1 ? "y" : r === TUN ? "t" : r >= L ? "z" + (r - L + 1) : String(g.absOf(col, r) + 1))).join(" ")).join("\n");
 }
 
 // the characters of w that are not plain ASCII, to show in an error ("p35 (U+0440)")
@@ -269,6 +271,7 @@ export function parsePlace(text, g, points = []) {
   const L = g.L, pos = g.state.pos.map(a => a.slice());
   const field = (col, w) => {
     if (/^y$/i.test(w) || w === "0") return -1;
+    if (/^t$/i.test(w)) return TUN;            // stays in its tunnel (Game.place refuses a new one)
     const z = /^z(\d+)$/i.exec(w);
     if (z) {
       const k = Number(z[1]);
