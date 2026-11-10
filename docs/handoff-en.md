@@ -843,7 +843,13 @@ from the same code. The last Cloudflare-only version is tag `v3.2.34`.
   `events`) and `import` (replaces the lobby, writes the rooms). On the Linux server `sudo supermensch-copy`
   copies everything from Cloudflare (`tools/linux/copy-games.mjs`). After that the two servers keep
   their own games.
-* For now plain HTTP on the server's IP (owner: no domain, no voice yet). Voice chat needs HTTPS
-  (browsers open the microphone only there): a free name such as `<ip>.sslip.io` and a proxy like Caddy.
+* **Domain and HTTPS (v3.2.36):** `sudo DOMAIN=wiengame.com bash install.sh` puts Caddy in front (HTTPS
+  for the name and `www.`, certificate got and renewed by Caddy); the game then listens on
+  `127.0.0.1:8080` (`HOST`, `PORT` in `/etc/supermensch.env`). Without DOMAIN: plain HTTP on port 80.
+  The owner's server: `wiengame.com` (owner, 2026-11-10).
+* **Voice chat** needs HTTPS (browsers open the microphone only there) and the Cloudflare Realtime keys:
+  `sudo supermensch-voice` asks for `REALTIME_APP_ID`, `REALTIME_APP_TOKEN` and optionally
+  `TURN_KEY_ID`, `TURN_KEY_TOKEN`, writes them to `/etc/supermensch.env` and restarts the game. Voice
+  still goes through Cloudflare's SFU; there is no video chat.
 * Test: `tests/linux-server.test.mjs` starts the Linux server, makes a room, plays over a WebSocket,
   restarts it, and copies the game to a second one.

@@ -14,5 +14,6 @@ as npm run build
 # a newer install script may set up more: the commands themselves are kept current here
 install -m 755 tools/linux/update.sh /usr/local/bin/supermensch-update
 install -m 755 tools/linux/copy.sh /usr/local/bin/supermensch-copy
+install -m 755 tools/linux/voice.sh /usr/local/bin/supermensch-voice
 systemctl restart "$SVC"
 echo "updated $old -> $(as git rev-parse --short HEAD) ($(node -p 'require("./package.json").version'))"

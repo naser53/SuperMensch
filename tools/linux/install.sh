@@ -12,7 +12,8 @@
 #   supermensch.service           the server (server/node/main.mjs) on port 80, restarted on failure
 #   caddy (with DOMAIN)           HTTPS for DOMAIN and www.DOMAIN, passed on to the game
 #   supermensch-update.timer      every 2 minutes: a new commit on main is pulled, built and started
-#   supermensch-update, supermensch-copy   commands (update now; copy the games from Cloudflare)
+#   supermensch-update, supermensch-copy, supermensch-voice   commands (update now; copy the games
+#                                 from Cloudflare; the voice chat keys)
 set -euo pipefail
 
 REPO="${REPO:-https://github.com/naser53/SuperMensch.git}"
@@ -112,6 +113,7 @@ UNIT
 
 install -m 755 "$APP/tools/linux/update.sh" /usr/local/bin/supermensch-update
 install -m 755 "$APP/tools/linux/copy.sh" /usr/local/bin/supermensch-copy
+install -m 755 "$APP/tools/linux/voice.sh" /usr/local/bin/supermensch-voice
 cat > /etc/systemd/system/$SVC-update.service <<UNIT
 [Unit]
 Description=SuperMensch: take a new version from $BRANCH
