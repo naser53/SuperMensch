@@ -6,3 +6,4 @@ server/public/admin-page.js
 .dev.vars
 .wrangler/
 server/public/index.html
+data/

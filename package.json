@@ -1,16 +1,17 @@
 {
   "name": "supermensch",
-  "version": "3.2.34",
+  "version": "3.2.35",
   "private": true,
   "type": "module",
   "description": "SuperMensch — multi-color Mensch board game, 3D, online in the browser",
   "scripts": {
-    "test": "node --test tests/rules.test.mjs tests/table.test.mjs tests/server.test.mjs",
+    "test": "node --test tests/rules.test.mjs tests/table.test.mjs tests/server.test.mjs tests/linux-server.test.mjs",
     "simulate": "node tests/simulate.mjs 10",
     "build": "node tools/build.mjs"
   },
   "dependencies": {
-    "three": "0.160.0"
+    "three": "0.160.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "esbuild": "0.20.2",
