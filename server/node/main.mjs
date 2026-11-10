@@ -3,7 +3,7 @@
 //   node server/node/main.mjs          (Node 22.13 or newer; npm run build first for the pages)
 // Settings come from the environment (on the server: /etc/supermensch.env, see tools/linux/):
 //   PORT (default 8080), HOST (default: every address; 127.0.0.1 behind Caddy), DATA_DIR (default ./data: the SQLite files), ADMIN_KEY, and for voice
-//   chat REALTIME_APP_ID, REALTIME_APP_TOKEN, TURN_KEY_ID, TURN_KEY_TOKEN (as the Worker's secrets).
+//   chat (the server's own relay, server/node/sfu.mjs; nothing from Cloudflare) VOICE_PORTS, VOICE_IP, TURN_SECRET, TURN_HOST.
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +15,7 @@ register("./hooks.mjs", import.meta.url);
 const { default: worker, Lobby, GameRoom } = await import("../worker.js");
 const { isGameId } = await import("../core.js");
 const { Namespace, Socket, queued } = await import("./runtime.mjs");
+const { localSfu } = await import("./sfu.mjs");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PUBLIC = path.join(root, "server/public");
@@ -22,8 +23,9 @@ const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || undefined;
 const DATA = path.resolve(process.env.DATA_DIR || path.join(root, "data"));
 
-const SECRETS = ["ADMIN_KEY", "REALTIME_APP_ID", "REALTIME_APP_TOKEN", "TURN_KEY_ID", "TURN_KEY_TOKEN", "REALTIME_API"];
-const env = Object.fromEntries(SECRETS.filter(k => process.env[k]).map(k => [k, process.env[k]]));
+const env = process.env.ADMIN_KEY ? { ADMIN_KEY: process.env.ADMIN_KEY } : {};
+// voice: the server's own relay; TURN (coturn on this server) when install.sh set it up
+env.SFU = localSfu({ ports: process.env.VOICE_PORTS, ip: process.env.VOICE_IP, turnSecret: process.env.TURN_SECRET, turnHost: process.env.TURN_HOST });
 env.LOBBY = new Namespace(Lobby, path.join(DATA, "lobby"), env);
 env.ROOM = new Namespace(GameRoom, path.join(DATA, "rooms"), env);
 

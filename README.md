@@ -66,7 +66,8 @@ After a deliberate rule change, record the fixed games again with
 **SFU** application and a **TURN** key, and add their ids and tokens as repository secrets
 `REALTIME_APP_ID`, `REALTIME_APP_TOKEN`, `TURN_KEY_ID`, `TURN_KEY_TOKEN` (the TURN pair is optional
 but helps behind strict filters). The server deploy puts them on the Worker. Then tick **Voice** for
-the players who may talk on the admin page. Cloudflare's free allowance is 1,000 GB a month for SFU
+the players who may talk on the admin page. On the Linux server voice needs none of this: it relays
+the voices itself and runs its own TURN (coturn); the admin page picks "through the server" or "peer to peer" (handoff 12.4). Cloudflare's free allowance is 1,000 GB a month for SFU
 and TURN together; a speaker uses about 15 MB an hour.
 
 | Path | Purpose |
@@ -83,8 +84,8 @@ and TURN together; a speaker uses about 15 MB an hour.
 | `js/debugcmd.js` | Debug console commands (for `tools/replay.mjs`) |
 | `js/table.js` | A game plus its event list, for replay and the online game |
 | `js/voice.js` | Voice chat in online games (WebRTC through Cloudflare Realtime) |
-| `server/` | The online server (Cloudflare Worker; `server/node/` runs the same code on Linux); `server/voice.js` talks to Cloudflare Realtime |
-| `tools/linux/` | Install, update and copy-the-games scripts for the Linux server |
+| `server/` | The online server (Cloudflare Worker; `server/node/` runs the same code on Linux); `server/voice.js` carries the voices (Cloudflare Realtime, or on Linux the server's own relay `server/node/sfu.mjs`) |
+| `tools/linux/` | Install, update, copy-the-games and voice (coturn) scripts for the Linux server |
 | `js/version.js` | The game version |
 | `tests/` | Rule tests, fixed-game regression, simulations |
 | `tools/build.mjs` | Builds the single-file page |

@@ -32,5 +32,5 @@ export const Look = {
   // hour), the loudness that lights a speaker's chip (0..1, RMS), how long it stays lit (ms), and how
   // often the loudness is measured (ms); RETRY_MS: how long a broken connection or a stopped voice
   // waits before it is started again (ms); STATS_MS: how often a line of numbers goes to the voice log
-  VOICE: { BITRATE: 32000, SPEAK_LEVEL: 0.02, SPEAK_HOLD_MS: 400, TICK_MS: 120, RETRY_MS: 3000, STATS_MS: 10000 },
+  VOICE: { BITRATE: 32000, SPEAK_LEVEL: 0.02, SPEAK_HOLD_MS: 400, TICK_MS: 120, RETRY_MS: 3000, STATS_MS: 10000, GATHER_MS: 2500 },
 };

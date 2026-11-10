@@ -10,7 +10,7 @@ import { DurableObject } from "cloudflare:workers";
 import { Config } from "../js/config.js";
 import { OPEN_DAYS, cleanOpenDays, PasskeyGate, Room, USERS, checkSetup, claimSeats, cleanName, cleanRules, isGameId, newGameId, newPasskey, nextName, rulesFor } from "./core.js";
 import { adminApi } from "./admin.js";
-import { cleanId, sfu, voiceCan, voiceReady } from "./voice.js";
+import { cleanId, iceFor, relayReady, sfu, voiceCan, voiceMode, voiceReady, VOICE_MODES } from "./voice.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
@@ -60,7 +60,7 @@ async function api(req, env, url) {
   if (parts[0] === "users" && req.method === "GET") return json(await lobby.users());
   // the server-wide settings every game page reads: the admin's piece and board colors (null = default)
   const settings = async () => ({ colors: await lobby.colors(), board: await lobby.board(), rings: await lobby.rings(), hunter: await lobby.hunter(), points: await lobby.points(), headring: await lobby.headring(), rankrings: await lobby.rankrings(), openDays: await lobby.openDays(), openDaysDefault: OPEN_DAYS,
-    voice: { on: await lobby.voiceOn(), ready: voiceReady(env) },
+    voice: { on: await lobby.voiceOn(), ready: voiceReady(env), relay: relayReady(env), chosen: await lobby.voiceMode(), mode: voiceMode(env, await lobby.voiceMode()) },
     defaults: Config.PIECE_COLORS, boardDefaults: Config.BOARD_COLORS, ringDefaults: Config.RING_COLORS,
     headringDefault: { mode: Config.HEAD_RING.MODE, from: Math.round(Config.HEAD_RING.FROM * 100), to: Math.round(Config.HEAD_RING.TO * 100) } });
   if (parts[0] === "settings" && req.method === "GET") return json(await settings());
@@ -152,9 +152,21 @@ export class Lobby extends DurableObject {
     return this.voiceOn();
   }
 
-  // what a room needs to decide who may talk: the switch and the ticked players
+  // how the voices travel (server/voice.js): "relay" (default) or "p2p"
+  voiceMode() {
+    const r = this.sql.exec(`SELECT v FROM settings WHERE k = 'voicemode'`).toArray();
+    return r.length && JSON.parse(r[0].v) === "p2p" ? "p2p" : "relay";
+  }
+
+  setVoiceMode(m) {
+    if (!VOICE_MODES.includes(m)) throw new Error("bad voice mode");
+    this.sql.exec(`INSERT OR REPLACE INTO settings (k, v) VALUES ('voicemode', ?)`, JSON.stringify(m));
+    return this.voiceMode();
+  }
+
+  // what a room needs to decide who may talk: the switch, the ticked players and the mode
   voiceInfo() {
-    return { on: this.voiceOn(), users: this.sql.exec(`SELECT id FROM users WHERE voice = 1`).toArray().map(u => u.id) };
+    return { on: this.voiceOn(), mode: this.voiceMode(), users: this.sql.exec(`SELECT id FROM users WHERE voice = 1`).toArray().map(u => u.id) };
   }
 
 
@@ -375,9 +387,12 @@ export class Lobby extends DurableObject {
 //                                                            from the first `at` events (only from a
 //                                                            device in replay mode)
 //                   { t: "mute", on }                        voice: this device's microphone muted / open
+//                   { t: "rtc", from, to, desc }             voice, peer to peer: an offer or answer for
+//                                                            the device holding session `to`
 //   room -> device  { t: "state", id, name, setup, events, seats, fp, view, mine, taken }
 //                   (mine: the seats this device got; taken: wanted seats another device holds;
-//                   voice: { on, can } the room has voice chat / this device may talk; voices as below)
+//                   voice: { on, can, mode } the room has voice chat / this device may talk / "relay"
+//                   or "p2p"; voices as below)
 //                   { t: "events", from, events, fp, view }  sent to every device
 //                   { t: "seats", seats }                    who holds which seat
 //                   { t: "refused", reason, seq }
@@ -385,8 +400,10 @@ export class Lobby extends DurableObject {
 //                   { t: "debug", by: [name] }               who else is in replay mode; while anyone
 //                                                            is, every move is refused ("debug")
 //                   { t: "voices", list: [{ sid, track, seats, muted }] }   the microphones in the room
-//                   { t: "voiceok", on, can }                the admin changed who may talk
-// Voice signalling goes over HTTP (POST /api/games/<ID>/voice, GameRoom.voice), as the SFU answers it.
+//                   { t: "voiceok", on, can, mode }          the admin changed who may talk, or the mode
+//                   { t: "rtc", from, to, desc }             peer to peer: another device's offer or answer
+// Voice signalling goes over HTTP (POST /api/games/<ID>/voice, GameRoom.voice), as the SFU answers it;
+// peer to peer, the offers and answers go between the devices over the WebSocket.
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -612,7 +629,7 @@ export class GameRoom extends DurableObject {
           o.ws.serializeAttachment({ device: o.device, token: o.token, seats: o.seats.filter(s => !seats.includes(s)), debug: !!o.debug, ...keepVoice(o) });
       ws.serializeAttachment({ device, token, seats, debug: !!msg.debug, ...keepVoice(old) });
       this._send(ws, { t: "state", ...this.snapshot(), game: room.gameView(), mine: seats, taken, debug: this._debugBy(ws),
-        voice: { on: vi.on, can: voiceCan(room.setup.players, seats, vi.users, vi.on) }, voices: this._voices() });
+        voice: { on: vi.on, can: voiceCan(room.setup.players, seats, vi.users, vi.on), mode: vi.mode }, voices: this._voices() });
       this._all({ t: "seats", seats: this._seats() });
       this._debugAll();
       return;
@@ -654,6 +671,16 @@ export class GameRoom extends DurableObject {
     if (msg.t === "mute") {
       const a = ws.deserializeAttachment() || {};
       if (a.voice) { ws.serializeAttachment({ ...a, voice: { ...a.voice, muted: !!msg.on } }); this._voicesAll(); }
+      return;
+    }
+    if (msg.t === "rtc") {               // peer to peer voice: pass an offer or answer to the device it is for
+      const a = ws.deserializeAttachment() || {};
+      const from = cleanId(msg.from), to = cleanId(msg.to), d = msg.desc;
+      if (!from || !to || !(a.sessions || []).includes(from) || !d || !["offer", "answer"].includes(d.type) || typeof d.sdp !== "string" || d.sdp.length > 20000) return;
+      const vi = await this._voiceInfo();
+      if (!vi.on || vi.mode !== "p2p") return;
+      const peer = this.ctx.getWebSockets().find(w => w !== ws && ((w.deserializeAttachment() || {}).sessions || []).includes(to));
+      if (peer) this._send(peer, { t: "rtc", from, to, desc: { type: d.type, sdp: d.sdp } });
       return;
     }
     if (msg.t === "again") { await this.again(ws); return; }
@@ -720,7 +747,7 @@ export class GameRoom extends DurableObject {
   async _voiceInfo() {
     const lobby = this.env.LOBBY.get(this.env.LOBBY.idFromName("lobby"));
     const vi = await lobby.voiceInfo();
-    return { on: vi.on && voiceReady(this.env), users: vi.users };
+    return { on: vi.on && voiceReady(this.env), users: vi.users, mode: voiceMode(this.env, vi.mode) };
   }
 
   // the open microphones: whose they are (seats), and where the others pull them from
@@ -743,7 +770,7 @@ export class GameRoom extends DurableObject {
     const { voice, ...rest } = a;
     ws.serializeAttachment(rest);
     this._voicesAll();
-    if (voiceReady(this.env)) { try { await sfu(this.env).close(v.sid, [v.mid]); } catch { /* gone already */ } }
+    if (v.mode !== "p2p" && relayReady(this.env)) { try { await sfu(this.env).close(v.sid, [v.mid]); } catch { /* gone already */ } }
   }
 
   // the admin changed the switch or a player's tick: tell every device, stop microphones not allowed now
@@ -753,8 +780,8 @@ export class GameRoom extends DurableObject {
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment() || {};
       const can = voiceCan(players, a.seats || [], vi.users, vi.on);
-      if (!can) await this._voiceStop(ws);
-      this._send(ws, { t: "voiceok", on: vi.on, can });
+      if (!can || (a.voice && (a.voice.mode || "relay") !== vi.mode)) await this._voiceStop(ws);
+      this._send(ws, { t: "voiceok", on: vi.on, can, mode: vi.mode });
     }
   }
 
@@ -777,9 +804,10 @@ export class GameRoom extends DurableObject {
     let a = ws.deserializeAttachment() || {};
     const sid = body.op === "ice" || body.op === "session" ? null : cleanId(body.sid);
     if (body.op !== "ice" && body.op !== "session" && !(a.sessions || []).includes(sid)) throw new Error("voice: unknown session");
-    if (body.op === "ice") return { iceServers: await api.ice() };
+    if (body.op === "ice") return { iceServers: await iceFor(this.env) };
+    const p2p = vi.mode === "p2p";
     if (body.op === "session") {
-      const sessionId = await api.session();
+      const sessionId = p2p ? crypto.randomUUID().replace(/-/g, "") : await api.session();
       a = ws.deserializeAttachment() || {};
       ws.serializeAttachment({ ...a, sessions: [...(a.sessions || []), sessionId].slice(-4) });
       return { sessionId };
@@ -787,14 +815,15 @@ export class GameRoom extends DurableObject {
     if (body.op === "push") {
       if (!voiceCan(room.setup.players, a.seats || [], vi.users, vi.on)) throw new Error("voice: not allowed");
       const track = cleanId(body.track), mid = cleanId(String(body.mid));
-      if (!track || !mid || typeof body.sdp !== "string") throw new Error("voice: bad request");
+      if (!track || !mid || (!p2p && typeof body.sdp !== "string")) throw new Error("voice: bad request");
       if (a.voice) await this._voiceStop(ws);         // one microphone per device
-      const r = await api.push(sid, body.sdp, [{ mid, trackName: track }]);
+      const r = p2p ? {} : await api.push(sid, body.sdp, [{ mid, trackName: track }]);   // peer to peer: only listed
       a = ws.deserializeAttachment() || {};
-      ws.serializeAttachment({ ...a, voice: { sid, track, mid, muted: !!body.muted } });
+      ws.serializeAttachment({ ...a, voice: { sid, track, mid, muted: !!body.muted, mode: vi.mode } });
       this._voicesAll();
       return { sessionDescription: r.sessionDescription };
     }
+    if (p2p) throw new Error("voice: peer to peer");
     if (body.op === "pull") {
       const open = this._voices();
       const tracks = (Array.isArray(body.tracks) ? body.tracks : []).slice(0, 8)

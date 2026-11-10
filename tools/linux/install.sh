@@ -8,12 +8,13 @@
 # What it sets up:
 #   /opt/supermensch/app          the code (a clone of main), built with npm run build
 #   /var/lib/supermensch          the games (SQLite files); kept on reinstall
-#   /etc/supermensch.env          PORT, DATA_DIR, ADMIN_KEY (and voice keys, if added later)
+#   /etc/supermensch.env          PORT, DATA_DIR, ADMIN_KEY, and the voice settings (voice.sh)
 #   supermensch.service           the server (server/node/main.mjs) on port 80, restarted on failure
 #   caddy (with DOMAIN)           HTTPS for DOMAIN and www.DOMAIN, passed on to the game
 #   supermensch-update.timer      every 2 minutes: a new commit on main is pulled, built and started
+#   coturn and voice settings     voice chat on this server alone (tools/linux/voice.sh)
 #   supermensch-update, supermensch-copy, supermensch-voice   commands (update now; copy the games
-#                                 from Cloudflare; the voice chat keys)
+#                                 from Cloudflare; set up voice chat again)
 set -euo pipefail
 
 REPO="${REPO:-https://github.com/naser53/SuperMensch.git}"
@@ -158,6 +159,9 @@ CADDY
   systemctl enable -q caddy
   systemctl restart caddy
 fi
+
+say "voice chat (coturn)"
+DOMAIN="$DOMAIN" /usr/local/bin/supermensch-voice || echo "voice chat is not set up; try again: sudo supermensch-voice"
 
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
   ufw allow 80/tcp >/dev/null && echo "firewall: port 80 open"

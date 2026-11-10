@@ -20,8 +20,21 @@
 export const SFU_BASE = "https://rtc.live.cloudflare.com/v1";
 const STUN = [{ urls: "stun:stun.cloudflare.com:3478" }];
 
-// the SFU can be used: both of its secrets are there
-export const voiceReady = env => !!(env && env.REALTIME_APP_ID && env.REALTIME_APP_TOKEN);
+// Two ways to carry the voices (owner, 2026-11-10; the admin picks one):
+//   "relay"  every device sends once to an SFU, which forwards it (the Linux server's own relay,
+//            server/node/sfu.mjs, given as env.SFU; on Cloudflare: Realtime SFU with its secrets)
+//   "p2p"    every device sends straight to every listening device (one connection per pair); the
+//            offers and answers go over the game's WebSocket ({ t: "rtc" }), TURN helps where a
+//            network blocks direct connections
+// the relay can be used: the server's own, or Cloudflare's with both of its secrets
+export const relayReady = env => !!(env && (env.SFU || (env.REALTIME_APP_ID && env.REALTIME_APP_TOKEN)));
+// voice works at all: peer to peer needs nothing set up
+export const voiceReady = env => !!env;
+export const VOICE_MODES = ["relay", "p2p"];
+// the mode a room uses: the admin's choice, peer to peer when there is no relay
+export const voiceMode = (env, chosen) => (chosen !== "p2p" && relayReady(env) ? "relay" : "p2p");
+// ICE servers for a page (TURN when set up, else STUN)
+export const iceFor = env => (env.SFU || (env.TURN_KEY_ID && env.TURN_KEY_TOKEN) ? sfu(env).ice() : Promise.resolve(STUN));
 
 // may a device with these seats send its microphone?  players: the room's setup.players;
 // allowed: the user ids the admin ticked; on: the server-wide switch
@@ -47,6 +60,7 @@ async function answer(r) {
 
 // Cloudflare Realtime, used by the room. fetchFn can be replaced in tests.
 export function sfu(env, fetchFn = fetch) {
+  if (env.SFU) return env.SFU;            // the Linux server's own relay (server/node/sfu.mjs)
   const app = `${env.REALTIME_API || SFU_BASE}/apps/${env.REALTIME_APP_ID}`;
   const call = (method, path, body) => fetchFn(app + path, {
     method, headers: { authorization: `Bearer ${env.REALTIME_APP_TOKEN}`, "content-type": "application/json" },

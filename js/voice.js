@@ -1,8 +1,12 @@
-// Voice chat in online games (v3.0.0). The page sends its microphone once to Cloudflare Realtime
-// SFU and pulls the other devices' microphones from it (server/voice.js has the server side; the
-// server holds the SFU's token and checks every request). Only the page's own WebRTC lives here:
+// Voice chat in online games (v3.0.0). Two modes (the admin picks one, server/voice.js):
+// "relay": the page sends its microphone once to an SFU (the Linux server's own, or Cloudflare
+// Realtime) and pulls the other devices' microphones from it (the server checks every request):
 //   mic     one sendonly RTCPeerConnection with this device's microphone (only if it may talk)
 //   listen  one RTCPeerConnection that receives every other open microphone of the room
+// "p2p" (v3.3.0): no SFU. A listening device opens one receive-only connection to each open
+// microphone and sends its offer over the game's WebSocket ({ t: "rtc" }); the talking device
+// answers with its microphone on it (mic.peers). The offers and answers carry all their ICE
+// candidates (no trickle), so one message each way is enough.
 // The microphone starts closed; a tap on the mic button opens it, the next mutes it, and so on.
 // It stops when the player leaves the game or closes the page. Every tick the loudness of each
 // voice is measured to light the speaker's player chip.
@@ -23,8 +27,10 @@ const loadSpeaker = () => { try { return localStorage.getItem(SPEAKER_KEY) !== "
 export class Voice {
   // post(op, body) asks the server (POST /api/games/<ID>/voice); onChange() redraws the panel;
   // onError(code) shows a short message ("denied", "failed")
-  constructor({ post, onChange, onError, onMute }) {
-    Object.assign(this, { post, onChange, onError, onMute });
+  // send(msg) sends a message over the game's WebSocket (peer to peer)
+  constructor({ post, onChange, onError, onMute, send }) {
+    Object.assign(this, { post, onChange, onError, onMute, send });
+    this.mode = "relay";      // "relay" or "p2p" (the server says)
     this.on = false;          // the room has voice chat (admin switch, server set up)
     this.can = false;         // this device may talk
     this.voices = [];         // the open microphones of the room: { sid, track, seats, muted }
@@ -88,7 +94,16 @@ export class Voice {
   }
 
   // ---------------------------------------------------------------- state from the server
-  setAllowed(on, can) {
+  setAllowed(on, can, mode) {
+    const m = mode === "p2p" ? "p2p" : "relay";
+    if (m !== this.mode) {                 // the admin changed the mode: start again in the new one
+      this.note("mode " + m);
+      if (this.mic) this.resume = this.resume || (this.mic.muted ? "muted" : "live");
+      this.stopMic(false);
+      this.stopListening();
+      this.ice = null;
+      this.mode = m;
+    }
     this.on = !!on;
     this.can = !!can && this.on;
     if (!this.can && this.mic) { this.note("mic not allowed now"); this.stopMic(false); }
@@ -113,7 +128,7 @@ export class Voice {
   setVoices(list, mySeats) {
     this.voices = Array.isArray(list) ? list : [];
     if (mySeats) this.mySeats = mySeats;
-    if (this.mic && this.mic.sid && !this.voices.some(v => v.sid === this.mic.sid)) { this.note("server closed my mic"); this.stopMic(false); }  // the server dropped it
+    if (this.mic && this.mic.sid && !this.mic.pending && !this.voices.some(v => v.sid === this.mic.sid)) { this.note("server closed my mic"); this.stopMic(false); }  // the server dropped it
     this.note("voices " + (this.voices.map(v => v.sid.slice(0, 6) + (v.muted ? "(muted)" : "")).join(" ") || "-"));
     if (this.on) this.queue = this.queue.then(() => this.syncHeard()).catch(e => { this.note("listen failed " + (e && e.message)); this.onError("failed"); });
     this.onChange();
@@ -207,6 +222,19 @@ export class Voice {
       } catch (e) { this.note("mic denied " + (e && e.name)); err = "denied"; return; }
       this.note("mic granted");
       if (!this.can) { stream.getTracks().forEach(t => t.stop()); return; }
+      if (this.mode === "p2p") {              // only listed: each listener asks for it (onRtc)
+        const { sessionId } = await this.post("session");
+        const name = "mic-" + rnd();
+        this.ownTrack = name;
+        this.mic = { pc: null, peers: new Map(), stream, sid: sessionId, track: name, muted: false, an: this.analyser(stream), pending: true };
+        await this.post("push", { sid: sessionId, mid: "0", track: name });
+        this.mic.pending = false;
+        try { if (this.ctx) await this.ctx.suspend().then(() => this.ctx.resume()); } catch { /* iOS */ }
+        this.output();
+        this.replay();
+        this.tick();
+        return;
+      }
       pc = await this.newPc();
       const mpc = pc;
       pc.onconnectionstatechange = () => {
@@ -234,6 +262,7 @@ export class Voice {
       this.tick();
     } catch (e) {
       this.note("mic failed " + (e && e.message));
+      if (this.mic && this.mic.stream === stream) this.stopMic(false);
       if (stream) stream.getTracks().forEach(t => t.stop());
       if (pc) pc.close();
       err = "failed";
@@ -250,7 +279,8 @@ export class Voice {
     if (!m) return;
     this.mic = null;
     m.stream.getTracks().forEach(t => t.stop());
-    try { m.pc.close(); } catch { /* closed */ }
+    try { if (m.pc) m.pc.close(); } catch { /* closed */ }
+    for (const p of (m.peers || new Map()).values()) { try { p.close(); } catch { /* closed */ } }
     if (tell) this.onMute(true);
     this.output();
   }
@@ -259,7 +289,10 @@ export class Voice {
     for (const h of this.heard.values()) this.drop(h);
     this.heard.clear();
     this.mids.clear();
-    if (this.listen) { try { this.listen.pc.close(); } catch { /* closed */ } }
+    if (this.listen) {
+      try { if (this.listen.pc) this.listen.pc.close(); } catch { /* closed */ }
+      for (const p of (this.listen.peers || new Map()).values()) { try { p.pc.close(); } catch { /* closed */ } }
+    }
     this.listen = null;
   }
 
@@ -272,6 +305,7 @@ export class Voice {
       const v = want.find(x => x.sid === h.sid);
       if (v) h.seats = v.seats;
     }
+    if (this.mode === "p2p") { await this.syncPeers(want); return; }
     const pending = new Set([...this.mids.values()]);
     const fresh = want.filter(v => !this.heard.has(key(v.sid, v.track)) && !pending.has(key(v.sid, v.track)));
     if (!fresh.length || !this.on) return;
@@ -303,8 +337,8 @@ export class Voice {
     }
   }
 
-  gotTrack(e) {
-    const k = this.mids.get(String(e.transceiver && e.transceiver.mid));
+  gotTrack(e, given) {
+    const k = given || this.mids.get(String(e.transceiver && e.transceiver.mid));
     if (!k) { this.note("track with unknown mid " + (e.transceiver && e.transceiver.mid)); return; }
     const sid = k.split("/")[0], v = this.voices.find(x => x.sid === sid);
     const stream = new MediaStream([e.track]);
@@ -329,8 +363,103 @@ export class Voice {
     this.heard.set(k, h);
     this.note("hearing " + sid.slice(0, 6));
     this.output();
-    this.mids.delete(String(e.transceiver.mid));
+    if (!given) this.mids.delete(String(e.transceiver.mid));
     this.tick();
+  }
+
+  // ---------------------------------------------------------------- peer to peer
+  // wait until the connection knows its ICE candidates (they go inside the offer or answer)
+  gathered(pc) {
+    return new Promise(done => {
+      if (pc.iceGatheringState === "complete") return done();
+      const t = setTimeout(done, V.GATHER_MS);
+      pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); done(); } });
+    });
+  }
+
+  // listening: one receive-only connection to each open microphone, closed ones dropped
+  async syncPeers(want) {
+    if (!this.on) return;
+    if (!this.listen) {
+      const { sessionId } = await this.post("session");
+      this.listen = { pc: null, sid: sessionId, peers: new Map() };
+    }
+    const L = this.listen;
+    for (const [sid, p] of L.peers)
+      if (!want.some(v => v.sid === sid && v.track === p.track)) { try { p.pc.close(); } catch { /* closed */ } L.peers.delete(sid); }
+    for (const v of want) {
+      if (L.peers.has(v.sid)) continue;
+      const pc = await this.newPc(), k = key(v.sid, v.track);
+      const p = { pc, track: v.track, bad: 0 };
+      L.peers.set(v.sid, p);
+      pc.addTransceiver("audio", { direction: "recvonly" });
+      pc.ontrack = e => { if (this.listen === L && L.peers.get(v.sid) === p) this.gotTrack(e, k); };
+      pc.onconnectionstatechange = () => {
+        const st = pc.connectionState;
+        this.note("peer " + v.sid.slice(0, 6) + " " + st);
+        if (this.listen !== L || L.peers.get(v.sid) !== p) return;
+        const again = why => {            // ask that microphone again
+          try { pc.close(); } catch { /* closed */ }
+          L.peers.delete(v.sid);
+          const h = this.heard.get(k);
+          if (h) { this.drop(h); this.heard.delete(k); }
+          this.relistenPeers(why);
+        };
+        if (st === "failed") again("failed");
+        else if (st === "disconnected") {
+          clearTimeout(p.bad);
+          p.bad = setTimeout(() => { if (L.peers.get(v.sid) === p && pc.connectionState === "disconnected") again("disconnected"); }, V.RETRY_MS);
+        }
+      };
+      await pc.setLocalDescription(await pc.createOffer());
+      await this.gathered(pc);
+      if (L.peers.get(v.sid) !== p) continue;
+      this.note("ask " + v.sid.slice(0, 6));
+      this.send({ t: "rtc", from: L.sid, to: v.sid, desc: { type: "offer", sdp: pc.localDescription.sdp } });
+    }
+  }
+
+  relistenPeers(why) {
+    this.note("listen again: " + why);
+    if (this.on) this.queue = this.queue.then(() => this.syncHeard()).catch(e => { this.note("listen failed " + (e && e.message)); this.onError("failed"); });
+  }
+
+  // another device's offer (to my microphone) or answer (to my listening)
+  async onRtc(msg) {
+    if (this.mode !== "p2p" || !msg || !msg.desc) return;
+    try {
+      const m = this.mic;
+      if (msg.desc.type === "offer" && m && m.peers && msg.to === m.sid) {
+        const old = m.peers.get(msg.from);
+        if (old) { try { old.close(); } catch { /* closed */ } }
+        const pc = await this.newPc();
+        m.peers.set(msg.from, pc);
+        pc.onconnectionstatechange = () => {
+          this.note("to " + msg.from.slice(0, 6) + " " + pc.connectionState);
+          if (pc.connectionState === "failed" && m.peers.get(msg.from) === pc) { try { pc.close(); } catch { /* closed */ } m.peers.delete(msg.from); }
+        };
+        await pc.setRemoteDescription(msg.desc);
+        const track = m.stream.getAudioTracks()[0];
+        const tr = pc.getTransceivers()[0];
+        if (tr) { await tr.sender.replaceTrack(track); tr.direction = "sendonly"; } else pc.addTrack(track, m.stream);
+        await pc.setLocalDescription(await pc.createAnswer());
+        try {                                 // a light voice: Opus at about 32 kbit/s
+          const snd = pc.getSenders()[0], p = snd.getParameters();
+          p.encodings = p.encodings && p.encodings.length ? p.encodings : [{}];
+          p.encodings[0].maxBitrate = V.BITRATE;
+          await snd.setParameters(p);
+        } catch { /* the browser keeps its own rate */ }
+        await this.gathered(pc);
+        if (this.mic !== m || m.peers.get(msg.from) !== pc) return;
+        this.send({ t: "rtc", from: m.sid, to: msg.from, desc: { type: "answer", sdp: pc.localDescription.sdp } });
+        return;
+      }
+      const L = this.listen;
+      if (msg.desc.type === "answer" && L && L.peers && msg.to === L.sid) {
+        const p = L.peers.get(msg.from);
+        if (p && p.pc.signalingState === "have-local-offer") await p.pc.setRemoteDescription(msg.desc);
+      }
+    } catch (e) { this.note("rtc failed " + (e && e.message)); }
   }
 
   drop(h) {
@@ -377,7 +506,8 @@ export class Voice {
       const parts = [];
       if (this.listen) {
         let rx = 0, lv = null;
-        (await this.listen.pc.getStats()).forEach(r => {
+        const pcs = this.listen.pc ? [this.listen.pc] : [...this.listen.peers.values()].map(p => p.pc);
+        for (const pc of pcs) (await pc.getStats()).forEach(r => {
           if (r.type === "inbound-rtp" && r.kind === "audio") { rx += r.bytesReceived || 0; if (typeof r.audioLevel === "number") lv = Math.max(lv || 0, r.audioLevel); }
         });
         parts.push(`in ${Math.round(rx / 1024)}KB lvl ${lv === null ? "-" : lv.toFixed(2)}`);
@@ -388,7 +518,8 @@ export class Voice {
       }
       if (this.mic) {
         let tx = 0;
-        (await this.mic.pc.getStats()).forEach(r => { if (r.type === "outbound-rtp") tx += r.bytesSent || 0; });
+        const pcs = this.mic.pc ? [this.mic.pc] : [...this.mic.peers.values()];
+        for (const pc of pcs) (await pc.getStats()).forEach(r => { if (r.type === "outbound-rtp") tx += r.bytesSent || 0; });
         parts.push(`out ${Math.round(tx / 1024)}KB${this.mic.muted ? " muted" : ""}`);
       }
       if (this.ctx) parts.push("ctx " + this.ctx.state);

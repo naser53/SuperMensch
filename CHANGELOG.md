@@ -4,6 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.3.0 (2026-11-10)
+
+* Voice chat on the Linux server without Cloudflare (owner): the game server relays the voices
+  itself (`server/node/sfu.mjs`, a small SFU on werift) and runs its own TURN (coturn, set up by
+  `tools/linux/voice.sh` / `sudo supermensch-voice`). The old Cloudflare keys are not used there.
+* Voice can also go peer to peer: each device sends straight to the others, the offers and answers
+  go over the game's WebSocket. The admin page picks "through the server" or "peer to peer".
+
 ## v3.2.38 (2026-11-10)
 
 * Linux server: the admin key may also have the signs `@ ! % + = : ,` (owner); still no spaces, quotes, `# Changelog

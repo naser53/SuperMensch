@@ -1,22 +1,84 @@
 #!/usr/bin/env bash
-# Voice chat on the Linux server (sudo supermensch-voice): the Cloudflare Realtime keys, as the
-# Worker's secrets of the same names (README, "Voice chat"). Voice still goes through Cloudflare's
-# SFU; the browser opens the microphone only over HTTPS (install.sh with DOMAIN=...).
-# Asks for each key (empty: keep the one there), writes /etc/supermensch.env, restarts the game.
+# Voice chat on the Linux server (sudo supermensch-voice; install.sh runs it too). Nothing from
+# Cloudflare (owner, 2026-11-10): the game server relays the voices itself (server/node/sfu.mjs),
+# and coturn on this machine is the TURN relay for networks that block direct connections (peer to
+# peer mode, and phones behind strict routers). Sets up, and may be run again at any time:
+#   coturn            TURN on port 3478 (UDP and TCP), relay ports 49160-49359/udp, with a shared
+#                     secret: the game hands out short-lived passwords made from it
+#   /etc/supermensch.env   VOICE_PORTS (the relay's UDP ports, 40000-40199), VOICE_IP (this
+#                     server's public address), TURN_SECRET, TURN_HOST; old Cloudflare keys removed
+#   the firewall (ufw, when it is on): those ports open
+# The browser opens the microphone only over HTTPS (install.sh with DOMAIN=...).
 set -euo pipefail
 ENVF=/etc/supermensch.env
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
-for k in REALTIME_APP_ID REALTIME_APP_TOKEN TURN_KEY_ID TURN_KEY_TOKEN; do
-  have=$(grep -q "^$k=." "$ENVF" && echo " (set; Enter keeps it)" || echo "")
-  [ "${k#TURN}" != "$k" ] && opt=" optional" || opt=""
-  read -r -s -p "$k$opt$have: " v </dev/tty; echo
-  v=$(printf '%s' "$v" | tr -d '\r[:space:]')
-  [ -n "$v" ] || continue
-  sed -i "/^$k=/d" "$ENVF"
-  printf '%s=%s\n' "$k" "$v" >> "$ENVF"
-done
+[ -f "$ENVF" ] || { echo "$ENVF is missing: run install.sh first"; exit 1; }
+VOICE_PORTS=40000-40199
+TURN_PORTS=49160-49359
+
+setkey() { sed -i "/^$1=/d" "$ENVF"; printf '%s=%s\n' "$1" "$2" >> "$ENVF"; }
+getkey() { sed -n "s/^$1=//p" "$ENVF" | tail -n 1; }
+
+ip=$(curl -fsS -4 --max-time 5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
+host="${DOMAIN:-}"
+[ -n "$host" ] || host=$(sed -n 's/^\([^ ,#]*\),.*{$/\1/p' /etc/caddy/Caddyfile 2>/dev/null | head -n 1)
+[ -n "$host" ] || host="$ip"
+secret=$(getkey TURN_SECRET)
+[ -n "$secret" ] || secret=$(head -c 24 /dev/urandom | base64 | tr -d '/+=')
+
+echo "== coturn (TURN for $host)"
+export DEBIAN_FRONTEND=noninteractive
+command -v turnserver >/dev/null || { apt-get update -qq; apt-get install -y -qq coturn >/dev/null; }
+cat > /etc/turnserver.conf <<CONF
+# SuperMensch (tools/linux/voice.sh): TURN for the voice chat; passwords from the shared secret
+listening-port=3478
+fingerprint
+use-auth-secret
+static-auth-secret=$secret
+realm=$host
+external-ip=$ip
+min-port=${TURN_PORTS%-*}
+max-port=${TURN_PORTS#*-}
+no-tls
+no-dtls
+no-cli
+no-multicast-peers
+total-quota=200
+stale-nonce=600
+# never relay into private networks (this machine's own public address stays allowed)
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=100.64.0.0-100.127.255.255
+denied-peer-ip=127.0.0.0-127.255.255.255
+denied-peer-ip=169.254.0.0-169.254.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+denied-peer-ip=::1
+denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+CONF
+chmod 640 /etc/turnserver.conf
+getent group turnserver >/dev/null && chgrp turnserver /etc/turnserver.conf
+[ -f /etc/default/coturn ] && sed -i 's/^#*TURNSERVER_ENABLED=.*/TURNSERVER_ENABLED=1/' /etc/default/coturn
+systemctl enable -q coturn
+systemctl restart coturn
+
+echo "== settings ($ENVF)"
+sed -i '/^REALTIME_APP_ID=/d; /^REALTIME_APP_TOKEN=/d; /^TURN_KEY_ID=/d; /^TURN_KEY_TOKEN=/d' "$ENVF"   # Cloudflare: not used here
+setkey VOICE_PORTS "$VOICE_PORTS"
+setkey VOICE_IP "$ip"
+setkey TURN_SECRET "$secret"
+setkey TURN_HOST "$host"
 chmod 600 "$ENVF"
+
+if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
+  ufw allow 3478 >/dev/null
+  ufw allow "${VOICE_PORTS%-*}:${VOICE_PORTS#*-}/udp" >/dev/null
+  ufw allow "${TURN_PORTS%-*}:${TURN_PORTS#*-}/udp" >/dev/null
+  echo "firewall: 3478, $VOICE_PORTS/udp and $TURN_PORTS/udp open"
+fi
+
 systemctl restart supermensch
 sleep 2
-port=$(sed -n 's/^PORT=//p' "$ENVF")
-curl -fsS "http://127.0.0.1:${port:-80}/api/settings" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const v=JSON.parse(s).voice;console.log(v.ready?"voice: ready (tick the players who may talk on the admin page)":"voice: not ready, REALTIME_APP_ID and REALTIME_APP_TOKEN are needed")})'
+port=$(getkey PORT)
+curl -fsS "http://127.0.0.1:${port:-80}/api/settings" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const v=JSON.parse(s).voice;console.log(`voice: ready, mode ${v.mode === "p2p" ? "peer to peer" : "through the server"} (the admin page picks the mode and who may talk)`)})'
