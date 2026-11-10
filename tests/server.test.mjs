@@ -218,6 +218,9 @@ test("the admin can place the pieces (a test aid): the turn starts again and dev
   assert.equal(g.hunterEligible(1, g.state), 1);                  // blue is home: the hunter may come in
   assert.equal(fingerprint(Table.replay(setup, room.events).game), room.fingerprint());
   room.place("R2 23\nR3z 2\nG1 z1; G4 y");                       // a line per piece; z = the nest
+  // typed on a Persian phone keyboard: Persian digits and a direction mark
+  assert.deepEqual(room.place("R2 p\u06F3\u06F5\u200F").events[0].points, [[0, 1, 35]]);
+  assert.deepEqual(parseDebug("rewind \u06F2"), { go: 2 });
   assert.equal(room.placeText().split("\n")[0], "R: 4 23 z2 y");
   assert.equal(room.placeText().split("\n")[2], "G: z1 y y y");
   const n = room.events.length;

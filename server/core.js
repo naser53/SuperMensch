@@ -249,11 +249,19 @@ export function withEngine(setup, engine) {
 // R2 p85 gives red 2 rank points 85 (its general / marshal look; owner, 2026-11-09): pushed to points
 // as [color, piece, points]; the piece stays where it is.
 const LETTERS = "RBGYPTNK";
+// the admin's text as typed on a Persian phone keyboard: Persian and Arabic digits become 0-9, and the
+// invisible direction marks and joiners go (owner, 2026-11-10: "G4 p۳۵" said "no such field")
+export const plainText = t => String(t || "")
+  .replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x6F0))
+  .replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x660))
+  .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "");
 export function placeText(g) {
   const L = g.L;
   return g.state.pos.map((a, col) => `${LETTERS[col]}: ` + a.map(r => (r === -1 ? "y" : r >= L ? "z" + (r - L + 1) : String(g.absOf(col, r) + 1))).join(" ")).join("\n");
 }
 
+// the characters of w that are not plain ASCII, to show in an error ("p35 (U+0440)")
+const odd = w => { const c = [...w].filter(x => x.charCodeAt(0) > 126); return c.length ? ` (${c.map(x => "U+" + x.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")).join(" ")})` : ""; };
 export function parsePlace(text, g, points = []) {
   const L = g.L, pos = g.state.pos.map(a => a.slice());
   const field = (col, w) => {
@@ -265,7 +273,7 @@ export function parsePlace(text, g, points = []) {
       return L + k - 1;
     }
     const n = Number(w);
-    if (!Number.isInteger(n) || n < 1 || n > L + pos[col].length) throw new Error(`no such field: ${w}`);
+    if (!Number.isInteger(n) || n < 1 || n > L + pos[col].length) throw new Error(`no such field: ${w}${odd(w)}`);
     return n <= L ? g.relOf(col, n - 1) : n - 1;
   };
   const colorOf = (c, line) => {
@@ -273,7 +281,7 @@ export function parsePlace(text, g, points = []) {
     if (col < 0 || col >= pos.length) throw new Error(`no such color: ${line.trim()}`);
     return col;
   };
-  for (const line of String(text || "").split(/[\n;]+/)) {
+  for (const line of plainText(text).split(/[\n;]+/)) {
     if (!line.trim()) continue;
     const pts = /^\s*([a-z])\s*(\d+)\s*:?\s*p\s*(\d+)\s*$/i.exec(line);   // R2 p85
     if (pts) {
@@ -308,7 +316,7 @@ export function parsePlace(text, g, points = []) {
 //                    "drop dice" is the old name
 //   reset            the game starts again from the beginning, with the same players
 export function parseDebug(text) {
-  const s = String(text || "").trim().toLowerCase();
+  const s = plainText(text).trim().toLowerCase();
   if (s === "reset") return { reset: true };
   let m = /^(?:rewind|go\s+drop)\s+(-?\d+)$/.exec(s);
   if (m) return { go: +m[1] };
