@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.33 (2026-11-10)
+
+* Rooms on the first page (owner): a room now stays on the list for 7 days without a move (was a fixed 24 hours); the admin sets the days under the room list in the Rooms tab, 0 = always (settings key `openDays`, `POST /api/admin/opendays`, `cleanOpenDays` in `server/core.js`).
+
 ## v3.2.32 (2026-11-10)
 
 * Debug and place commands (owner: `G4 p35` said "no such field" from a phone): Persian and Arabic digits now read as 0-9 and invisible direction marks are dropped (`plainText` in `server/core.js`); a field that still cannot be read names its odd characters (`p35 (U+0440)`).

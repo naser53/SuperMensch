@@ -114,6 +114,7 @@ async function loadColors(d) {
   showHunter(d);
   showPoints(d);
   showVoice(d);
+  $("#openDays").value = Number.isInteger(d.openDays) ? d.openDays : (d.openDaysDefault ?? 7);
   $("#colors").innerHTML = d.defaults.map((def, i) => picker("col", i, COLOR_NAMES[lang][i] || T("color_n", { n: N(i + 1) }), d.colors[i], def)).join("");
   $("#ringColors").innerHTML = (d.ringDefaults || []).map((def, i) => picker("rng", i, COLOR_NAMES[lang][i] || T("color_n", { n: N(i + 1) }), (d.rings || [])[i], def)).join("");
   $("#boardColors").innerHTML = (d.boardDefaults || []).map((def, i) => picker("brd", i, T(BOARD_NAMES[i]), (d.board || [])[i], def)).join("");
@@ -144,6 +145,10 @@ $("#colorsBtn").onclick = async () => {
   catch (e) { show("#colorsMsg", e.message, true); }
 };
 const showHunter = d => { const x = document.querySelector(`[name=hunter][value=${d.hunter === "sword" ? "sword" : "arrow"}]`); x.checked = true; };
+$("#openDaysBtn").onclick = async () => {
+  try { const d = await api("admin/opendays", { days: Math.round(+$("#openDays").value) }); $("#openDays").value = d.openDays; show("#openDaysMsg", T("saved_dot")); }
+  catch (e) { show("#openDaysMsg", e.message, true); }
+};
 $("#hunterBtn").onclick = async () => {
   try { showHunter(await api("admin/hunter", { hunter: document.querySelector("[name=hunter]:checked").value })); show("#hunterMsg", T("saved_dot")); }
   catch (e) { show("#hunterMsg", e.message, true); }

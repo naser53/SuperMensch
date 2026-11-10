@@ -9,7 +9,10 @@ import { FrameRecorder, gameView } from "./frames.js";
 
 export const USERS = 10;                 // user1 .. user10 at the first start
 export const NAME_MAX = 24;
-export const OPEN_HOURS = 24;            // a game idle this long leaves the list of open games
+// how many days without a move a game stays on the first page's list (the admin's "openDays";
+// 0 = always; owner, 2026-11-10: was a fixed 24 hours)
+export const OPEN_DAYS = 7, OPEN_DAYS_MAX = 365;
+export const cleanOpenDays = d => (Number.isInteger(d) && d >= 0 && d <= OPEN_DAYS_MAX ? d : OPEN_DAYS);
 
 const ID_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ";   // no I, L, O: easy to read out loud
 

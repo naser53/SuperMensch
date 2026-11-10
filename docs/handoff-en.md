@@ -687,7 +687,7 @@ earlier sketch (browser dice, PINs).
   else `Config.SERVER_URL` (the API sends CORS headers, so the downloaded file can reach it).
 * **Cloudflare Workers + Durable Objects** (SQLite): `Lobby` (users, games, results) and one
   `GameRoom` per game. Each game has a GameID (`K7QX-42`, made by the server) and a GameName
-  (typed by its creator); the lobby lists open games (idle 24 h → off the list, kept in history).
+  (typed by its creator); the lobby lists open games (idle `openDays` days, default 7, set by the admin under the room list, 0 = always → off the list, kept in history; a fixed 24 h until v3.2.32).
 * **The server throws the dice** (crypto) and checks every move with the same engine (`Room` in
   `server/core.js`); computer seats are played by the server. Devices send `{pick}`, the server
   sends the new events to every device, which replays them (`Table`), so everybody sees the

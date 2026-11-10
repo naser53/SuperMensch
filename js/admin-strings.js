@@ -140,6 +140,8 @@ export const ADMIN_STR = {
   reset          the game from the beginning
 <b>Room</b>
   rename Name    a new name for the room`,
+    open_days: "On the first page for",
+    open_days_unit: "days without a move (0 = always)",
     "err_wrong admin key": "Wrong admin key",
     "err_no such game": "No such game",
     "err_the game needs a name": "The game needs a name",
@@ -284,6 +286,8 @@ export const ADMIN_STR = {
   reset          بازی از اول
 <b>اتاق</b>
   rename Name    نام تازه برای اتاق`,
+    open_days: "در صفحه‌ی اول تا",
+    open_days_unit: "روز بدون حرکت (۰ = همیشه)",
     "err_wrong admin key": "کلید ادمین اشتباه است",
     "err_no such game": "چنین بازی‌ای نیست",
     "err_the game needs a name": "بازی نام لازم دارد",
@@ -469,6 +473,8 @@ export const ADMIN_STR = {
   reset          das Spiel von vorn
 <b>Raum</b>
   rename Name    ein neuer Name für den Raum`,
+    open_days: "Auf der ersten Seite für",
+    open_days_unit: "Tage ohne Zug (0 = immer)",
     "err_wrong admin key": "Falscher Admin-Schlüssel",
     "err_no such game": "Dieses Spiel gibt es nicht",
     "err_the game needs a name": "Das Spiel braucht einen Namen",
