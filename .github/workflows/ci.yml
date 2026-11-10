@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"   # node:sqlite (the Linux server, its test) needs 22.13+
       - run: npm ci
       - name: Rule tests
         run: npm test
