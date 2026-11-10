@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.37 (2026-11-10)
+
+* Linux server: the admin key is sent in an HTTP header, so `install.sh` now takes only English letters, digits and `- _ .` for it (a key typed in Persian made `supermensch-copy` fail with "invalid x-admin-key header"); `supermensch-copy` says so plainly instead of a stack trace.
+
 ## v3.2.36 (2026-11-10)
 
 * Linux server with a domain (owner: `wiengame.com`): `install.sh` with `DOMAIN=...` sets up Caddy for HTTPS (the name and `www.`) in front of the game, which then listens on `127.0.0.1:8080`. New command `sudo supermensch-voice` puts the voice chat keys (Cloudflare Realtime) on the server.

@@ -10,6 +10,7 @@ for k in REALTIME_APP_ID REALTIME_APP_TOKEN TURN_KEY_ID TURN_KEY_TOKEN; do
   have=$(grep -q "^$k=." "$ENVF" && echo " (set; Enter keeps it)" || echo "")
   [ "${k#TURN}" != "$k" ] && opt=" optional" || opt=""
   read -r -s -p "$k$opt$have: " v </dev/tty; echo
+  v=$(printf '%s' "$v" | tr -d '\r[:space:]')
   [ -n "$v" ] || continue
   sed -i "/^$k=/d" "$ENVF"
   printf '%s=%s\n' "$k" "$v" >> "$ENVF"
