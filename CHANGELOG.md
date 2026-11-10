@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.34 (2026-11-10)
+
+* Debug and place commands (owner: `G4 p34` said "no such field"): a piece in a tunnel broke every place command of its room, because the unchanged pieces were checked too. Such a piece now shows as `t` under "Pieces now" and may stay there; none is put into a tunnel this way.
+
 ## v3.2.33 (2026-11-10)
 
 * Rooms on the first page (owner): a room now stays on the list for 7 days without a move (was a fixed 24 hours); the admin sets the days under the room list in the Rooms tab, 0 = always (settings key `openDays`, `POST /api/admin/opendays`, `cleanOpenDays` in `server/core.js`).
