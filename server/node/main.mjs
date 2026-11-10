@@ -2,7 +2,7 @@
 // (server/worker.js), with server/node/runtime.mjs in place of Cloudflare's runtime.
 //   node server/node/main.mjs          (Node 22.13 or newer; npm run build first for the pages)
 // Settings come from the environment (on the server: /etc/supermensch.env, see tools/linux/):
-//   PORT (default 8080), DATA_DIR (default ./data: the SQLite files), ADMIN_KEY, and for voice
+//   PORT (default 8080), HOST (default: every address; 127.0.0.1 behind Caddy), DATA_DIR (default ./data: the SQLite files), ADMIN_KEY, and for voice
 //   chat REALTIME_APP_ID, REALTIME_APP_TOKEN, TURN_KEY_ID, TURN_KEY_TOKEN (as the Worker's secrets).
 import http from "node:http";
 import fs from "node:fs";
@@ -19,6 +19,7 @@ const { Namespace, Socket, queued } = await import("./runtime.mjs");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PUBLIC = path.join(root, "server/public");
 const PORT = Number(process.env.PORT) || 8080;
+const HOST = process.env.HOST || undefined;
 const DATA = path.resolve(process.env.DATA_DIR || path.join(root, "data"));
 
 const SECRETS = ["ADMIN_KEY", "REALTIME_APP_ID", "REALTIME_APP_TOKEN", "TURN_KEY_ID", "TURN_KEY_TOKEN", "REALTIME_API"];
@@ -83,4 +84,4 @@ server.on("upgrade", (req, sock, head) => {
   });
 });
 
-server.listen(PORT, () => console.log(`SuperMensch on port ${PORT}, data in ${DATA}${env.ADMIN_KEY ? "" : " (no ADMIN_KEY: the admin page stays locked)"}`));
+server.listen(PORT, HOST, () => console.log(`SuperMensch on port ${PORT}${HOST ? ` (${HOST})` : ""}, data in ${DATA}${env.ADMIN_KEY ? "" : " (no ADMIN_KEY: the admin page stays locked)"}`));

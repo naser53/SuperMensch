@@ -709,7 +709,8 @@ npm run build       # server/public/index.html (صفحه‌ی بازی سرور)
 * **صفحه** با همان سروری حرف می‌زند که آن را فرستاده (`apiBase` در `js/main.js`)؛ فقط صفحه توسعه از `Look.SERVER_URL` استفاده می‌کند.
 * **نصب** (اوبونتو، با root): `curl -fsSL https://raw.githubusercontent.com/naser53/SuperMensch/main/tools/linux/install.sh | sudo bash`. Node را نصب می‌کند، `main` را در `/opt/supermensch/app` می‌گذارد و می‌سازد، `/etc/supermensch.env` را می‌نویسد (PORT=80، DATA_DIR=/var/lib/supermensch، ADMIN_KEY) و `supermensch.service` را راه می‌اندازد. **به‌روزرسانی:** `supermensch-update.timer` هر ۲ دقیقه `main` را نگاه می‌کند و نسخه جدید را می‌گیرد، می‌سازد و راه می‌اندازد. پس push به `main` هر دو سرور را به‌روز می‌کند.
 * **کپی بازی‌ها:** مسیرهای ادمین `export` و `import`. روی سرور لینوکس `sudo supermensch-copy` همه‌چیز را از Cloudflare کپی می‌کند. بعد از آن هر سرور بازی‌های خودش را دارد.
-* فعلاً HTTP ساده روی IP (بدون دامنه و بدون صوت). چت صوتی HTTPS لازم دارد: یک اسم رایگان مثل `<ip>.sslip.io` و یک پراکسی مثل Caddy.
+* **دامنه و HTTPS (v3.2.36):** `sudo DOMAIN=wiengame.com bash install.sh` پراکسی Caddy را جلوی بازی می‌گذارد (HTTPS برای دامنه و `www.`؛ گواهی را Caddy خودش می‌گیرد و تمدید می‌کند) و بازی روی `127.0.0.1:8080` گوش می‌دهد. بدون DOMAIN: HTTP ساده روی پورت 80. سرور صاحب پروژه: `wiengame.com`.
+* **چت صوتی** HTTPS و کلیدهای Cloudflare Realtime لازم دارد: `sudo supermensch-voice` کلیدهای `REALTIME_APP_ID`، `REALTIME_APP_TOKEN` و در صورت تمایل `TURN_KEY_ID`، `TURN_KEY_TOKEN` را می‌پرسد، در `/etc/supermensch.env` می‌نویسد و بازی را دوباره راه می‌اندازد. صوت همچنان از SFU کلادفلر می‌گذرد. چت تصویری وجود ندارد.
 * تست: `tests/linux-server.test.mjs`.
 
 </div>
