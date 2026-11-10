@@ -11,6 +11,7 @@ Working rules:
 * Run `npm test` before every commit. After a deliberate rule change, run
   `node tests/golden.mjs --record`, and update `docs/rules-fa.*` and both handoff files.
 * `npm run build` makes `server/public/index.html`, the game page of the server. Pushing to `main` deploys the
-  server. The game is online only (owner, 2026-11-06): no offline file, nothing in the releases but notes.
+  server: on Cloudflare, and on the owner's Linux server (it pulls `main`; handoff 12.4). Keep
+  `server/node/` working when the server code changes (`tests/linux-server.test.mjs`). The game is online only (owner, 2026-11-06): no offline file, nothing in the releases but notes.
 * Keep screenshots and scratch files out of the repo.
 * Ask the owner before expensive or ambiguous changes; small clear ones, just do.

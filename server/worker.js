@@ -1,4 +1,5 @@
-// SuperMensch online server (Cloudflare Worker).
+// SuperMensch online server (Cloudflare Worker; the same code runs on a Linux server through
+// server/node/, which gives it what Cloudflare gives a Worker).
 //   Lobby     one Durable Object: users, the list of games and their results
 //   GameRoom  one Durable Object per game: setup, events, the devices' WebSockets
 // Pages come from server/public: / is the game (built from js/, with the room list on its first
@@ -341,6 +342,23 @@ export class Lobby extends DurableObject {
     return this.allGames();
   }
 
+  // the whole lobby, for a copy to another server (admin export / import)
+  dump() {
+    const t = name => this.sql.exec(`SELECT * FROM ${name}`).toArray();
+    return { users: t("users"), games: t("games"), settings: t("settings") };
+  }
+
+  restore(d) {
+    for (const name of ["users", "games", "settings"]) {
+      const cols = this.sql.exec(`PRAGMA table_info(${name})`).toArray().map(c => c.name);
+      this.sql.exec(`DELETE FROM ${name}`);
+      for (const row of Array.isArray(d[name]) ? d[name] : []) {
+        const ks = Object.keys(row).filter(k => cols.includes(k));
+        if (ks.length) this.sql.exec(`INSERT INTO ${name} (${ks.join(", ")}) VALUES (${ks.map(() => "?").join(", ")})`, ...ks.map(k => row[k]));
+      }
+    }
+  }
+
   history() {
     return this.sql.exec(`SELECT id, name, created, updated, result FROM games WHERE status = 'over'
       ORDER BY updated DESC LIMIT 200`).toArray().map(r => ({ ...r, result: JSON.parse(r.result) }));
@@ -512,6 +530,20 @@ export class GameRoom extends DurableObject {
     await this._report();
   }
 
+  // the room as stored, for a copy to another server (admin export / import)
+  dump() {
+    return { meta: this.sql.exec(`SELECT k, v FROM meta`).toArray(), events: this.sql.exec(`SELECT seq, ev FROM events ORDER BY seq`).toArray() };
+  }
+
+  restore(d) {
+    for (const ws of this.ctx.getWebSockets()) { try { ws.close(4001, "game copied"); } catch { /* closed */ } }
+    this.sql.exec(`DELETE FROM meta`);
+    this.sql.exec(`DELETE FROM events`);
+    for (const r of d.meta || []) this.sql.exec(`INSERT INTO meta (k, v) VALUES (?, ?)`, String(r.k), String(r.v));
+    for (const r of d.events || []) this.sql.exec(`INSERT INTO events (seq, ev) VALUES (?, ?)`, r.seq | 0, String(r.ev));
+    this.room = null;
+  }
+
   snapshot() {
     const room = this._load();
     if (!room) return null;
@@ -523,9 +555,14 @@ export class GameRoom extends DurableObject {
     if (req.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket", { status: 426 });
     if (!this._load()) return new Response("no such game", { status: 404 });
     const [client, server] = Object.values(new WebSocketPair());
-    this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ device: "?", seats: [] });
+    this.accept(server);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // a device's WebSocket joins the room (also called by the Linux server, server/node/main.mjs)
+  accept(ws) {
+    this.ctx.acceptWebSocket(ws);
+    ws.serializeAttachment({ device: "?", seats: [] });
   }
 
   held() { return this._seats(); }

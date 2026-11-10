@@ -703,4 +703,13 @@ npm run build       # server/public/index.html (صفحه‌ی بازی سرور)
   * اندازه‌ها (بازی ۶ رنگ): هر حرکت با جواب کامپیوترها حدود ۳۰ کیلوبایت (حداکثر حدود ۹۰)؛ کل نما هنگام وصل شدن تا حدود ۳۵۰ کیلوبایت در آخر بازی (بیشترش دفتر حرکت‌ها).
 * باید در صفحه بماند: کشیدن صفحه و افکت‌ها (`render3d.js`، `rolldie.js`)، صداها، چت صوتی (`js/voice.js`؛ کلیدهایش روی سرور است).
 
+### ۱۲.۴ دو سرور: Cloudflare و سرور لینوکس صاحب پروژه (v3.2.35؛ صاحب پروژه، ۲۰۲۶-۱۱-۱۰)
+صاحب پروژه بازی را هم روی Cloudflare و هم روی سرور لینوکس خودش (VPS: دو پردازنده، ۲ گیگ، اوبونتو) می‌خواهد، از یک کد. آخرین نسخه فقط-Cloudflare تگ `v3.2.34` است.
+* **یک کد:** `server/worker.js`، `server/core.js` و `server/admin.js` بدون تغییر روی هر دو اجرا می‌شوند. `server/node/` همان چیزهایی را که Cloudflare به Worker می‌دهد برای Node فراهم می‌کند: `main.mjs` (سرور HTTP، صفحه‌ها از `server/public`، WebSocket با بسته `ws`)، `runtime.mjs` (اشیای Durable Object: برای هر نام یک شیء و یک فایل SQLite با `node:sqlite`؛ در هر شیء رویدادهای WebSocket یکی‌یکی)، `hooks.mjs` و `cf-shim.mjs`. سرور لینوکس فقط `GameRoom.accept(ws)` را خودش صدا می‌زند. Node نسخه 22.13 یا بالاتر لازم است.
+* **صفحه** با همان سروری حرف می‌زند که آن را فرستاده (`apiBase` در `js/main.js`)؛ فقط صفحه توسعه از `Look.SERVER_URL` استفاده می‌کند.
+* **نصب** (اوبونتو، با root): `curl -fsSL https://raw.githubusercontent.com/naser53/SuperMensch/main/tools/linux/install.sh | sudo bash`. Node را نصب می‌کند، `main` را در `/opt/supermensch/app` می‌گذارد و می‌سازد، `/etc/supermensch.env` را می‌نویسد (PORT=80، DATA_DIR=/var/lib/supermensch، ADMIN_KEY) و `supermensch.service` را راه می‌اندازد. **به‌روزرسانی:** `supermensch-update.timer` هر ۲ دقیقه `main` را نگاه می‌کند و نسخه جدید را می‌گیرد، می‌سازد و راه می‌اندازد. پس push به `main` هر دو سرور را به‌روز می‌کند.
+* **کپی بازی‌ها:** مسیرهای ادمین `export` و `import`. روی سرور لینوکس `sudo supermensch-copy` همه‌چیز را از Cloudflare کپی می‌کند. بعد از آن هر سرور بازی‌های خودش را دارد.
+* فعلاً HTTP ساده روی IP (بدون دامنه و بدون صوت). چت صوتی HTTPS لازم دارد: یک اسم رایگان مثل `<ip>.sslip.io` و یک پراکسی مثل Caddy.
+* تست: `tests/linux-server.test.mjs`.
+
 </div>

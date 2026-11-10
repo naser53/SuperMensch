@@ -1558,10 +1558,12 @@ async function loadColors(app) {
   } catch { /* no server: the colors kept or the defaults */ }
 }
 
-// where the online server is: this page's own host when the server serves it, else Look.SERVER_URL
+// where the online server is: this page's own host when the server serves it (Cloudflare or the
+// Linux server; the built page has no import map), else Look.SERVER_URL (the development page)
 function apiBase() {
   const h = location.hostname;
-  const own = location.protocol.startsWith("http") && (h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
+  const built = !document.querySelector('script[type="importmap"]');
+  const own = location.protocol.startsWith("http") && (built || h.endsWith(".workers.dev") || ((h === "localhost" || h === "127.0.0.1") && location.port === "8787"));
   return own ? location.origin : Look.SERVER_URL;
 }
 

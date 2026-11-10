@@ -82,6 +82,21 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     await env.ROOM.get(env.ROOM.idFromName(body.id)).setName(name);
     return json(await lobby.renameGame(body.id, name));
   }
+  // Copy the whole server (owner, 2026-11-10: the game runs on Cloudflare and on a Linux server):
+  // export gives the lobby's tables and every room's; import replaces this server's with them
+  // (tools/linux/copy-games.mjs). Rooms not in the copy stay as they are.
+  if (what === "export") {
+    const lobbyDump = await lobby.dump();
+    const rooms = {};
+    for (const g of lobbyDump.games) rooms[g.id] = await env.ROOM.get(env.ROOM.idFromName(g.id)).dump();
+    return json({ version: 1, lobby: lobbyDump, rooms });
+  }
+  if (what === "import" && body) {
+    if (body.version !== 1 || !body.lobby || !body.rooms) return fail("not an export of this server");
+    for (const [id, d] of Object.entries(body.rooms)) if (isGameId(id)) await env.ROOM.get(env.ROOM.idFromName(id)).restore(d);
+    await lobby.restore(body.lobby);
+    return json({ ok: true, rooms: Object.keys(body.rooms).length });
+  }
   if (what === "delete" && body && isGameId(body.id)) {      // a test room: gone from the lists and the server
     await env.ROOM.get(env.ROOM.idFromName(body.id)).remove();
     return json(await lobby.removeGame(body.id));

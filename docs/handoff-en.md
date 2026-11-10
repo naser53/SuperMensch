@@ -821,3 +821,29 @@ server; the offline game is dropped. The plan (in phases) is in the project note
     Server work per move at most about 20 ms in Node.
 * What must stay in the page: drawing and effects (`render3d.js`, `rolldie.js`), sounds, voice chat
   (`js/voice.js`; its keys stay on the server).
+
+### 12.4 Two servers: Cloudflare and the owner's Linux server (v3.2.35; owner, 2026-11-10)
+The owner wants the game on Cloudflare **and** on a Linux server of their own (VPS: 2 CPUs, 2 GB, Ubuntu),
+from the same code. The last Cloudflare-only version is tag `v3.2.34`.
+* **Same code:** `server/worker.js`, `server/core.js`, `server/admin.js` run unchanged on both.
+  `server/node/` gives Node what Cloudflare gives a Worker: `main.mjs` (HTTP server, the pages from
+  `server/public` as Cloudflare's assets, WebSockets with the `ws` package), `runtime.mjs` (Durable
+  Object bindings: one object per name, one SQLite file each with `node:sqlite`; `ctx.storage.sql`,
+  `acceptWebSocket`, `getWebSockets`, attachments; one WebSocket event at a time per object),
+  `hooks.mjs` and `cf-shim.mjs` (`cloudflare:workers`). `GameRoom.accept(ws)` is the one entry the
+  Linux server calls itself. Needs Node 22.13 or newer.
+* **The page** talks to the server that served it (`apiBase` in `js/main.js`: the built page has no
+  import map); only the development page uses `Look.SERVER_URL`.
+* **Install** (Ubuntu, as root): `curl -fsSL https://raw.githubusercontent.com/naser53/SuperMensch/main/tools/linux/install.sh | sudo bash`.
+  It installs Node, clones `main` to `/opt/supermensch/app`, builds, writes `/etc/supermensch.env`
+  (PORT=80, DATA_DIR=/var/lib/supermensch, ADMIN_KEY, later the voice keys) and starts
+  `supermensch.service`. **Updates:** `supermensch-update.timer` looks at `main` every 2 minutes; a new
+  commit is pulled, built and started. So a push to `main` updates both servers.
+* **Copy of the games:** admin routes `export` (the lobby's tables and every room's `meta` and
+  `events`) and `import` (replaces the lobby, writes the rooms). On the Linux server `sudo supermensch-copy`
+  copies everything from Cloudflare (`tools/linux/copy-games.mjs`). After that the two servers keep
+  their own games.
+* For now plain HTTP on the server's IP (owner: no domain, no voice yet). Voice chat needs HTTPS
+  (browsers open the microphone only there): a free name such as `<ip>.sslip.io` and a proxy like Caddy.
+* Test: `tests/linux-server.test.mjs` starts the Linux server, makes a room, plays over a WebSocket,
+  restarts it, and copies the game to a second one.
