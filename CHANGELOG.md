@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.2.32 (2026-11-10)
+
+* Debug and place commands (owner: `G4 p35` said "no such field" from a phone): Persian and Arabic digits now read as 0-9 and invisible direction marks are dropped (`plainText` in `server/core.js`); a field that still cannot be read names its odd characters (`p35 (U+0440)`).
+
 ## v3.2.31 (2026-11-09)
 
 * Rank rings (owner): a new admin choice in the Layout tab, next to the points look: the general's ring and the marshal's two rings stay silver and gold (default), or take the pawn's Ring color (settings key `rankrings`: `metal` or `ring`).

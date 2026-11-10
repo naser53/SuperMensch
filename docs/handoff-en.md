@@ -635,7 +635,7 @@ earlier sketch (browser dice, PINs).
   works), y yard; `parsePlace`/`placeText` in `server/core.js`, `POST /api/admin/place`). It is stored as the
   event `{ place: [...] }` (`Game.place`): the pieces move and the current turn starts again; open
   pages load the game again. `R2 p85` (owner, 2026-11-09) gives red 2 rank points 85 where it stands, to see the general and
-  marshal looks; stored in the same event as `points: [[color, piece, points]]`.
+  marshal looks; stored in the same event as `points: [[color, piece, points]]`. Since v3.2.32 Persian and Arabic digits and invisible direction marks from a phone keyboard are accepted (`plainText`), and a bad field names its non-ASCII characters.
   **Debug commands** (owner, 2026-11-03; a test aid): a room's Debug button lists its dice turns
   (`#3 Naser 6 2 / 5 5`; a second try belongs to the turn of its first throw, after the slash) and runs
   `rewind N` (owner, 2026-11-04; `go drop N` still works) (back to dice turn N, 0 = the first, -1 = the one before the last; thrown again with the
