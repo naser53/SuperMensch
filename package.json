@@ -1,6 +1,6 @@
 {
   "name": "supermensch",
-  "version": "3.2.38",
+  "version": "3.3.0",
   "private": true,
   "type": "module",
   "description": "SuperMensch — multi-color Mensch board game, 3D, online in the browser",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "three": "0.160.0",
+    "werift": "0.27.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

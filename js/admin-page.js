@@ -95,8 +95,16 @@ async function loadUsers() {
 const showVoice = d => {
   const v = d.voice || {};
   $("#voiceOn").checked = !!v.on;
-  $("#voiceReady").innerHTML = T(v.ready ? "voice_ready" : "voice_not_ready");
+  document.querySelectorAll("[name=voiceMode]").forEach(x => {
+    x.checked = x.value === (v.mode || "p2p");
+    if (x.value === "relay") x.disabled = !v.relay;
+  });
+  $("#voiceReady").innerHTML = T(v.mode === "relay" ? "voice_relay_about" : v.relay ? "voice_p2p_about" : "voice_p2p_only");
 };
+document.querySelectorAll("[name=voiceMode]").forEach(x => x.onchange = async () => {
+  try { showVoice(await api("admin/voicemode", { mode: x.value })); show("#voiceMsg", T("saved_dot")); }
+  catch (e) { show("#voiceMsg", e.message, true); }
+});
 $("#voiceOn").onchange = async () => {
   try { showVoice(await api("admin/voice", { on: $("#voiceOn").checked })); show("#voiceMsg", T("saved_dot")); }
   catch (e) { show("#voiceMsg", e.message, true); }

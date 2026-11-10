@@ -847,9 +847,24 @@ from the same code. The last Cloudflare-only version is tag `v3.2.34`.
   for the name and `www.`, certificate got and renewed by Caddy); the game then listens on
   `127.0.0.1:8080` (`HOST`, `PORT` in `/etc/supermensch.env`). Without DOMAIN: plain HTTP on port 80.
   The owner's server: `wiengame.com` (owner, 2026-11-10).
-* **Voice chat** needs HTTPS (browsers open the microphone only there) and the Cloudflare Realtime keys:
-  `sudo supermensch-voice` asks for `REALTIME_APP_ID`, `REALTIME_APP_TOKEN` and optionally
-  `TURN_KEY_ID`, `TURN_KEY_TOKEN`, writes them to `/etc/supermensch.env` and restarts the game. Voice
-  still goes through Cloudflare's SFU; there is no video chat.
+* **Voice chat on the Linux server needs nothing from Cloudflare (v3.3.0; owner, 2026-11-10: "forget
+  Cloudflare, the VPS must stand alone").** It needs HTTPS (browsers open the microphone only there).
+  The admin picks how the voices travel (Voice chat on the admin page; Lobby setting `voicemode`):
+  * **Through the server** ("relay", the default): `server/node/sfu.mjs`, a small SFU inside the game
+    server on werift (WebRTC in plain JavaScript). Every device sends its microphone once; the relay
+    forwards it to the listeners. It answers the same calls as Cloudflare Realtime SFU (session, push,
+    pull, renegotiate, close; `env.SFU` wins in `server/voice.js` `sfu()`), so the room and the page
+    are the same. UDP ports `VOICE_PORTS` (40000-40199), public address `VOICE_IP`.
+  * **Peer to peer** ("p2p"): no SFU. A listening device opens one receive-only connection to each open
+    microphone; the offer and the answer (with all ICE candidates, no trickle) go over the game's
+    WebSocket as `{ t: "rtc", from, to, desc }`, the room passes them on by session id. The server's
+    `session` and `push` only list the microphone. More upload per phone (one stream per listener).
+  * **TURN:** coturn on the same machine (`tools/linux/voice.sh`, run by install.sh and by
+    `sudo supermensch-voice`): port 3478 UDP/TCP, relay ports 49160-49359/udp, `use-auth-secret` with
+    `TURN_SECRET`; the game hands out passwords valid 6 hours (`turnServers` in sfu.mjs). It never
+    relays into private networks. Old Cloudflare keys are removed from `/etc/supermensch.env`.
+  * Checked with two Chromium pages playing a real game (fake microphones), in both modes, directly
+    and forced through coturn (relay only). On Cloudflare, "relay" is Realtime SFU as before and
+    "p2p" works too (STUN, or Cloudflare TURN when its key is set). There is no video chat.
 * Test: `tests/linux-server.test.mjs` starts the Linux server, makes a room, plays over a WebSocket,
   restarts it, and copies the game to a second one.

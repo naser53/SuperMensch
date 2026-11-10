@@ -295,7 +295,7 @@ test("admin debug: rewind N and roll dice go back to a dice turn and throw it ag
 });
 
 // ---------------------------------------------------------------- voice chat (server/voice.js)
-import { cleanId, iceList, sfu, voiceCan, voiceReady } from "../server/voice.js";
+import { cleanId, iceList, relayReady, sfu, voiceCan, voiceMode } from "../server/voice.js";
 
 test("voice: only a ticked player may talk, and only while the server-wide switch is on", () => {
   const players = [{ isAi: true }, { user: 3 }, { user: 5 }];
@@ -305,8 +305,13 @@ test("voice: only a ticked player may talk, and only while the server-wide switc
   assert.equal(voiceCan(players, [1], [3], false), false);      // the switch is off
   assert.equal(voiceCan(players, [0], [3], true), false);       // a computer seat
   assert.equal(voiceCan(players, [], [3], true), false);
-  assert.equal(voiceReady({ REALTIME_APP_ID: "a" }), false);
-  assert.equal(voiceReady({ REALTIME_APP_ID: "a", REALTIME_APP_TOKEN: "t" }), true);
+  assert.equal(relayReady({ REALTIME_APP_ID: "a" }), false);
+  assert.equal(relayReady({ REALTIME_APP_ID: "a", REALTIME_APP_TOKEN: "t" }), true);
+  assert.equal(relayReady({ SFU: {} }), true);                   // the Linux server's own relay
+  // the admin's mode; peer to peer when there is no relay
+  assert.equal(voiceMode({ SFU: {} }, "relay"), "relay");
+  assert.equal(voiceMode({ SFU: {} }, "p2p"), "p2p");
+  assert.equal(voiceMode({}, "relay"), "p2p");
 });
 
 test("voice: ids from a page are short and plain; TURN answers become a list", () => {

@@ -1056,6 +1056,7 @@ class App {
       onChange: () => { if (this.game) this.render(); },
       onError: code => this.voiceNote("voice_" + code),
       onMute: on => { if (o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify({ t: "mute", on })); },
+      send: m => { if (o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify(m)); },
     });
     this.voice.mySeats = seats;
     this.voice.onSpeaking = set => document.querySelectorAll(".rb-players .chip").forEach(c => c.classList.toggle("speaking", set.has(+c.dataset.val)));
@@ -1128,13 +1129,14 @@ class App {
     }
     if (m.t === "state" && this.voice) {
       if (o.fresh) { this.voice.reset(); o.fresh = false; }
-      this.voice.setAllowed(m.voice && m.voice.on, m.voice && m.voice.can);
+      this.voice.setAllowed(m.voice && m.voice.on, m.voice && m.voice.can, m.voice && m.voice.mode);
       this.voice.setVoices(m.voices, m.mine || o.seats);
     }
     if (m.t === "voices" && this.voice) { this.voice.setVoices(m.list); return; }
+    if (m.t === "rtc") { if (this.voice) this.voice.onRtc(m); return; }
     if (m.t === "voiceok" && this.voice) {
       const had = this.voice.mic;
-      this.voice.setAllowed(m.on, m.can);
+      this.voice.setAllowed(m.on, m.can, m.mode);
       if (had && !m.can) this.voiceNote("voice_off");
       return;
     }

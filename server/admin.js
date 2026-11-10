@@ -15,6 +15,11 @@ export async function adminApi(what, body, { env, lobby, settings, json, fail })
     await voiceRefresh(env, lobby);
     return json(await settings());
   }
+  if (what === "voicemode" && body) {       // "relay" or "p2p" (server/voice.js)
+    await lobby.setVoiceMode(body.mode);
+    await voiceRefresh(env, lobby);
+    return json(await settings());
+  }
   if (what === "uservoice" && body) {
     const users = await lobby.setUserVoice(body.id, !!body.on);
     await voiceRefresh(env, lobby);
