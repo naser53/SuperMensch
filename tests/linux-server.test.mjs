@@ -75,6 +75,7 @@ test("voice on the Linux server: TURN passwords from the shared secret; the own 
   assert.equal(t[1].credential, crypto.createHmac("sha1", "S3CRET").update("1000003600:sm").digest("base64"));
   assert.deepEqual(t[1].urls, ["turn:example.org:3478?transport=udp", "turn:example.org:3478?transport=tcp"]);
   assert.equal(turnServers(null, null)[0].urls.startsWith("stun:"), true);
+  assert.equal(turnServers("S", "h", 60, 0, 3480)[1].urls[0], "turn:h:3480?transport=udp");   // the own coturn's port
   const sfu = localSfu({ ip: "127.0.0.1" });
   const sid = await sfu.session();
   assert.match(sid, /^\w{32}$/);

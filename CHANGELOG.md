@@ -4,6 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.3.2 (2026-11-11)
+
+* Linux server: the game's TURN (coturn) has its own service `supermensch-turn` and config
+  `/etc/supermensch-turn.conf` on port 3480 (`TURN_PORT`), so another app's TURN on the usual
+  3478 (Gap's) is left alone; two on one port had split the packets and kept Gap's restarting.
+  `sudo supermensch-voice` moves an older setup over (it stops the package's coturn only when its
+  config is the game's).
+
 ## v3.3.1 (2026-11-11)
 
 * Linux server: the game on its own name (owner: `sm.wiengame.com`; the main domain stays free for

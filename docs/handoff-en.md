@@ -865,7 +865,9 @@ from the same code. The last Cloudflare-only version is tag `v3.2.34`.
     WebSocket as `{ t: "rtc", from, to, desc }`, the room passes them on by session id. The server's
     `session` and `push` only list the microphone. More upload per phone (one stream per listener).
   * **TURN:** coturn on the same machine (`tools/linux/voice.sh`, run by install.sh and by
-    `sudo supermensch-voice`): port 3478 UDP/TCP, relay ports 49160-49359/udp, `use-auth-secret` with
+    `sudo supermensch-voice`), its own service `supermensch-turn` with `/etc/supermensch-turn.conf` (v3.3.2:
+    another app on the machine, Gap, runs its own coturn on 3478, and two on one port split the
+    packets): port 3480 UDP/TCP (`TURN_PORT`; coturn also takes 3481), relay ports 49160-49359/udp, `use-auth-secret` with
     `TURN_SECRET`; the game hands out passwords valid 6 hours (`turnServers` in sfu.mjs). It never
     relays into private networks. Old Cloudflare keys are removed from `/etc/supermensch.env`.
   * Checked with two Chromium pages playing a real game (fake microphones), in both modes, directly
