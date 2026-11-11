@@ -4,6 +4,12 @@ Versions follow `MAJOR.MINOR.PATCH`. The version lives in `package.json` and `js
 (a test keeps them equal); each release is a Git tag `v<version>` with the changelog section.
 Up to v3.0.13 the releases carried `supermensch.html`; since v3.2.0 there is no game file (online only).
 
+## v3.3.1 (2026-11-11)
+
+* Linux server: the game on its own name (owner: `sm.wiengame.com`; the main domain stays free for
+  another page). Caddy is shared by every app: the main Caddyfile imports `/etc/caddy/sites/*.caddy`
+  and install.sh writes only `sites/supermensch.caddy`. Only a bare domain also gets `www.`.
+
 ## v3.3.0 (2026-11-10)
 
 * Voice chat on the Linux server without Cloudflare (owner): the game server relays the voices

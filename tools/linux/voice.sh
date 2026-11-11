@@ -21,7 +21,8 @@ getkey() { sed -n "s/^$1=//p" "$ENVF" | tail -n 1; }
 
 ip=$(curl -fsS -4 --max-time 5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
 host="${DOMAIN:-}"
-[ -n "$host" ] || host=$(sed -n 's/^\([^ ,#]*\),.*{$/\1/p' /etc/caddy/Caddyfile 2>/dev/null | head -n 1)
+[ -n "$host" ] || host=$(sed -n 's/^\([^ ,#{]*\)[ ,{].*$/\1/p' /etc/caddy/sites/supermensch.caddy 2>/dev/null | head -n 1)   # the game's own name
+[ -n "$host" ] || host=$(sed -n 's/^\([^ ,#{]*\)[ ,{].*$/\1/p' /etc/caddy/Caddyfile 2>/dev/null | grep '\.' | head -n 1)
 [ -n "$host" ] || host="$ip"
 secret=$(getkey TURN_SECRET)
 [ -n "$secret" ] || secret=$(head -c 24 /dev/urandom | base64 | tr -d '/+=')
