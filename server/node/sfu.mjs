@@ -11,7 +11,7 @@
 //   ice()                               ICE servers for the page (TURN on this server, when set up)
 // Settings (/etc/supermensch.env): VOICE_PORTS (UDP ports, default 40000-40199), VOICE_IP (the
 // public address, when the server only sees a private one), TURN_SECRET and TURN_HOST (coturn on
-// this server, tools/linux/install.sh).
+// this server, tools/linux/voice.sh), TURN_PORT (default 3478; the server's own coturn uses 3480).
 import crypto from "node:crypto";
 import { MediaStreamTrack, RTCPeerConnection, RTCRtpCodecParameters } from "werift";
 
@@ -19,13 +19,13 @@ const IDLE_MS = 60_000;          // a session that never connects, or lost its c
 const OPUS = () => new RTCRtpCodecParameters({ mimeType: "audio/opus", clockRate: 48000, channels: 2, payloadType: 111 });
 
 // TURN credentials for coturn's "use-auth-secret": user "<expiry>:sm", password HMAC-SHA1(secret, user)
-export function turnServers(secret, host, ttl = 6 * 3600, now = Date.now()) {
-  if (!secret || !host) return [{ urls: host ? `stun:${host}:3478` : "stun:stun.l.google.com:19302" }];
+export function turnServers(secret, host, ttl = 6 * 3600, now = Date.now(), port = 3478) {
+  if (!secret || !host) return [{ urls: host ? `stun:${host}:${port}` : "stun:stun.l.google.com:19302" }];
   const username = `${Math.floor(now / 1000) + ttl}:sm`;
   const credential = crypto.createHmac("sha1", secret).update(username).digest("base64");
   return [
-    { urls: `stun:${host}:3478` },
-    { urls: [`turn:${host}:3478?transport=udp`, `turn:${host}:3478?transport=tcp`], username, credential },
+    { urls: `stun:${host}:${port}` },
+    { urls: [`turn:${host}:${port}?transport=udp`, `turn:${host}:${port}?transport=tcp`], username, credential },
   ];
 }
 
@@ -59,7 +59,7 @@ export function localSfu(opts = {}) {
 
   return {
     sessions,
-    async ice() { return turnServers(opts.turnSecret, opts.turnHost); },
+    async ice() { return turnServers(opts.turnSecret, opts.turnHost, undefined, undefined, Number(opts.turnPort) || 3478); },
 
     async session() {
       const sid = crypto.randomUUID().replace(/-/g, "");

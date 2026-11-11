@@ -3,7 +3,7 @@
 //   node server/node/main.mjs          (Node 22.13 or newer; npm run build first for the pages)
 // Settings come from the environment (on the server: /etc/supermensch.env, see tools/linux/):
 //   PORT (default 8080), HOST (default: every address; 127.0.0.1 behind Caddy), DATA_DIR (default ./data: the SQLite files), ADMIN_KEY, and for voice
-//   chat (the server's own relay, server/node/sfu.mjs; nothing from Cloudflare) VOICE_PORTS, VOICE_IP, TURN_SECRET, TURN_HOST.
+//   chat (the server's own relay, server/node/sfu.mjs; nothing from Cloudflare) VOICE_PORTS, VOICE_IP, TURN_SECRET, TURN_HOST, TURN_PORT.
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -25,7 +25,7 @@ const DATA = path.resolve(process.env.DATA_DIR || path.join(root, "data"));
 
 const env = process.env.ADMIN_KEY ? { ADMIN_KEY: process.env.ADMIN_KEY } : {};
 // voice: the server's own relay; TURN (coturn on this server) when install.sh set it up
-env.SFU = localSfu({ ports: process.env.VOICE_PORTS, ip: process.env.VOICE_IP, turnSecret: process.env.TURN_SECRET, turnHost: process.env.TURN_HOST });
+env.SFU = localSfu({ ports: process.env.VOICE_PORTS, ip: process.env.VOICE_IP, turnSecret: process.env.TURN_SECRET, turnHost: process.env.TURN_HOST, turnPort: process.env.TURN_PORT });
 env.LOBBY = new Namespace(Lobby, path.join(DATA, "lobby"), env);
 env.ROOM = new Namespace(GameRoom, path.join(DATA, "rooms"), env);
 
