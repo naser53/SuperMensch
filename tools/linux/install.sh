@@ -2,15 +2,19 @@
 # Install (or repair) the SuperMensch server on an Ubuntu machine (owner, 2026-11-10: the game runs
 # on Cloudflare and on the owner's Linux server, from the same code). Run as root:
 #   curl -fsSL https://raw.githubusercontent.com/naser53/SuperMensch/main/tools/linux/install.sh | sudo bash
-# With a domain (its A records, the name and www, point at this server): HTTPS through Caddy, which
-# gets and renews the certificate by itself; the game then listens on 127.0.0.1:8080 behind it:
-#   curl -fsSL .../install.sh | sudo DOMAIN=wiengame.com bash
+# With a domain name (its A record points at this server): HTTPS through Caddy, which gets and
+# renews the certificate by itself; the game then listens on 127.0.0.1:8080 behind it. The owner's
+# server (2026-11-11): the game on its own subdomain, the main domain is kept for another page:
+#   curl -fsSL .../install.sh | sudo DOMAIN=sm.wiengame.com bash
+# A bare domain (example.com) also gets www.example.com. Caddy is shared by every app on the
+# machine: /etc/caddy/Caddyfile only imports /etc/caddy/sites/*.caddy, one file per app; this
+# script writes only sites/supermensch.caddy, so another app's site is never touched.
 # What it sets up:
 #   /opt/supermensch/app          the code (a clone of main), built with npm run build
 #   /var/lib/supermensch          the games (SQLite files); kept on reinstall
 #   /etc/supermensch.env          PORT, DATA_DIR, ADMIN_KEY, and the voice settings (voice.sh)
 #   supermensch.service           the server (server/node/main.mjs) on port 80, restarted on failure
-#   caddy (with DOMAIN)           HTTPS for DOMAIN and www.DOMAIN, passed on to the game
+#   caddy (with DOMAIN)           HTTPS for DOMAIN (/etc/caddy/sites/supermensch.caddy), passed on to the game
 #   supermensch-update.timer      every 2 minutes: a new commit on main is pulled, built and started
 #   coturn and voice settings     voice chat on this server alone (tools/linux/voice.sh)
 #   supermensch-update, supermensch-copy, supermensch-voice   commands (update now; copy the games
@@ -25,6 +29,8 @@ DATA=/var/lib/supermensch
 ENVF=/etc/supermensch.env
 SVC=supermensch
 DOMAIN="${DOMAIN:-}"
+NAMES="$DOMAIN"                   # a bare domain (one dot) also gets www.
+[ -n "$DOMAIN" ] && [ "$(printf '%s' "$DOMAIN" | tr -cd . | wc -c)" = 1 ] && NAMES="$DOMAIN www.$DOMAIN"
 if [ -n "$DOMAIN" ]; then PORT=8080; HOST=127.0.0.1; else PORT=80; HOST=; fi
 
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
@@ -149,13 +155,24 @@ systemctl restart $SVC.service
 if [ -n "$DOMAIN" ]; then
   say "HTTPS for $DOMAIN (Caddy)"
   apt-get install -y -qq caddy >/dev/null
-  cat > /etc/caddy/Caddyfile <<CADDY
-# SuperMensch (tools/linux/install.sh): HTTPS for the domain, passed on to the game
-$DOMAIN, www.$DOMAIN {
+  mkdir -p /etc/caddy/sites
+  # the shared main file: only imports one file per app (an older SuperMensch Caddyfile is replaced;
+  # anyone else's is kept, with the import added)
+  if ! grep -q '^import /etc/caddy/sites/\*\.caddy' /etc/caddy/Caddyfile 2>/dev/null; then
+    if [ ! -s /etc/caddy/Caddyfile ] || grep -q 'SuperMensch\|Caddy, the default\|:80 {' /etc/caddy/Caddyfile; then
+      printf '# Every app on this machine has its own site file in /etc/caddy/sites/ (SuperMensch: supermensch.caddy)\nimport /etc/caddy/sites/*.caddy\n' > /etc/caddy/Caddyfile
+    else
+      printf '\nimport /etc/caddy/sites/*.caddy\n' >> /etc/caddy/Caddyfile
+    fi
+  fi
+  cat > /etc/caddy/sites/supermensch.caddy <<CADDY
+# SuperMensch (tools/linux/install.sh): HTTPS for the game's name, passed on to the game
+$(echo $NAMES | sed 's/ /, /g') {
 	encode gzip
 	reverse_proxy 127.0.0.1:$PORT
 }
 CADDY
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || { echo "Caddy finds the settings wrong:"; caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; exit 1; }
   systemctl enable -q caddy
   systemctl restart caddy
 fi
@@ -178,7 +195,7 @@ if [ -z "$DOMAIN" ]; then
   say "ready: http://$ip/   (admin page: http://$ip/admin)"
   exit 0
 fi
-for name in "$DOMAIN" "www.$DOMAIN"; do
+for name in $NAMES; do
   got=$(getent ahostsv4 "$name" | awk 'NR==1{print $1}')
   [ "$got" = "$ip" ] || echo "note: $name points to '${got:-nothing}', not $ip: set its A record to $ip (HTTPS starts once it does)"
 done

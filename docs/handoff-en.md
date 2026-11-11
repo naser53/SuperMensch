@@ -846,7 +846,12 @@ from the same code. The last Cloudflare-only version is tag `v3.2.34`.
 * **Domain and HTTPS (v3.2.36):** `sudo DOMAIN=wiengame.com bash install.sh` puts Caddy in front (HTTPS
   for the name and `www.`, certificate got and renewed by Caddy); the game then listens on
   `127.0.0.1:8080` (`HOST`, `PORT` in `/etc/supermensch.env`). Without DOMAIN: plain HTTP on port 80.
-  The owner's server: `wiengame.com` (owner, 2026-11-10).
+  The owner's server: **`sm.wiengame.com`** (owner, 2026-11-11: the main domain `wiengame.com` is kept
+  for another home page, and more apps will come "with the same standard"). Caddy is shared:
+  `/etc/caddy/Caddyfile` only does `import /etc/caddy/sites/*.caddy`, one site file per app; install.sh
+  writes only `sites/supermensch.caddy` (and replaces an older SuperMensch-only Caddyfile). A bare
+  domain also gets `www.`, a subdomain does not. Another app: its own `sites/<app>.caddy` and its own
+  local port (the game has 8080).
 * **Voice chat on the Linux server needs nothing from Cloudflare (v3.3.0; owner, 2026-11-10: "forget
   Cloudflare, the VPS must stand alone").** It needs HTTPS (browsers open the microphone only there).
   The admin picks how the voices travel (Voice chat on the admin page; Lobby setting `voicemode`):
