@@ -1,0 +1,42 @@
+name: Clean up Actions
+
+# Run by hand (Actions > Clean up Actions > Run workflow). Deletes every finished
+# workflow run, with its logs and artifacts, except the newest ones (2 by default).
+# Runs of this workflow are not counted among the kept ones and are deleted too,
+# apart from the run doing the cleaning.
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: How many of the newest runs to keep
+        default: "2"
+
+permissions:
+  actions: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          KEEP: ${{ inputs.keep }}
+          SELF: ${{ github.run_id }}
+          ME: ${{ github.workflow }}
+        run: |
+          case "$KEEP" in ''|*[!0-9]*) echo "::error::keep must be a number"; exit 1;; esac
+          # Newest first. Runs of this workflow (other than this one) are always deleted.
+          gh api --paginate "repos/$REPO/actions/runs?per_page=100" \
+            --jq '.workflow_runs[] | [.id, .status, .name] | @tsv' > runs.tsv
+          awk -F'\t' -v me="$ME" -v self="$SELF" '$1 != self && $3 != me' runs.tsv \
+            | tail -n +"$((KEEP + 1))" > delete.tsv
+          awk -F'\t' -v me="$ME" -v self="$SELF" '$1 != self && $3 == me' runs.tsv >> delete.tsv
+          deleted=0; skipped=0
+          while IFS=$'\t' read -r id status name; do
+            if [ "$status" != completed ]; then skipped=$((skipped + 1)); continue; fi
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" && deleted=$((deleted + 1))
+          done < delete.tsv
+          echo "Deleted $deleted runs, kept the newest $KEEP, skipped $skipped still running." | tee -a "$GITHUB_STEP_SUMMARY"
